@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
-import { formatErrorEnvelope, getRateLimitHeaders } from "../../src/lib/middleware/api-standards.js";
-import { processIdempotentRequest } from "../../src/lib/middleware/idempotency.js";
-import { executeAtomicWalletDebitAndStatusChange } from "../../src/lib/services/wallet.js";
+import { formatErrorEnvelope, getRateLimitHeaders } from "../lib/middleware/api-standards.js";
+import { processIdempotentRequest } from "../lib/middleware/idempotency.js";
+import { executeAtomicWalletDebitAndStatusChange } from "../lib/services/wallet.js";
 
 const router = Router();
 

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
-import { formatErrorEnvelope, getRateLimitHeaders, paginateArrayWithCursor } from "../../src/lib/middleware/api-standards.js";
-import { validateStateTransition, ApplicationState, evaluateSlaEscalation } from "../../src/lib/lifecycle/application-state.js";
-import { publishDomainEvent } from "../../src/lib/events/kafka.js";
+import { formatErrorEnvelope, getRateLimitHeaders, paginateArrayWithCursor } from "../lib/middleware/api-standards.js";
+import { validateStateTransition, ApplicationState, evaluateSlaEscalation } from "../lib/lifecycle/application-state.js";
+import { publishDomainEvent } from "../lib/events/kafka.js";
 
 const router = Router();
 

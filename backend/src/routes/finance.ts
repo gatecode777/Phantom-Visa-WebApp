@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { formatErrorEnvelope, getRateLimitHeaders } from "../../src/lib/middleware/api-standards.js";
-import { createRefundRequest, approveRefundRequest } from "../../src/lib/services/refunds.js";
+import { formatErrorEnvelope, getRateLimitHeaders } from "../lib/middleware/api-standards.js";
+import { createRefundRequest, approveRefundRequest } from "../lib/services/refunds.js";
 
 const router = Router();
 

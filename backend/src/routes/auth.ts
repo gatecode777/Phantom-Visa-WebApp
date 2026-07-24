@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { issueTokens } from "../../src/lib/security/jwt.js";
-import { formatErrorEnvelope, getRateLimitHeaders } from "../../src/lib/middleware/api-standards.js";
+import { issueTokens } from "../lib/security/jwt.js";
+import { formatErrorEnvelope, getRateLimitHeaders } from "../lib/middleware/api-standards.js";
 
 const router = Router();
 

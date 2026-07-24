@@ -27,5 +27,5 @@ app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/wallet", walletRouter);
 
 app.listen(PORT, () => {
-  console.log(`⚡ Phantom Visa OS Express Server running on http://localhost:${PORT}`);
+  console.log(`⚡ Phantom Visa OS Backend running on http://localhost:${PORT}`);
 });
