@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: 'Inter', sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --color-brand-midnight: #09111E;
+  --color-brand-slate: #0E1A2C;
+  --color-brand-gold: #C5A880;
+  --color-brand-gold-hover: #BCA075;
+  --color-brand-red: #E63946;
+  --color-brand-teal: #2A9D8F;
+  --color-brand-paper: #F8F9FA;
+}
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --background: #09111E;
+  --foreground: #F8F9FA;
+}
+
+body {
+  background-color: #09111E;
+  color: #F8F9FA;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Boarding Pass Ticket Stub styling */
+.ticket-card {
+  position: relative;
+  background-color: #0E1A2C;
+  border: 1px dashed rgba(197, 168, 128, 0.25);
+  border-radius: 12px;
+}
+
+/* Semi-circle cutouts on left and right borders */
+.ticket-notch-y {
+  position: relative;
+}
+
+.ticket-notch-y::before,
+.ticket-notch-y::after {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: #09111E;
+  border-radius: 50%;
+  z-index: 20;
+}
+
+/* Notch split horizontally (left and right edges) */
+.ticket-notch-y::before {
+  left: -12px;
+  top: calc(70% - 12px);
+  border-right: 1px dashed rgba(197, 168, 128, 0.25);
+}
+
+.ticket-notch-y::after {
+  right: -12px;
+  top: calc(70% - 12px);
+  border-left: 1px dashed rgba(197, 168, 128, 0.25);
+}
+
+/* Visa Stamp styling */
+.stamp-seal {
+  position: relative;
+  border: 3px double currentColor;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 8px 16px;
+  transform: rotate(-10deg);
+  display: inline-block;
+  opacity: 0.85;
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.stamp-approved {
+  color: #2A9D8F;
+  background-color: rgba(42, 157, 143, 0.05);
+  text-shadow: 0 0 1px rgba(42, 157, 143, 0.2);
+}
+
+.stamp-rejected {
+  color: #E63946;
+  background-color: rgba(230, 57, 70, 0.05);
+  text-shadow: 0 0 1px rgba(230, 57, 70, 0.2);
+}
+
+.stamp-pending {
+  color: #D4AF37;
+  background-color: rgba(212, 175, 55, 0.05);
+  text-shadow: 0 0 1px rgba(212, 175, 55, 0.2);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09111E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 128, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 128, 0.5);
+}
