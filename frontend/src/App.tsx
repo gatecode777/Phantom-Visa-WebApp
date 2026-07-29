@@ -5,6 +5,7 @@ import CustomerPortal from "./components/CustomerPortal";
 import StaffPortal from "./components/StaffPortal";
 import AdminPortal from "./components/AdminPortal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import Logo from "./components/Logo";
 import {
   Menu,
   X,
@@ -334,20 +335,16 @@ export function App() {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-brand-midnight text-brand-paper font-sans">
       <ImpersonationBanner />
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        
-        {/* LEFT SIDEBAR (Desktop) */}
-        <aside className="hidden md:flex md:w-64 bg-brand-slate border-r border-brand-gold/15 flex-col justify-between z-30">
+      {currentRole === "Customer" ? (
+        <CustomerPortal />
+      ) : (
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* LEFT SIDEBAR (Desktop) */}
+          <aside className="hidden md:flex md:w-64 bg-brand-slate border-r border-brand-gold/15 flex-col justify-between z-30">
           <div className="flex flex-col">
             {/* Logo wordmark */}
-            <div className="p-6 border-b border-brand-gold/15 flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-brand-gold/10 border border-brand-gold/40 flex items-center justify-center font-bold text-brand-gold text-lg">
-                Φ
-              </div>
-              <div>
-                <h1 className="font-outfit font-black text-sm tracking-widest text-brand-paper">PHANTOM VISA</h1>
-                <p className="text-[9px] font-mono text-brand-gold/80 tracking-widest leading-none">OPERATING SYSTEM</p>
-              </div>
+            <div className="p-4 border-b border-brand-gold/15">
+              <Logo variant="sidebar" />
             </div>
 
             {/* Navigation Links */}
@@ -399,7 +396,7 @@ export function App() {
             >
               <Menu size={24} />
             </button>
-            <span className="font-outfit font-black text-sm tracking-wider text-brand-paper">PHANTOM OS</span>
+            <Logo variant="header" />
           </div>
 
           {/* Mini wallet display for Agent in mobile header */}
@@ -425,14 +422,8 @@ export function App() {
                 <X size={20} />
               </button>
 
-              <div className="flex items-center gap-3 border-b border-brand-gold/15 pb-4">
-                <div className="w-8 h-8 rounded bg-brand-gold/10 border border-brand-gold/40 flex items-center justify-center font-bold text-brand-gold text-lg">
-                  Φ
-                </div>
-                <div>
-                  <h1 className="font-outfit font-black text-sm tracking-widest text-brand-paper">PHANTOM VISA</h1>
-                  <p className="text-[9px] font-mono text-brand-gold/80 tracking-widest leading-none">OPERATING SYSTEM</p>
-                </div>
+              <div className="border-b border-brand-gold/15 pb-4">
+                <Logo variant="sidebar" />
               </div>
 
               <nav className="space-y-1.5">
@@ -522,8 +513,8 @@ export function App() {
             {renderActivePortal()}
           </main>
         </div>
-
       </div>
+      )}
     </div>
   );
 }
