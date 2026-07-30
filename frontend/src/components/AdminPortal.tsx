@@ -8,6 +8,10 @@ import ActiveUsers from "./ActiveUsers";
 import BlockedUsers from "./BlockedUsers";
 import KycVerifications from "./KycVerifications";
 import UserActivityLogs from "./UserActivityLogs";
+import AllAgents from "./AllAgents";
+import AddNewAgent from "./AddNewAgent";
+import PendingApprovalAgents from "./PendingApprovalAgents";
+import ActiveAgents from "./ActiveAgents";
 import {
   LayoutDashboard,
   Users,
@@ -917,6 +921,14 @@ export default function AdminPortal() {
                 <KycVerifications />
               ) : activeSubItem === "User Activity Logs" ? (
                 <UserActivityLogs />
+              ) : activeSubItem === "All Agents" || (activeSection === "Agent Management" && (!activeSubItem || activeSubItem === "All Agents")) ? (
+                <AllAgents />
+              ) : activeSubItem === "Add New Agents" || activeSubItem === "Add New Agent" ? (
+                <AddNewAgent />
+              ) : activeSubItem === "Pending Approval" ? (
+                <PendingApprovalAgents />
+              ) : activeSubItem === "Active Agents" ? (
+                <ActiveAgents />
               ) : (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   
