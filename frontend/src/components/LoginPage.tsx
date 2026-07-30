@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { CountryCode } from "libphonenumber-js";
 import {
   validatePhoneNumber,
@@ -36,14 +37,44 @@ interface CountryOption {
 const COUNTRIES: CountryOption[] = [
   { code: "IN", dialCode: "+91", name: "India", flag: "🇮🇳" },
   { code: "US", dialCode: "+1", name: "United States", flag: "🇺🇸" },
+  { code: "CA", dialCode: "+1", name: "Canada", flag: "🇨🇦" },
   { code: "GB", dialCode: "+44", name: "United Kingdom", flag: "🇬🇧" },
   { code: "AE", dialCode: "+971", name: "United Arab Emirates", flag: "🇦🇪" },
-  { code: "CA", dialCode: "+1", name: "Canada", flag: "🇨🇦" },
   { code: "AU", dialCode: "+61", name: "Australia", flag: "🇦🇺" },
   { code: "SG", dialCode: "+65", name: "Singapore", flag: "🇸🇬" },
   { code: "DE", dialCode: "+49", name: "Germany", flag: "🇩🇪" },
   { code: "FR", dialCode: "+33", name: "France", flag: "🇫🇷" },
-  { code: "JP", dialCode: "+81", name: "Japan", flag: "🇯🇵" }
+  { code: "JP", dialCode: "+81", name: "Japan", flag: "🇯🇵" },
+  { code: "SA", dialCode: "+966", name: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "QA", dialCode: "+974", name: "Qatar", flag: "🇶🇦" },
+  { code: "KW", dialCode: "+965", name: "Kuwait", flag: "🇰🇼" },
+  { code: "OM", dialCode: "+968", name: "Oman", flag: "🇴🇲" },
+  { code: "BH", dialCode: "+973", name: "Bahrain", flag: "🇧🇭" },
+  { code: "MY", dialCode: "+60", name: "Malaysia", flag: "🇲🇾" },
+  { code: "ID", dialCode: "+62", name: "Indonesia", flag: "🇮🇩" },
+  { code: "TH", dialCode: "+66", name: "Thailand", flag: "🇹🇭" },
+  { code: "VN", dialCode: "+84", name: "Vietnam", flag: "🇻🇳" },
+  { code: "PH", dialCode: "+63", name: "Philippines", flag: "🇵🇭" },
+  { code: "KR", dialCode: "+82", name: "South Korea", flag: "🇰🇷" },
+  { code: "CN", dialCode: "+86", name: "China", flag: "🇨🇳" },
+  { code: "HK", dialCode: "+852", name: "Hong Kong", flag: "🇭🇰" },
+  { code: "TW", dialCode: "+886", name: "Taiwan", flag: "🇹🇼" },
+  { code: "NZ", dialCode: "+64", name: "New Zealand", flag: "🇳🇿" },
+  { code: "ZA", dialCode: "+27", name: "South Africa", flag: "🇿🇦" },
+  { code: "BR", dialCode: "+55", name: "Brazil", flag: "🇧🇷" },
+  { code: "MX", dialCode: "+52", name: "Mexico", flag: "🇲🇽" },
+  { code: "ES", dialCode: "+34", name: "Spain", flag: "🇪🇸" },
+  { code: "IT", dialCode: "+39", name: "Italy", flag: "🇮🇹" },
+  { code: "CH", dialCode: "+41", name: "Switzerland", flag: "🇨🇭" },
+  { code: "NL", dialCode: "+31", name: "Netherlands", flag: "🇳🇱" },
+  { code: "SE", dialCode: "+46", name: "Sweden", flag: "🇸🇪" },
+  { code: "NO", dialCode: "+47", name: "Norway", flag: "🇳🇴" },
+  { code: "DK", dialCode: "+45", name: "Denmark", flag: "🇩🇰" },
+  { code: "IE", dialCode: "+353", name: "Ireland", flag: "🇮🇪" },
+  { code: "RU", dialCode: "+7", name: "Russia", flag: "🇷🇺" },
+  { code: "EG", dialCode: "+20", name: "Egypt", flag: "🇪🇬" },
+  { code: "LK", dialCode: "+94", name: "Sri Lanka", flag: "🇱🇰" },
+  { code: "NP", dialCode: "+977", name: "Nepal", flag: "🇳🇵" }
 ];
 
 const PRESETS = [
@@ -58,6 +89,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
+  const navigate = useNavigate();
   // Toggle for full Applicant Registration Page
   const [showRegisterApplicant, setShowRegisterApplicant] = useState(false);
 
@@ -135,18 +167,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   }, [step]);
 
   // Live E.164 Phone Format Validation
-  const handlePhoneChange = (val: string) => {
-    setPhoneNumber(val);
+  const handlePhoneChange = (val: string, country = selectedCountry) => {
+    // Only allow numeric digits and spaces
+    const cleanDigits = val.replace(/\D/g, "").slice(0, 15);
+    setPhoneNumber(cleanDigits);
     setPhoneError("");
 
-    if (!val.trim()) {
+    if (!cleanDigits) {
       setE164Phone("");
       return;
     }
 
-    const digitsOnly = val.replace(/\D/g, "");
-    const fullVal = val.startsWith("+91") ? val : `+91${digitsOnly}`;
-    const validation = validatePhoneNumber(fullVal, "IN");
+    const fullVal = `${country.dialCode}${cleanDigits}`;
+    const validation = validatePhoneNumber(fullVal, country.code);
 
     if (validation.isValid && validation.e164Format) {
       setE164Phone(validation.e164Format);
@@ -160,22 +193,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const handlePresetSelect = (phone: string) => {
     const rawNumber = phone.replace("+91", "");
     setPhoneNumber(rawNumber);
-    const validation = validatePhoneNumber(phone, "IN");
-    if (validation.isValid && validation.e164Format) {
-      setE164Phone(validation.e164Format);
-      setPhoneError("");
-    }
+    setE164Phone(phone);
+    setPhoneError("");
   };
 
-  // Send OTP Action
-  const handleSendOtp = () => {
+  // Send OTP Action - Checks MongoDB Database First & Strict libphonenumber-js Validation
+  const handleSendOtp = async () => {
     setPhoneError("");
-    const digitsOnly = phoneNumber.replace(/\D/g, "");
-    const fullVal = phoneNumber.startsWith("+91") ? phoneNumber : `+91${digitsOnly}`;
-    const validation = validatePhoneNumber(fullVal, "IN");
+    const cleanDigits = phoneNumber.replace(/\D/g, "");
+
+    if (!cleanDigits) {
+      setPhoneError("Please enter a mobile phone number.");
+      return;
+    }
+
+    const fullVal = `${selectedCountry.dialCode}${cleanDigits}`;
+    const validation = validatePhoneNumber(fullVal, selectedCountry.code);
 
     if (!validation.isValid || !validation.e164Format) {
-      setPhoneError(validation.error || "Please enter a valid 10-digit Indian mobile number.");
+      setPhoneError(validation.error || `Please enter a valid mobile number for ${selectedCountry.name}.`);
       return;
     }
 
@@ -183,7 +219,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     setE164Phone(targetE164);
     setIsSendingOtp(true);
 
-    setTimeout(() => {
+    try {
+      // Query backend to verify if account exists in MongoDB
+      const checkRes = await fetch("http://localhost:5000/api/v1/auth/verify-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: targetE164 })
+      });
+
+      const checkJson = await checkRes.json();
+
+      if (!checkRes.ok || !checkJson.success) {
+        setIsSendingOtp(false);
+        setPhoneError(checkJson.error?.message || "No account registered with this phone number. Please register first as an applicant.");
+        return;
+      }
+
+      // Account verified in MongoDB -> Send OTP
       const res = requestOtp(targetE164);
       setIsSendingOtp(false);
 
@@ -201,7 +253,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       setResendTimer(45);
       setOtpDigits(["", "", "", "", "", ""]);
       setTimeout(() => inputRefs[0].current?.focus(), 100);
-    }, 600);
+    } catch (err: any) {
+      setIsSendingOtp(false);
+      setPhoneError("Failed to connect to authentication server. Please verify backend service.");
+    }
   };
 
   // OTP Digit Change Handler
@@ -281,8 +336,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     }, 500);
   };
 
-  // Verify OTP Action
-  const handleVerifyOtp = (fullOtp?: string) => {
+  // Verify OTP or Backend Password Action
+  const handleVerifyOtp = async (fullOtp?: string) => {
     const codeToVerify = fullOtp || otpDigits.join("");
     if (codeToVerify.length < 6) {
       setOtpError("Please enter all 6 digits of the OTP code.");
@@ -291,6 +346,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
     setIsVerifying(true);
     setOtpError("");
+
+    try {
+      // Attempt backend OTP authentication against MongoDB database
+      const res = await fetch("http://localhost:5000/api/v1/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: e164Phone || phoneNumber, otp: codeToVerify })
+      });
+      const json = await res.json();
+
+      if (res.ok && json.success && json.data) {
+        setIsVerifying(false);
+        onSuccess({
+          token: json.data.accessToken,
+          user: {
+            id: json.data.user.id,
+            phone: json.data.user.phone,
+            role: json.data.user.role,
+            name: json.data.user.name
+          },
+          expiresAt: Date.now() + 15 * 60 * 1000
+        });
+        return;
+      }
+
+      if (json.error?.message) {
+        setIsVerifying(false);
+        setOtpError(json.error.message);
+        return;
+      }
+    } catch (err) {
+      // Fallback to local verifyOtp service if backend call fails
+    }
 
     setTimeout(() => {
       const res = verifyOtp(e164Phone, codeToVerify);
@@ -316,6 +404,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         onClose={() => setShowRegisterApplicant(false)}
         onSuccessSubmit={(data) => {
           setShowRegisterApplicant(false);
+          if (data?.phone) {
+            setPhoneNumber(data.phone);
+          }
+          setOtpSuccessMsg(
+            `Registration complete for ${data?.name || "Applicant"} (${data?.applicantId || "APP-Success"})! Please log in below.`
+          );
         }}
       />
     );
@@ -378,22 +472,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   <span className="text-[10px] text-[#4848F7] font-mono font-bold">E.164 Standard</span>
                 </label>
 
-                <div className="flex gap-2">
-                  {/* Fixed +91 Country Badge */}
-                  <div className="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-3 px-3.5 rounded-xl flex items-center gap-1.5 shrink-0 select-none">
-                    <span className="text-base">🇮🇳</span>
-                    <span className="font-mono text-slate-900">+91</span>
+                <div className="flex gap-2.5 items-center">
+                  {/* Selectable International Country Code Dropdown (Fixed compact width w-32) */}
+                  <div className="shrink-0 w-32">
+                    <select
+                      value={selectedCountry.code}
+                      onChange={(e) => {
+                        const found = COUNTRIES.find((c) => c.code === e.target.value);
+                        if (found) {
+                          setSelectedCountry(found);
+                          handlePhoneChange(phoneNumber, found);
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-extrabold font-mono py-3.5 px-3 rounded-xl cursor-pointer focus:outline-none focus:border-[#4848F7] truncate shadow-2xs"
+                      title={selectedCountry.name}
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} ({c.dialCode})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Number Input Field */}
-                  <div className="relative flex-1">
+                  {/* Number Input Field (Flexible flex-1 min-w-0 width) */}
+                  <div className="relative flex-1 min-w-0">
                     <input
                       type="tel"
-                      placeholder="98765 43210"
+                      maxLength={15}
+                      placeholder="Mobile number"
                       value={phoneNumber}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                      className={`w-full bg-slate-50 border text-sm font-mono font-bold py-3 px-4 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none transition ${
+                      className={`w-full bg-slate-50 border text-sm font-mono font-bold py-3.5 pl-3.5 pr-9 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none transition tracking-wide ${
                         e164Phone
                           ? "border-emerald-500 ring-2 ring-emerald-500/20"
                           : phoneError
@@ -402,7 +513,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                       }`}
                     />
                     {e164Phone && (
-                      <CheckCircle2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
+                      <CheckCircle2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 shrink-0 pointer-events-none" />
                     )}
                   </div>
                 </div>
@@ -447,7 +558,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowRegisterApplicant(true)}
+                  onClick={() => navigate("/register")}
                   className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <UserPlus size={15} />

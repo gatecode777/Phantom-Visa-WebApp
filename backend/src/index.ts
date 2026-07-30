@@ -2,20 +2,35 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+import path from "path";
 
 import { connectDB } from "./lib/db.js";
 import applicationsRouter from "./routes/applications.js";
 import authRouter from "./routes/auth.js";
 import financeRouter from "./routes/finance.js";
 import walletRouter from "./routes/wallet.js";
+import applicantRouter from "./routes/applicant.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// CORS configuration (allow requests with credentials for cookies)
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    credentials: true
+  })
+);
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Serve static uploads directory for document links
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Initialize MongoDB Connection
 connectDB();
@@ -41,6 +56,7 @@ app.use("/api/v1/applications", applicationsRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/wallet", walletRouter);
+app.use("/api/v1/applicant", applicantRouter);
 
 app.listen(PORT, () => {
   console.log(`⚡ Phantom Visa OS Backend running on http://localhost:${PORT}`);

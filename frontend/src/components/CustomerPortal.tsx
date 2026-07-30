@@ -57,7 +57,9 @@ export default function CustomerPortal() {
     setRole,
     walletBalance,
     currentRole,
-    logoutSession
+    logoutSession,
+    authSession,
+    applicantDashboardData
   } = useVisa();
 
   // Selected active application ID for tracking/documents
@@ -66,6 +68,19 @@ export default function CustomerPortal() {
 
   // Target app reference
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
+
+  // Dynamic user data from MongoDB
+  const greetingName = applicantDashboardData?.greetingName || authSession?.user?.name || "Applicant";
+  const liveMetrics = applicantDashboardData?.metrics || {
+    totalApplications: applications.length || 1,
+    underReview: applications.filter((a) => ["Submitted", "Docs Uploaded", "Embassy Processing"].includes(a.status)).length,
+    approvedVisas: applications.filter((a) => a.status === "Approved").length,
+    rejectedApplications: applications.filter((a) => a.status === "Rejected").length,
+    pendingDocuments: 1,
+    upcomingAppointments: 1,
+    unreadMessages: 2,
+    notifications: 3
+  };
 
   // Collapsible Sidebar Sections State
   const [openMyApps, setOpenMyApps] = useState(true);
@@ -154,7 +169,7 @@ export default function CustomerPortal() {
   // Chatbot State
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ sender: "user" | "ai"; text: string }>>([
-    { sender: "ai", text: "Hello Geeta! I am your Phantom Consular Assistant. How can I help with your visa application?" }
+    { sender: "ai", text: `Hello ${greetingName}! I am your Phantom Consular Assistant. How can I help with your visa application?` }
   ]);
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -166,23 +181,25 @@ export default function CustomerPortal() {
     setTimeout(() => {
       setChatHistory((prev) => [
         ...prev,
-        { sender: "ai", text: "Your application VO-2026-1025 is currently under review by the Canadian Embassy. Expected decision within 5-7 business days." }
+        { sender: "ai", text: `Your application is currently being processed by the consular division. Expected decision within 5-7 business days.` }
       ]);
     }, 600);
   };
 
   const handleApplyVisaSubmit = () => {
-    const newId = `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    addApplication({
-      id: newId,
+    const newId = addApplication({
       travelerName: newAppForm.travelerName,
+      dob: newAppForm.dob,
+      passportNumber: newAppForm.passportNumber,
+      passportExpiry: newAppForm.passportExpiry,
+      nationality: newAppForm.nationality,
       destination: newAppForm.destination,
       visaType: newAppForm.visaType,
+      travelDates: newAppForm.travelDates,
       status: "Submitted",
-      appliedDate: "2026-07-25",
-      expiryDate: "2027-07-25",
       fees: newAppForm.fees,
-      documents: { passport: "verified", photo: "verified", nocLetter: "pending", sponsorLetter: "pending" }
+      verifiedDocs: { passport: "verified", photo: "verified", nocLetter: "pending", sponsorLetter: "pending" },
+      checklist: { employed: newAppForm.employed, sponsored: newAppForm.sponsored }
     });
     setApplySuccessId(newId);
     setApplyStep(3);
@@ -191,15 +208,11 @@ export default function CustomerPortal() {
   return (
     <div className="flex flex-col h-screen w-full bg-[#F8FAFC] text-slate-800 font-sans overflow-hidden">
       
-      {/* ============================================================ */}
       {/* TOP HEADER BAR */}
-      {/* ============================================================ */}
       <header className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between shrink-0 z-30 shadow-xs">
-        {/* Left: Logo & Wallet Button */}
         <div className="flex items-center gap-6">
           <Logo variant="header" />
 
-          {/* Wallet Button */}
           <button
             onClick={() => setCustomerTab("payments")}
             className="bg-[#F1F5F9] hover:bg-[#EEF2FF] text-slate-700 font-medium px-4 py-1.5 rounded-full border border-slate-200 text-xs flex items-center gap-2 transition cursor-pointer"
@@ -209,9 +222,7 @@ export default function CustomerPortal() {
           </button>
         </div>
 
-        {/* Right: Search, Messages, Notifications, Profile Avatar & Role Switcher */}
         <div className="flex items-center gap-3">
-          {/* Search Input */}
           <div className="relative hidden md:block">
             <Search size={15} className="absolute left-3.5 top-2.5 text-slate-400" />
             <input
@@ -223,7 +234,6 @@ export default function CustomerPortal() {
             />
           </div>
 
-          {/* Chat Icon Button */}
           <button
             onClick={() => setCustomerTab("messages")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer"
@@ -232,7 +242,6 @@ export default function CustomerPortal() {
             <MessageSquare size={17} />
           </button>
 
-          {/* Notification Bell */}
           <button
             onClick={() => setCustomerTab("notifications")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer relative"
@@ -244,19 +253,17 @@ export default function CustomerPortal() {
             )}
           </button>
 
-          {/* Profile Avatar */}
           <div
             onClick={() => setCustomerTab("profile")}
             className="w-9 h-9 rounded-full overflow-hidden border border-slate-300 cursor-pointer shadow-xs hover:ring-2 hover:ring-[#4848F7]/40 transition"
           >
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256"
-              alt="Geeta Sharma"
+              alt={greetingName}
               className="w-full h-full object-cover"
             />
           </div>
 
-          {/* Log Out Button */}
           <div className="ml-2 pl-2 border-l border-slate-200">
             <button
               onClick={logoutSession}
@@ -270,16 +277,12 @@ export default function CustomerPortal() {
         </div>
       </header>
 
-      {/* ============================================================ */}
       {/* BODY LAYOUT: SIDEBAR + MAIN CONTENT */}
-      {/* ============================================================ */}
       <div className="flex flex-1 overflow-hidden">
         
         {/* LEFT SIDEBAR NAVIGATION */}
         <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between overflow-y-auto shrink-0 py-4 px-3 space-y-1">
           <nav className="space-y-1">
-            
-            {/* 1. Dashboard */}
             <button
               onClick={() => setCustomerTab("dashboard")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -292,7 +295,6 @@ export default function CustomerPortal() {
               <span>Dashboard</span>
             </button>
 
-            {/* 2. Apply for Visa */}
             <button
               onClick={() => setCustomerTab("apply")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -305,7 +307,6 @@ export default function CustomerPortal() {
               <span>Apply for Visa</span>
             </button>
 
-            {/* 3. My Applications (Collapsible) */}
             <div>
               <button
                 onClick={() => {
@@ -355,7 +356,6 @@ export default function CustomerPortal() {
               )}
             </div>
 
-            {/* 4. Documents (Collapsible) */}
             <div>
               <button
                 onClick={() => {
@@ -401,7 +401,6 @@ export default function CustomerPortal() {
               )}
             </div>
 
-            {/* 5. Payments (Collapsible) */}
             <div>
               <button
                 onClick={() => {
@@ -447,7 +446,6 @@ export default function CustomerPortal() {
               )}
             </div>
 
-            {/* 6. Appointments */}
             <button
               onClick={() => setCustomerTab("appointments")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -463,7 +461,6 @@ export default function CustomerPortal() {
               <ChevronRight size={15} />
             </button>
 
-            {/* 7. Explore Visas (Collapsible) */}
             <div>
               <button
                 onClick={() => {
@@ -511,7 +508,6 @@ export default function CustomerPortal() {
               )}
             </div>
 
-            {/* 8. Support */}
             <button
               onClick={() => setCustomerTab("support")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -524,7 +520,6 @@ export default function CustomerPortal() {
               <span>Support</span>
             </button>
 
-            {/* 9. My Profile */}
             <button
               onClick={() => setCustomerTab("profile")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -537,7 +532,6 @@ export default function CustomerPortal() {
               <span>My Profile</span>
             </button>
 
-            {/* 10. Settings */}
             <button
               onClick={() => setCustomerTab("settings")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -550,7 +544,6 @@ export default function CustomerPortal() {
               <span>Settings</span>
             </button>
 
-            {/* 11. Logout */}
             <button
               onClick={() => setShowLogoutModal(true)}
               className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all mt-4"
@@ -561,43 +554,47 @@ export default function CustomerPortal() {
           </nav>
         </aside>
 
-        {/* ============================================================ */}
         {/* MAIN DASHBOARD CONTENT AREA */}
-        {/* ============================================================ */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F8FAFC]">
           
-          {/* ============================================================ */}
           {/* SECTION 1: MAIN DASHBOARD OVERVIEW */}
-          {/* ============================================================ */}
           {customerTab === "dashboard" && (
             <div className="space-y-6">
               
-              {/* TOP ROW: Good Morning Card (Left 8 Cols) & Upcoming Appointment (Right 4 Cols) */}
+              {/* TOP ROW: Good Morning Card & Upcoming Appointment */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* LEFT: Good Morning, Geeta 👋 Card */}
+                {/* LEFT: Good Morning Card */}
                 <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between">
-                  <h2 className="text-xl font-bold text-slate-800 mb-6">Good Morning, Geeta 👋</h2>
+                  <h2 className="text-xl font-bold text-slate-800 mb-6">Good Morning, {greetingName} 👋</h2>
 
-                  {/* 8 Stats Metrics in 2 Rows of 4 Columns */}
+                  {/* 8 Stats Metrics */}
                   <div className="space-y-6">
                     {/* Row 1 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Total Applications</p>
-                        <p className="text-2xl font-extrabold text-slate-900">05</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.totalApplications).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Under Review</p>
-                        <p className="text-2xl font-extrabold text-slate-900">02</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.underReview).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Approved Visas</p>
-                        <p className="text-2xl font-extrabold text-slate-900">02</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.approvedVisas).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Rejected Applications</p>
-                        <p className="text-2xl font-extrabold text-slate-900">1</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.rejectedApplications)}
+                        </p>
                       </div>
                     </div>
 
@@ -607,19 +604,27 @@ export default function CustomerPortal() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Pending Documents</p>
-                        <p className="text-2xl font-extrabold text-slate-900">02</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.pendingDocuments).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Upcoming Appointment</p>
-                        <p className="text-2xl font-extrabold text-slate-900">01</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.upcomingAppointments ?? 1).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Unread Messages</p>
-                        <p className="text-2xl font-extrabold text-slate-900">03</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.unreadMessages ?? 2).padStart(2, "0")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-medium mb-1">Notifications</p>
-                        <p className="text-2xl font-extrabold text-slate-900">05</p>
+                        <p className="text-2xl font-extrabold text-slate-900">
+                          {String(liveMetrics.notifications ?? 3).padStart(2, "0")}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -978,7 +983,7 @@ export default function CustomerPortal() {
                         <td className="py-3 px-4 font-bold text-[#4848F7]">{a.id}</td>
                         <td className="py-3 px-4 font-medium text-slate-800">{a.destination}</td>
                         <td className="py-3 px-4 text-slate-600">{a.visaType}</td>
-                        <td className="py-3 px-4 text-slate-600">{a.appliedDate}</td>
+                        <td className="py-3 px-4 text-slate-600">{a.submissionDate}</td>
                         <td className="py-3 px-4 font-bold text-slate-700">{a.status}</td>
                       </tr>
                     ))}
