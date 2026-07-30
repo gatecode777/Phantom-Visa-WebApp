@@ -21,8 +21,10 @@ import {
   ArrowLeft,
   ChevronDown,
   Info,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from "lucide-react";
+import RegisterApplicant from "./RegisterApplicant";
 
 interface CountryOption {
   code: CountryCode;
@@ -56,6 +58,9 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
+  // Toggle for full Applicant Registration Page
+  const [showRegisterApplicant, setShowRegisterApplicant] = useState(false);
+
   // Screen Step: 1 = Phone Input, 2 = OTP Verification
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -305,6 +310,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     }, 600);
   };
 
+  if (showRegisterApplicant) {
+    return (
+      <RegisterApplicant
+        onClose={() => setShowRegisterApplicant(false)}
+        onSuccessSubmit={(data) => {
+          setShowRegisterApplicant(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#FAFAFC] text-slate-800 flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden select-none font-sans">
       
@@ -315,9 +331,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       {/* HEADER WORDMARK */}
       <header className="relative z-10 flex items-center justify-between max-w-6xl w-full mx-auto pb-4 border-b border-slate-200/80">
         <Logo variant="full" size="md" />
-        <div className="flex items-center gap-2 text-xs font-mono text-[#4848F7] bg-[#EEF2FF] px-3.5 py-1.5 rounded-full border border-[#4848F7]/20 font-bold shadow-xs">
-          <ShieldCheck size={14} className="text-[#4848F7]" />
-          <span>PHANTOM_AUTH_OS v4.8</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowRegisterApplicant(true)}
+            className="px-4 py-1.5 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-extrabold rounded-full shadow-md transition cursor-pointer flex items-center gap-1.5"
+          >
+            <UserPlus size={14} />
+            <span>Register as Applicant</span>
+          </button>
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#4848F7] bg-[#EEF2FF] px-3.5 py-1.5 rounded-full border border-[#4848F7]/20 font-bold shadow-xs">
+            <ShieldCheck size={14} className="text-[#4848F7]" />
+            <span>PHANTOM_AUTH_OS v4.8</span>
+          </div>
         </div>
       </header>
 
@@ -414,6 +439,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   </>
                 )}
               </button>
+
+              {/* REGISTER AS APPLICANT PROMPT BOX */}
+              <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+                <span className="text-xs text-slate-500 font-medium block">
+                  New to VisaOS or submitting a new application?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterApplicant(true)}
+                  className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <UserPlus size={15} />
+                  <span>Register as Applicant (Full Dossier Form)</span>
+                </button>
+              </div>
 
             </div>
           )}
