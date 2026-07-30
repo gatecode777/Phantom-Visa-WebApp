@@ -384,95 +384,112 @@ export default function InteractiveWorldMap({
               </div>
             );
           })}
-        </div>
 
-        {/* GLASSMORPHISM HOVER TOOLTIP (FOR ANY HOVERED COUNTRY) */}
-        {hoveredCountry && (
-          <div
-            style={{
-              left: `${(hoveredCountry.cx / 1000) * 100}%`,
-              top: `${(hoveredCountry.cy / 500) * 100}%`
-            }}
-            className="absolute -translate-x-1/2 -translate-y-full mb-4 pointer-events-none z-40 transition-all duration-200 animate-in fade-in zoom-in-95"
-          >
-            <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-2xl p-3.5 text-xs w-60 space-y-2">
-              {/* Country & Flag Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">
-                    {COUNTRY_FLAGS[hoveredCountry.name] || "🌐"}
-                  </span>
-                  <span className="font-bold text-slate-800 truncate max-w-[130px]">
-                    {hoveredCountry.name}
-                  </span>
-                </div>
+          {/* GLASSMORPHISM HOVER TOOLTIP (FOR ANY HOVERED COUNTRY) */}
+          {hoveredCountry && (() => {
+            const cy = hoveredCountry.cy ?? 250;
+            const cx = hoveredCountry.cx ?? 500;
+            const isTopRegion = cy < 180;
+            const isLeftEdge = cx < 200;
+            const isRightEdge = cx > 800;
 
-                {(() => {
-                  const matchedApp = applications.find(
-                    (a) =>
-                      a.destination.toLowerCase() === hoveredCountry.name.toLowerCase() ||
-                      (hoveredCountry.name === "United States of America" && a.destination === "USA") ||
-                      (hoveredCountry.name === "United Kingdom" && a.destination === "UK")
-                  );
-                  if (matchedApp) {
-                    const st = getStatusColor(matchedApp.status);
-                    return (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${st.lightBg} ${st.text} ${st.border}`}>
-                        {st.label}
+            let posClasses = isTopRegion ? "translate-y-4" : "-translate-y-full -mt-4";
+            if (isLeftEdge) {
+              posClasses += " translate-x-0";
+            } else if (isRightEdge) {
+              posClasses += " -translate-x-full";
+            } else {
+              posClasses += " -translate-x-1/2";
+            }
+
+            return (
+              <div
+                style={{
+                  left: `${(cx / 1000) * 100}%`,
+                  top: `${(cy / 500) * 100}%`
+                }}
+                className={`absolute pointer-events-none z-40 transition-all duration-200 animate-in fade-in zoom-in-95 ${posClasses}`}
+              >
+                <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-2xl p-3.5 text-xs w-60 space-y-2">
+                  {/* Country & Flag Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">
+                        {COUNTRY_FLAGS[hoveredCountry.name] || "🌐"}
                       </span>
-                    );
-                  }
-                  return (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                      Hovered
-                    </span>
-                  );
-                })()}
-              </div>
-
-              {/* Details Content */}
-              {(() => {
-                const matchedApp = applications.find(
-                  (a) =>
-                    a.destination.toLowerCase() === hoveredCountry.name.toLowerCase() ||
-                    (hoveredCountry.name === "United States of America" && a.destination === "USA") ||
-                    (hoveredCountry.name === "United Kingdom" && a.destination === "UK")
-                );
-
-                if (matchedApp) {
-                  return (
-                    <div className="space-y-1 text-[11px] text-slate-600">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Application ID:</span>
-                        <span className="font-mono font-bold text-slate-800">{matchedApp.id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Visa Type:</span>
-                        <span className="font-semibold text-slate-800">{matchedApp.visaType}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Applied On:</span>
-                        <span className="font-medium text-slate-700">{matchedApp.submissionDate}</span>
-                      </div>
+                      <span className="font-bold text-slate-800 truncate max-w-[130px]">
+                        {hoveredCountry.name}
+                      </span>
                     </div>
-                  );
-                }
 
-                return (
-                  <p className="text-[11px] text-slate-500 italic">
-                    Click to start a new visa application for {hoveredCountry.name}.
-                  </p>
-                );
-              })()}
+                    {(() => {
+                      const matchedApp = applications.find(
+                        (a) =>
+                          a.destination.toLowerCase() === hoveredCountry.name.toLowerCase() ||
+                          (hoveredCountry.name === "United States of America" && a.destination === "USA") ||
+                          (hoveredCountry.name === "United Kingdom" && a.destination === "UK")
+                      );
+                      if (matchedApp) {
+                        const st = getStatusColor(matchedApp.status);
+                        return (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${st.lightBg} ${st.text} ${st.border}`}>
+                            {st.label}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                          Hovered
+                        </span>
+                      );
+                    })()}
+                  </div>
 
-              {/* Click Hint */}
-              <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-[#4848F7] font-bold">
-                <span>Click for glowing outline & details</span>
-                <ChevronRight size={12} />
+                  {/* Details Content */}
+                  {(() => {
+                    const matchedApp = applications.find(
+                      (a) =>
+                        a.destination.toLowerCase() === hoveredCountry.name.toLowerCase() ||
+                        (hoveredCountry.name === "United States of America" && a.destination === "USA") ||
+                        (hoveredCountry.name === "United Kingdom" && a.destination === "UK")
+                    );
+
+                    if (matchedApp) {
+                      return (
+                        <div className="space-y-1 text-[11px] text-slate-600">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Application ID:</span>
+                            <span className="font-mono font-bold text-slate-800">{matchedApp.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Visa Type:</span>
+                            <span className="font-semibold text-slate-800">{matchedApp.visaType}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Applied On:</span>
+                            <span className="font-medium text-slate-700">{matchedApp.submissionDate}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <p className="text-[11px] text-slate-500 italic">
+                        Click to start a new visa application for {hoveredCountry.name}.
+                      </p>
+                    );
+                  })()}
+
+                  {/* Click Hint */}
+                  <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-[#4848F7] font-bold">
+                    <span>Click for glowing outline & details</span>
+                    <ChevronRight size={12} />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })()}
+        </div>
 
         {/* ZOOM & PAN CONTROL WIDGET (Bottom Right) */}
         <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md p-1.5 rounded-xl z-20">

@@ -156,7 +156,20 @@ export type AdminTab =
   | "matrix"
   | "audit";
 
+export interface AuthSession {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: "Admin" | "Agent" | "Staff" | "Applicant";
+  };
+  token: string;
+}
+
 interface VisaContextType {
+  authSession: AuthSession | null;
+  loginSession: (session: AuthSession) => void;
+  logoutSession: () => void;
   applications: Application[];
   walletBalance: number;
   ledger: LedgerEntry[];
@@ -203,7 +216,24 @@ let txnCounter = 9813;
 let comCounter = 4;
 
 export function VisaProvider({ children }: { children: React.ReactNode }) {
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [currentRole, setCurrentRole] = useState<"Agent" | "Staff" | "Customer" | "Super Admin">("Agent");
+
+  const loginSession = (session: AuthSession) => {
+    setAuthSession(session);
+    const roleMap: Record<string, "Agent" | "Staff" | "Customer" | "Super Admin"> = {
+      Admin: "Super Admin",
+      Applicant: "Customer",
+      Staff: "Staff",
+      Agent: "Agent"
+    };
+    const mappedRole = roleMap[session.user.role] || "Customer";
+    setCurrentRole(mappedRole);
+  };
+
+  const logoutSession = () => {
+    setAuthSession(null);
+  };
   const [agentTab, setAgentTab] = useState<AgentTab>("dashboard");
   const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
   const [customerTab, setCustomerTab] = useState<CustomerTab>("dashboard");
@@ -697,6 +727,9 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   return (
     <VisaContext.Provider
       value={{
+        authSession,
+        loginSession,
+        logoutSession,
         applications,
         walletBalance,
         ledger,

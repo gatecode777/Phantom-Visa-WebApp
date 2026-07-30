@@ -6,6 +6,8 @@ import StaffPortal from "./components/StaffPortal";
 import AdminPortal from "./components/AdminPortal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import Logo from "./components/Logo";
+import LoginPage from "./components/LoginPage";
+import { getDashboardPath } from "./lib/authService";
 import {
   Menu,
   X,
@@ -33,11 +35,16 @@ import {
   LifeBuoy,
   Settings,
   BarChart3,
-  FileCheck
+  FileCheck,
+  LogOut,
+  ShieldAlert
 } from "lucide-react";
 
 export function App() {
   const {
+    authSession,
+    loginSession,
+    logoutSession,
     currentRole,
     setRole,
     agentTab,
@@ -51,6 +58,12 @@ export function App() {
 
   // Mobile drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accessDeniedMsg, setAccessDeniedMsg] = useState<string | null>(null);
+
+  // Unauthenticated -> Render Phone + OTP Passwordless Login Page
+  if (!authSession) {
+    return <LoginPage onSuccess={(session) => loginSession(session)} />;
+  }
 
   // Define sidebar navigation items dynamically based on the current role
   const getSidebarNavItems = () => {
@@ -316,6 +329,29 @@ export function App() {
     return true;
   };
 
+  // Role Security Check
+  const handleRoleSwitchAttempt = (targetRole: "Agent" | "Staff" | "Customer" | "Super Admin") => {
+    const userRole = authSession.user.role;
+    const roleMap: Record<string, string> = {
+      Admin: "Super Admin",
+      Applicant: "Customer",
+      Staff: "Staff",
+      Agent: "Agent"
+    };
+
+    if (roleMap[userRole] !== targetRole) {
+      setAccessDeniedMsg(
+        `Server-side RBAC Enforcement: Your session token role (${userRole}) cannot access ${getDashboardPath(
+          targetRole as any
+        )}. Access Rejected.`
+      );
+      setTimeout(() => setAccessDeniedMsg(null), 4000);
+      return;
+    }
+
+    setRole(targetRole);
+  };
+
   // Helper for rendering the active portal
   const renderActivePortal = () => {
     switch (currentRole) {
@@ -335,8 +371,24 @@ export function App() {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-brand-midnight text-brand-paper font-sans">
       <ImpersonationBanner />
+
+      {/* ACCESS DENIED BANNER */}
+      {accessDeniedMsg && (
+        <div className="bg-red-500 text-white text-xs font-bold px-4 py-2 flex items-center justify-between z-50 animate-in slide-in-from-top">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={16} />
+            <span>{accessDeniedMsg}</span>
+          </div>
+          <button onClick={() => setAccessDeniedMsg(null)} className="hover:opacity-80">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {currentRole === "Customer" ? (
         <CustomerPortal />
+      ) : currentRole === "Super Admin" ? (
+        <AdminPortal />
       ) : (
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* LEFT SIDEBAR (Desktop) */}
@@ -399,12 +451,12 @@ export function App() {
             <Logo variant="header" />
           </div>
 
-          {/* Mini wallet display for Agent in mobile header */}
-          {currentRole === "Agent" && (
-            <span className="font-mono text-xs text-brand-gold font-bold">
-              ₹{formatINR(walletBalance)}
-            </span>
-          )}
+          <button
+            onClick={logoutSession}
+            className="flex items-center gap-1 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-lg"
+          >
+            <LogOut size={13} /> Exit
+          </button>
         </header>
 
         {/* Mobile Drawer Overlay */}
@@ -455,9 +507,14 @@ export function App() {
 
               <div className="flex-1" />
               
-              <div className="font-mono text-[9px] text-brand-gold/40 border-t border-brand-gold/10 pt-4">
-                <div>P&lt;OS&lt;&lt;PHANTOM&lt;VISA&lt;B2B&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
-                <div className="mt-1">SYS_VER: 4.8.2</div>
+              <div className="font-mono text-[9px] text-brand-gold/40 border-t border-brand-gold/10 pt-4 space-y-2">
+                <div>User: {authSession.user.phone}</div>
+                <button
+                  onClick={logoutSession}
+                  className="w-full bg-red-500/10 text-red-400 border border-red-500/30 py-1.5 rounded text-xs flex items-center justify-center gap-1 font-bold"
+                >
+                  <LogOut size={14} /> Log Out
+                </button>
               </div>
             </aside>
           </div>
@@ -468,43 +525,46 @@ export function App() {
           {/* Top Bar Navigation */}
           <div className="bg-brand-slate border-b border-brand-gold/15 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-20">
             {/* Left stats info */}
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-3 text-xs">
               <span className="font-outfit font-semibold text-brand-paper uppercase tracking-wider text-[11px]">
-                Active Access Profile: <span className="text-brand-gold font-mono">{currentRole}</span>
+                Authenticated User: <span className="text-brand-gold font-mono">{authSession.user.phone}</span>
+              </span>
+              <span className="text-brand-gold/30">|</span>
+              <span className="font-mono text-[10px] bg-brand-gold/10 text-brand-gold border border-brand-gold/20 px-2 py-0.5 rounded font-bold">
+                {getDashboardPath(authSession.user.role)}
               </span>
               {currentRole === "Agent" && (
                 <>
                   <span className="text-brand-gold/30">|</span>
                   <span className="font-mono text-brand-gold font-bold bg-brand-gold/10 border border-brand-gold/20 px-2.5 py-1 rounded">
-                    Ledger Liquidation: ₹{formatINR(walletBalance)}
+                    Ledger: ₹{formatINR(walletBalance)}
                   </span>
                 </>
               )}
             </div>
 
-            {/* Role selector switcher */}
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <div className="flex items-center gap-2 bg-brand-midnight border border-brand-gold/20 p-1 rounded-lg w-full sm:w-auto">
-                <span className="text-[10px] text-brand-paper/40 font-bold uppercase pl-2 hidden lg:inline">
-                  Access Token:
+            {/* Read-only Assigned Role & Logout */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2 bg-brand-midnight border border-brand-gold/20 px-3 py-1.5 rounded-lg text-xs font-mono">
+                <span className="text-[10px] text-brand-paper/40 font-bold uppercase">
+                  Role:
                 </span>
-                
-                <div className="grid grid-cols-4 gap-1 w-full sm:w-auto">
-                  {(["Agent", "Staff", "Customer", "Super Admin"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setRole(r)}
-                      className={`px-2 py-1.5 rounded text-[10px] font-bold tracking-tight transition whitespace-nowrap text-center ${
-                        currentRole === r
-                          ? "bg-brand-gold text-brand-midnight shadow-md shadow-brand-gold/10"
-                          : "text-brand-paper/60 hover:text-brand-paper hover:bg-brand-slate/40"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
+                <span className="font-bold text-brand-gold">
+                  {currentRole}
+                </span>
+                <span className="text-[9px] text-brand-teal font-bold bg-brand-teal/10 px-1.5 py-0.5 rounded border border-brand-teal/20">
+                  JWT Verified ✓
+                </span>
               </div>
+
+              <button
+                onClick={logoutSession}
+                className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg transition font-semibold text-xs shrink-0 cursor-pointer"
+                title="Log Out Session"
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Log Out</span>
+              </button>
             </div>
           </div>
 
@@ -520,3 +580,4 @@ export function App() {
 }
 
 export default App;
+

@@ -56,7 +56,8 @@ export default function CustomerPortal() {
     setCustomerTab,
     setRole,
     walletBalance,
-    currentRole
+    currentRole,
+    logoutSession
   } = useVisa();
 
   // Selected active application ID for tracking/documents
@@ -255,19 +256,16 @@ export default function CustomerPortal() {
             />
           </div>
 
-          {/* Role Switcher Pill */}
-          <div className="ml-2 pl-2 border-l border-slate-200 flex items-center gap-1">
-            <span className="text-[10px] text-slate-400 font-bold uppercase hidden xl:inline">Role:</span>
-            <select
-              value={currentRole}
-              onChange={(e) => setRole(e.target.value as any)}
-              className="bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold rounded px-2 py-1 focus:outline-none focus:border-[#4848F7]"
+          {/* Log Out Button */}
+          <div className="ml-2 pl-2 border-l border-slate-200">
+            <button
+              onClick={logoutSession}
+              className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-full font-bold text-xs transition cursor-pointer"
+              title="Log Out Session"
             >
-              <option value="Customer">Applicant</option>
-              <option value="Agent">Agent</option>
-              <option value="Staff">Staff</option>
-              <option value="Super Admin">Admin</option>
-            </select>
+              <LogOut size={14} />
+              <span>Log Out</span>
+            </button>
           </div>
         </div>
       </header>

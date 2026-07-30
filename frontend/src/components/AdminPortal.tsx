@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { useVisa, Application, VisaStatus, formatINR, AdminTab } from "../context/VisaContext";
+import { useVisa, Application, VisaStatus, formatINR } from "../context/VisaContext";
+import Logo from "./Logo";
+import AllApplicants from "./AllApplicants";
+import ActiveUsers from "./ActiveUsers";
+import BlockedUsers from "./BlockedUsers";
+import KycVerifications from "./KycVerifications";
+import UserActivityLogs from "./UserActivityLogs";
 import {
-  Users,
-  Settings,
-  Shield,
-  Activity,
-  Filter,
-  CheckCircle,
-  Building2,
-  Lock,
-  Globe,
   LayoutDashboard,
+  Users,
   Briefcase,
+  Globe,
   ClipboardList,
   FileText,
   CreditCard,
@@ -21,941 +20,1007 @@ import {
   MessageSquare,
   Bell,
   BarChart3,
+  Settings,
   LifeBuoy,
   User,
-  Plus,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
   Search,
+  Wallet,
+  TrendingUp,
+  ArrowUpRight,
   CheckCircle2,
+  Clock,
   AlertCircle,
-  X,
-  Upload,
-  RefreshCw,
+  XCircle,
+  Plus,
+  Filter,
+  Download,
   Eye,
-  Send,
+  Check,
+  X,
+  Sparkles,
+  ShieldCheck,
   Sliders,
   Database,
-  Key,
+  Lock,
   Mail,
   PhoneCall,
   Server,
-  DollarSign,
-  TrendingUp,
-  Award,
-  CheckSquare,
-  FileCheck,
-  Ban,
-  ShieldCheck,
-  Radio,
-  FileSpreadsheet
+  Building,
+  Key
 } from "lucide-react";
 
 export default function AdminPortal() {
   const {
     applications,
-    walletBalance,
-    ledger,
-    commissions,
-    auditLogs,
-    companies,
-    permissions,
-    togglePermission,
-    adminTab,
-    setAdminTab,
-    startImpersonation,
-    subscriptionTier,
-    setSubscriptionTier,
-    whiteLabelConfig,
-    updateWhiteLabelConfig,
-    featureFlags,
-    setFeatureFlagPercentage,
     updateApplicationStatus,
-    setRole
+    walletBalance,
+    logoutSession
   } = useVisa();
+
+  // Active Main Section & Sub Section state
+  const [activeSection, setActiveSection] = useState<string>("Dashboard");
+  const [activeSubItem, setActiveSubItem] = useState<string>("");
+
+  // Accordion Expand/Collapse State
+  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
+    "Apply for You": false,
+    "Agent Management": false,
+    "Visa Management": false,
+    "Applications": false,
+    "Documents": false,
+    "Payments": false,
+    "Appointments": false,
+    "Reports & Analytics": false,
+    "System Settings": false
+  });
+
+  const toggleAccordion = (name: string) => {
+    setOpenAccordions((prev) => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
+  };
 
   // Toast feedback state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 4000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // SUB-SECTION TAB STATES matching exact screenshot sub-items:
-
-  // 1. Dashboard: 'overview' | 'analytics' | 'recent_activities'
-  const [dashSubTab, setDashSubTab] = useState<"overview" | "analytics" | "recent_activities">("overview");
-
-  // 2. User Management: 'all_applicants' | 'active_users' | 'blocked_users' | 'kyc_verification' | 'user_activity_logs'
-  const [userMgmtSubTab, setUserMgmtSubTab] = useState<
-    "all_applicants" | "active_users" | "blocked_users" | "kyc_verification" | "user_activity_logs"
-  >("all_applicants");
-
-  // 3. Agent Management: 'all_agents' | 'add_agent' | 'pending_approval' | 'active_agents' | 'inactive_agents' | 'agent_performance'
-  const [agentMgmtSubTab, setAgentMgmtSubTab] = useState<
-    "all_agents" | "add_agent" | "pending_approval" | "active_agents" | "inactive_agents" | "agent_performance"
-  >("all_agents");
-
-  // 4. Visa Management: 'countries' | 'categories' | 'types' | 'requirements' | 'processing' | 'fees' | 'documents'
-  const [visaMgmtSubTab, setVisaMgmtSubTab] = useState<
-    "countries" | "categories" | "types" | "requirements" | "processing" | "fees" | "documents"
-  >("countries");
-
-  // 5. Applications: 'all' | 'new' | 'assigned' | 'under_review' | 'pending_docs' | 'approved' | 'rejected' | 'completed' | 'cancelled'
-  const [appSubTab, setAppSubTab] = useState<
-    "all" | "new" | "assigned" | "under_review" | "pending_docs" | "approved" | "rejected" | "completed" | "cancelled"
-  >("all");
-
-  // 6. Documents: 'all_docs' | 'pending_verif' | 'verified_docs' | 'rejected_docs' | 'templates'
-  const [docSubTab, setDocSubTab] = useState<
-    "all_docs" | "pending_verif" | "verified_docs" | "rejected_docs" | "templates"
-  >("all_docs");
-
-  // 7. Payments: 'all_txns' | 'successful' | 'pending' | 'failed' | 'refunds' | 'invoices'
-  const [paySubTab, setPaySubTab] = useState<
-    "all_txns" | "successful" | "pending" | "failed" | "refunds" | "invoices"
-  >("all_txns");
-
-  // 8. Appointments: 'all_appts' | 'upcoming' | 'completed' | 'cancelled'
-  const [apptSubTab, setApptSubTab] = useState<"all_appts" | "upcoming" | "completed" | "cancelled">("all_appts");
-
-  // 9. Messages: 'inbox' | 'applicant_msgs' | 'agent_msgs' | 'broadcast'
-  const [msgSubTab, setMsgSubTab] = useState<"inbox" | "applicant_msgs" | "agent_msgs" | "broadcast">("inbox");
-
-  // 10. Notifications: 'send' | 'email' | 'sms' | 'push' | 'history'
-  const [notifSubTab, setNotifSubTab] = useState<"send" | "email" | "sms" | "push" | "history">("send");
-
-  // 11. Reports & Analytics: 'dashboard_rep' | 'app_rep' | 'pay_rep' | 'rev_rep' | 'agent_perf' | 'country_rep' | 'visa_type_rep' | 'user_act'
-  const [reportSubTab, setReportSubTab] = useState<
-    "dashboard_rep" | "app_rep" | "pay_rep" | "rev_rep" | "agent_perf" | "country_rep" | "visa_type_rep" | "user_act"
-  >("dashboard_rep");
-
-  // 12. System Settings: 'general' | 'company' | 'roles' | 'gateway' | 'email_cfg' | 'sms_cfg' | 'security' | 'api' | 'backup'
-  const [settingsSubTab, setSettingsSubTab] = useState<
-    "general" | "company" | "roles" | "gateway" | "email_cfg" | "sms_cfg" | "security" | "api" | "backup"
-  >("general");
-
-  // 13. Support: 'tickets' | 'contact' | 'faqs' | 'feedback'
-  const [supportSubTab, setSupportSubTab] = useState<"tickets" | "contact" | "faqs" | "feedback">("tickets");
-
-  // 14. Profile: 'my_profile' | 'password' | 'login_history'
-  const [profileSubTab, setProfileSubTab] = useState<"my_profile" | "password" | "login_history">("my_profile");
-
-  // Form & Input States
-  const [newAgentForm, setNewAgentForm] = useState({
-    name: "",
-    license: "",
-    email: "",
-    tier: "Platinum",
-    creditLimit: 500000
-  });
-
-  const [broadcastMessage, setBroadcastMessage] = useState({
-    targetRole: "All",
-    subject: "",
-    content: "",
-    channel: "Push & Email"
-  });
-
+  // Filter States for tables
   const [searchQuery, setSearchQuery] = useState("");
-  const [actorFilter, setActorFilter] = useState("all");
+  const [timeRange, setTimeRange] = useState("Last 30 Days");
 
-  const [agentsList, setAgentsList] = useState([
-    { id: "AG-8819", name: "Apex Travel Ltd", license: "LIC-DE-9912", email: "contact@apextravel.com", status: "ACTIVE", volume: 28, revenue: 371840, tier: "Platinum 30%" },
-    { id: "AG-8820", name: "Global Nomads Co", license: "LIC-UK-8812", email: "info@globalnomads.com", status: "ACTIVE", volume: 14, revenue: 198420, tier: "Gold 25%" },
-    { id: "AG-8821", name: "Horizon Visa Bureau", license: "LIC-IN-4410", email: "support@horizonvisa.in", status: "PENDING_APPROVAL", volume: 4, revenue: 52400, tier: "Silver 20%" },
-    { id: "AG-8822", name: "Pacific Voyage LLC", license: "LIC-US-1102", email: "admin@pacificvoyage.us", status: "BLOCKED", volume: 0, revenue: 0, tier: "Standard 15%" }
-  ]);
-
-  const [usersList, setUsersList] = useState([
-    { id: "USR-01", name: "Sophia Martinez", email: "sophia.m@gmail.com", kyc: "VERIFIED", status: "ACTIVE", role: "Customer", lastLogin: "Today 09:15 AM" },
-    { id: "USR-02", name: "Liam Chen", email: "liam.chen@techasia.cn", kyc: "VERIFIED", status: "ACTIVE", role: "Customer", lastLogin: "Yesterday 14:20 PM" },
-    { id: "USR-03", name: "Amara Okafor", email: "amara.o@lagos.org", kyc: "PENDING", status: "ACTIVE", role: "Customer", lastLogin: "July 20, 2026" },
-    { id: "USR-04", name: "Yusuf Al-Farsi", email: "yusuf.alfarsi@dubai.ae", kyc: "VERIFIED", status: "ACTIVE", role: "Customer", lastLogin: "July 21, 2026" },
-    { id: "USR-05", name: "Emma Watson", email: "emma.watson@london.uk", kyc: "REJECTED", status: "BLOCKED", role: "Customer", lastLogin: "July 10, 2026" }
-  ]);
-
-  const filteredLogs = auditLogs.filter((log) => {
-    const matchesActor = actorFilter === "all" || log.actor.toLowerCase().includes(actorFilter.toLowerCase());
-    const matchesSearch =
-      searchQuery === "" ||
-      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.actor.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesActor && matchesSearch;
-  });
+  // Sidebar Menu Definition matching 1:1 with the screenshot
+  const menuStructure = [
+    { type: "item", name: "Dashboard", icon: LayoutDashboard },
+    {
+      type: "group",
+      name: "Apply for You",
+      icon: Users,
+      children: [
+        "All Applicants",
+        "Active Users",
+        "Blocked Users",
+        "KYC Verifications",
+        "User Activity Logs"
+      ]
+    },
+    {
+      type: "group",
+      name: "Agent Management",
+      icon: Briefcase,
+      children: [
+        "All Agents",
+        "Add New Agents",
+        "Pending Approval",
+        "Active Agents",
+        "Inactive Agents",
+        "Agent Performance"
+      ]
+    },
+    {
+      type: "group",
+      name: "Visa Management",
+      icon: Globe,
+      children: [
+        "Countries",
+        "Visa Categories",
+        "Visa Types",
+        "Visa Requirements",
+        "Processing Time",
+        "Visa Fees",
+        "Required Documents"
+      ]
+    },
+    {
+      type: "group",
+      name: "Applications",
+      icon: ClipboardList,
+      children: [
+        "All Applications",
+        "New Applications",
+        "Assigned Applications",
+        "Under Review",
+        "Pending Documents",
+        "Approved",
+        "Rejected",
+        "Completed",
+        "Cancelled"
+      ]
+    },
+    {
+      type: "group",
+      name: "Documents",
+      icon: FileText,
+      children: [
+        "All Documents",
+        "Pending Verification",
+        "Verified Documents",
+        "Rejected Documents",
+        "Document Templates"
+      ]
+    },
+    {
+      type: "group",
+      name: "Payments",
+      icon: CreditCard,
+      children: [
+        "All Transactions",
+        "Successful Payments",
+        "Pending Payments",
+        "Failed Payments",
+        "Refund Requests",
+        "Invoices"
+      ]
+    },
+    {
+      type: "group",
+      name: "Appointments",
+      icon: Calendar,
+      children: [
+        "All Appointments",
+        "Upcoming",
+        "Completed",
+        "Cancelled"
+      ]
+    },
+    { type: "item", name: "Messages", icon: MessageSquare },
+    { type: "item", name: "Notifications", icon: Bell },
+    {
+      type: "group",
+      name: "Reports & Analytics",
+      icon: BarChart3,
+      children: [
+        "Dashboard Reports",
+        "Application Reports",
+        "Payment Reports",
+        "Revenue Reports",
+        "Agent Performance",
+        "Country-wise Reports",
+        "Visa Type Reports",
+        "User Activity"
+      ]
+    },
+    {
+      type: "group",
+      name: "System Settings",
+      icon: Settings,
+      children: [
+        "General Settings",
+        "Company Profile",
+        "Roles & Permissions",
+        "Payment Gateway",
+        "Email Configuration",
+        "SMS Configuration",
+        "Security Settings",
+        "API Integrations",
+        "Backup & Restore"
+      ]
+    },
+    { type: "item", name: "Support", icon: LifeBuoy },
+    { type: "item", name: "My Profile", icon: User },
+    { type: "item", name: "Logout", icon: LogOut, action: () => logoutSession() }
+  ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-brand-midnight text-brand-paper overflow-hidden">
-      {/* Toast Banner */}
+    <div className="flex flex-col h-screen w-full bg-[#F8FAFC] text-slate-800 font-sans overflow-hidden select-none">
+      
+      {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-4 right-4 z-50 bg-brand-gold text-brand-midnight font-bold text-xs px-4 py-2.5 rounded shadow-xl border border-white/20 animate-fade-in flex items-center gap-2">
-          <ShieldCheck size={16} />
+        <div className="fixed top-4 right-4 z-50 bg-[#4848F7] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
+          <CheckCircle2 size={16} />
           <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* SUPER ADMIN PLATFORM CONTROL BAR */}
-      <div className="bg-brand-slate border-b border-brand-gold/15 px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-gold/15 border border-brand-gold/30 flex items-center justify-center text-brand-gold font-bold text-sm">
-            <Shield size={18} />
-          </div>
-          <div>
-            <h2 className="font-outfit font-bold text-base text-brand-paper capitalize">
-              Super Admin Operating Console &mdash; {adminTab.replace("_", " ")}
-            </h2>
-            <p className="text-[10px] text-brand-paper/50">
-              Master Instance: <span className="font-mono text-brand-gold">PHANTOM-OS-ROOT-01</span> &bull; 256-Bit SSL Encrypted
-            </p>
-          </div>
-        </div>
+      {/* ============================================================ */}
+      {/* TOP HEADER BAR */}
+      {/* ============================================================ */}
+      <header className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between shrink-0 z-30 shadow-xs">
+        {/* Left Logo & Wallet Badge */}
+        <div className="flex items-center gap-6">
+          <Logo variant="header" />
 
-        {/* Global Control Plane Metrics */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="hidden lg:block text-right">
-            <span className="text-[10px] text-brand-paper/50 block">Platform Gross Volume</span>
-            <span className="font-outfit font-bold text-brand-gold font-mono">₹1,42,85,000</span>
-          </div>
-          <div className="hidden lg:block text-right">
-            <span className="text-[10px] text-brand-paper/50 block">Net Commission Share</span>
-            <span className="font-outfit font-bold text-brand-teal font-mono">₹42,85,500</span>
-          </div>
-          <select
-            value={subscriptionTier}
-            onChange={(e) => {
-              setSubscriptionTier(e.target.value as any);
-              showToast(`Tenant Subscription Tier updated to: ${e.target.value}`);
+          <button
+            onClick={() => {
+              setActiveSection("Payments");
+              setActiveSubItem("All Transactions");
             }}
-            className="bg-brand-midnight border border-brand-gold/30 text-brand-gold text-xs font-bold px-2.5 py-1.5 rounded outline-none"
+            className="bg-[#EEF2FF] hover:bg-indigo-100 text-[#4848F7] font-semibold px-3.5 py-1.5 rounded-full border border-[#4848F7]/20 text-xs flex items-center gap-2 transition cursor-pointer shadow-2xs"
           >
-            <option value="Starter">Starter Tier</option>
-            <option value="Growth">Growth Tier</option>
-            <option value="Enterprise">Enterprise Tier</option>
-          </select>
+            <Wallet size={15} className="text-[#4848F7]" />
+            <span className="font-bold">Wallet</span>
+          </button>
         </div>
-      </div>
 
-      {/* MAIN BODY SCROLL AREA */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-        {/* ============================================================ */}
-        {/* SECTION 1: DASHBOARD */}
-        {/* Sub-items: Overview, Analytics, Recent Activities */}
-        {/* ============================================================ */}
-        {adminTab === "dashboard" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-3">
-                {[
-                  { key: "overview", label: "Overview" },
-                  { key: "analytics", label: "System Analytics" },
-                  { key: "recent_activities", label: "Recent Activities" }
-                ].map((st) => (
-                  <button
-                    key={st.key}
-                    onClick={() => setDashSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      dashSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md shadow-brand-gold/10"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
-
-              <span className="text-[11px] font-mono text-brand-teal font-bold">
-                PLATFORM HEALTH: 99.98% ONLINE ✓
-              </span>
-            </div>
-
-            {dashSubTab === "overview" && (
-              <div className="space-y-6">
-                {/* Metric Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-brand-slate border border-brand-gold/15 p-5 rounded-lg space-y-1">
-                    <div className="flex justify-between items-center text-brand-paper/50">
-                      <span className="text-xs font-medium uppercase tracking-wider">Gross GMV Revenue</span>
-                      <DollarSign size={18} className="text-brand-gold" />
-                    </div>
-                    <p className="font-outfit text-2xl font-bold text-brand-gold font-mono">₹1,42,85,000</p>
-                    <p className="text-[10px] text-brand-teal">+24.8% YoY Growth across 3 tenants</p>
-                  </div>
-
-                  <div className="bg-brand-slate border border-brand-gold/15 p-5 rounded-lg space-y-1">
-                    <div className="flex justify-between items-center text-brand-paper/50">
-                      <span className="text-xs font-medium uppercase tracking-wider">Registered Applicants</span>
-                      <Users size={18} className="text-brand-paper" />
-                    </div>
-                    <p className="font-outfit text-2xl font-bold text-brand-paper">{usersList.length} Active</p>
-                    <p className="text-[10px] text-brand-paper/50">Verified end-user accounts</p>
-                  </div>
-
-                  <div className="bg-brand-slate border border-brand-gold/15 p-5 rounded-lg space-y-1">
-                    <div className="flex justify-between items-center text-brand-paper/50">
-                      <span className="text-xs font-medium uppercase tracking-wider">Onboarded B2B Agencies</span>
-                      <Briefcase size={18} className="text-brand-gold" />
-                    </div>
-                    <p className="font-outfit text-2xl font-bold text-brand-paper">{agentsList.length} Agencies</p>
-                    <p className="text-[10px] text-brand-teal">Platinum & Gold partners</p>
-                  </div>
-
-                  <div className="bg-brand-slate border border-brand-gold/15 p-5 rounded-lg space-y-1">
-                    <div className="flex justify-between items-center text-brand-paper/50">
-                      <span className="text-xs font-medium uppercase tracking-wider">Active Visa Queue</span>
-                      <ClipboardList size={18} className="text-brand-teal" />
-                    </div>
-                    <p className="font-outfit text-2xl font-bold text-brand-paper">{applications.length} Files</p>
-                    <p className="text-[10px] text-brand-paper/50">Under consular review</p>
-                  </div>
-                </div>
-
-                {/* Master Applications Queue Summary */}
-                <div className="bg-brand-slate border border-brand-gold/15 rounded-lg overflow-hidden p-5 space-y-3">
-                  <h3 className="font-outfit font-bold text-sm text-brand-gold uppercase tracking-wider">
-                    Global System Applications Stream
-                  </h3>
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-brand-midnight text-brand-gold font-mono uppercase text-[10px]">
-                      <tr>
-                        <th className="p-3">App ID</th>
-                        <th className="p-3">Applicant Name</th>
-                        <th className="p-3">Destination</th>
-                        <th className="p-3">Visa Type</th>
-                        <th className="p-3">Fee</th>
-                        <th className="p-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-brand-gold/10">
-                      {applications.map((a) => (
-                        <tr key={a.id} className="hover:bg-brand-midnight/40">
-                          <td className="p-3 font-mono font-bold text-brand-gold">{a.id}</td>
-                          <td className="p-3 font-bold text-brand-paper">{a.travelerName}</td>
-                          <td className="p-3 text-brand-paper/80">{a.destination}</td>
-                          <td className="p-3 text-brand-paper/70">{a.visaType}</td>
-                          <td className="p-3 font-mono font-bold text-brand-paper">₹{formatINR(a.fees)}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase ${
-                              a.status === "Approved" ? "bg-brand-teal/20 text-brand-teal" : a.status === "Rejected" ? "bg-brand-red/20 text-brand-red" : "bg-brand-gold/20 text-brand-gold"
-                            }`}>
-                              {a.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {dashSubTab === "analytics" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-                <h3 className="font-outfit font-bold text-base text-brand-gold">Global System Analytics & Engine Performance</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10">
-                    <p className="text-brand-paper/50">AI OCR Scanner Precision</p>
-                    <p className="text-xl font-bold text-brand-teal">99.4% Match</p>
-                  </div>
-                  <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10">
-                    <p className="text-brand-paper/50">Average Consular Processing SLA</p>
-                    <p className="text-xl font-bold text-brand-paper">4.2 Days</p>
-                  </div>
-                  <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10">
-                    <p className="text-brand-paper/50">Realtime WebSocket Latency</p>
-                    <p className="text-xl font-bold text-brand-gold font-mono">1.8 ms</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {dashSubTab === "recent_activities" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-                <h3 className="font-outfit font-bold text-base text-brand-gold">Platform Audit Activity Stream</h3>
-                <div className="space-y-2 font-mono">
-                  {auditLogs.map((log) => (
-                    <div key={log.id} className="bg-brand-midnight p-3 rounded border border-brand-gold/10 flex justify-between">
-                      <div>
-                        <span className="text-brand-gold font-bold">{log.actor}</span>: {log.action}
-                      </div>
-                      <span className="text-brand-paper/40 text-[10px]">{log.timestamp}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* Right Search, Chat, Bell, Profile Avatar */}
+        <div className="flex items-center gap-3">
+          {/* Search Field */}
+          <div className="relative hidden md:block">
+            <Search size={15} className="absolute left-3.5 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-[#F8FAFC] border border-slate-200 text-xs pl-9 pr-4 py-2 rounded-full w-64 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#4848F7] transition"
+            />
           </div>
-        )}
 
-        {/* ============================================================ */}
-        {/* SECTION 2: USER MANAGEMENT */}
-        {/* Sub-items: All Applicants, Active Users, Blocked Users, KYC Verification, User Activity Logs */}
-        {/* ============================================================ */}
-        {adminTab === "user_management" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { key: "all_applicants", label: "All Applicants" },
-                  { key: "active_users", label: "Active Users" },
-                  { key: "blocked_users", label: "Blocked Users" },
-                  { key: "kyc_verification", label: "KYC Verification" },
-                  { key: "user_activity_logs", label: "User Activity Logs" }
-                ].map((st) => (
-                  <button
-                    key={st.key}
-                    onClick={() => setUserMgmtSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      userMgmtSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Messages */}
+          <button
+            onClick={() => {
+              setActiveSection("Messages");
+              setActiveSubItem("");
+            }}
+            className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+            title="Messages"
+          >
+            <MessageSquare size={16} />
+          </button>
 
-            {userMgmtSubTab === "all_applicants" && (
-              <div className="bg-brand-slate border border-brand-gold/15 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-brand-midnight text-brand-gold font-mono uppercase text-[10px]">
-                    <tr>
-                      <th className="p-3">User ID</th>
-                      <th className="p-3">Full Name</th>
-                      <th className="p-3">Email Address</th>
-                      <th className="p-3">KYC Status</th>
-                      <th className="p-3">Account Status</th>
-                      <th className="p-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-gold/10">
-                    {usersList.map((u) => (
-                      <tr key={u.id} className="hover:bg-brand-midnight/40">
-                        <td className="p-3 font-mono font-bold text-brand-gold">{u.id}</td>
-                        <td className="p-3 font-bold text-brand-paper">{u.name}</td>
-                        <td className="p-3 text-brand-paper/70">{u.email}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
-                            u.kyc === "VERIFIED" ? "bg-brand-teal/20 text-brand-teal" : "bg-amber-500/20 text-amber-500"
-                          }`}>
-                            {u.kyc}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
-                            u.status === "ACTIVE" ? "bg-brand-teal/20 text-brand-teal" : "bg-brand-red/20 text-brand-red"
-                          }`}>
-                            {u.status}
-                          </span>
-                        </td>
-                        <td className="p-3 flex gap-2">
-                          {u.status === "ACTIVE" ? (
-                            <button
-                              onClick={() => {
-                                setUsersList(usersList.map((item) => (item.id === u.id ? { ...item, status: "BLOCKED" } : item)));
-                                showToast(`Account ${u.name} has been blocked.`);
-                              }}
-                              className="bg-brand-red/20 hover:bg-brand-red text-brand-red hover:text-white font-bold text-[10px] px-2.5 py-1 rounded"
-                            >
-                              Block User
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setUsersList(usersList.map((item) => (item.id === u.id ? { ...item, status: "ACTIVE" } : item)));
-                                showToast(`Account ${u.name} unblocked successfully.`);
-                              }}
-                              className="bg-brand-teal/20 hover:bg-brand-teal text-brand-teal hover:text-brand-midnight font-bold text-[10px] px-2.5 py-1 rounded"
-                            >
-                              Unblock
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          {/* Notifications */}
+          <button
+            onClick={() => {
+              setActiveSection("Notifications");
+              setActiveSubItem("");
+            }}
+            className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer relative"
+            title="Notifications"
+          >
+            <Bell size={16} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#4848F7] rounded-full" />
+          </button>
 
-            {userMgmtSubTab === "kyc_verification" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-                <h3 className="font-outfit font-bold text-base text-brand-gold">Applicant Identity KYC Verification Queue</h3>
-                <div className="space-y-3">
-                  {usersList.filter((u) => u.kyc === "PENDING").map((u) => (
-                    <div key={u.id} className="bg-brand-midnight p-4 rounded border border-brand-gold/10 flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-brand-paper">{u.name} ({u.email})</p>
-                        <p className="text-[10px] text-brand-paper/50">Passport & Aadhaar ID Scans Uploaded</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setUsersList(usersList.map((item) => (item.id === u.id ? { ...item, kyc: "VERIFIED" } : item)));
-                            showToast(`KYC Approved for ${u.name}`);
-                          }}
-                          className="bg-brand-teal text-brand-midnight font-bold px-3 py-1 rounded"
-                        >
-                          Approve KYC
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* User Profile Avatar */}
+          <div
+            onClick={() => {
+              setActiveSection("My Profile");
+              setActiveSubItem("");
+            }}
+            className="w-9 h-9 rounded-full overflow-hidden border border-slate-300 cursor-pointer shadow-xs hover:ring-2 hover:ring-[#4848F7]/40 transition"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256"
+              alt="Geeta"
+              className="w-full h-full object-cover"
+            />
           </div>
-        )}
+        </div>
+      </header>
 
-        {/* ============================================================ */}
-        {/* SECTION 3: AGENT MANAGEMENT */}
-        {/* Sub-items: All Agents, Add New Agent, Pending Approval, Active Agents, Inactive Agents, Agent Performance */}
-        {/* ============================================================ */}
-        {adminTab === "agent_management" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { key: "all_agents", label: "All Agents" },
-                  { key: "add_agent", label: "Add New Agent" },
-                  { key: "pending_approval", label: "Pending Approval" },
-                  { key: "active_agents", label: "Active Agents" },
-                  { key: "agent_performance", label: "Agent Performance" }
-                ].map((st) => (
+      {/* ============================================================ */}
+      {/* BODY LAYOUT: SIDEBAR + MAIN CONTENT */}
+      {/* ============================================================ */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* LEFT SIDEBAR ACCORDION NAVIGATION */}
+        <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between overflow-y-auto shrink-0 py-3 px-2 z-20">
+          <nav className="space-y-1">
+            {menuStructure.map((menuItem, idx) => {
+              const IconComp = menuItem.icon;
+
+              if (menuItem.type === "item") {
+                const isActive = activeSection === menuItem.name && !activeSubItem;
+
+                return (
                   <button
-                    key={st.key}
-                    onClick={() => setAgentMgmtSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      agentMgmtSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {agentMgmtSubTab === "all_agents" && (
-              <div className="bg-brand-slate border border-brand-gold/15 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-brand-midnight text-brand-gold font-mono uppercase text-[10px]">
-                    <tr>
-                      <th className="p-3">Agent ID</th>
-                      <th className="p-3">Agency Name</th>
-                      <th className="p-3">License No</th>
-                      <th className="p-3">Tier</th>
-                      <th className="p-3">Files Volume</th>
-                      <th className="p-3">Revenue Share</th>
-                      <th className="p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-gold/10">
-                    {agentsList.map((a) => (
-                      <tr key={a.id} className="hover:bg-brand-midnight/40">
-                        <td className="p-3 font-mono font-bold text-brand-gold">{a.id}</td>
-                        <td className="p-3 font-bold text-brand-paper">{a.name}</td>
-                        <td className="p-3 font-mono text-brand-paper/70">{a.license}</td>
-                        <td className="p-3 text-brand-teal font-bold">{a.tier}</td>
-                        <td className="p-3 font-bold text-brand-paper">{a.volume} Visas</td>
-                        <td className="p-3 font-mono font-bold text-brand-gold">₹{formatINR(a.revenue)}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
-                            a.status === "ACTIVE" ? "bg-brand-teal/20 text-brand-teal" : "bg-amber-500/20 text-amber-500"
-                          }`}>
-                            {a.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {agentMgmtSubTab === "add_agent" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-6 max-w-2xl">
-                <h3 className="font-outfit font-bold text-lg text-brand-gold">Onboard New B2B Travel Agency</h3>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setAgentsList([
-                      ...agentsList,
-                      {
-                        id: `AG-${Math.floor(8823 + Math.random() * 100)}`,
-                        name: newAgentForm.name,
-                        license: newAgentForm.license,
-                        email: newAgentForm.email,
-                        status: "ACTIVE",
-                        volume: 0,
-                        revenue: 0,
-                        tier: `${newAgentForm.tier} 30%`
+                    key={menuItem.name || idx}
+                    onClick={() => {
+                      if (menuItem.action) {
+                        menuItem.action();
+                      } else {
+                        setActiveSection(menuItem.name);
+                        setActiveSubItem("");
                       }
-                    ]);
-                    showToast(`Onboarded agency partner: ${newAgentForm.name}`);
-                    setAgentMgmtSubTab("all_agents");
-                  }}
-                  className="space-y-4 text-xs"
-                >
-                  <div>
-                    <label className="block text-brand-paper/70 font-semibold mb-1">Agency Legal Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Horizon Travel Bureau"
-                      value={newAgentForm.name}
-                      onChange={(e) => setNewAgentForm({ ...newAgentForm, name: e.target.value })}
-                      className="w-full bg-brand-midnight border border-brand-gold/20 rounded px-3 py-2 text-brand-paper"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-brand-paper/70 font-semibold mb-1">License / IATA Number</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="LIC-IN-99128"
-                      value={newAgentForm.license}
-                      onChange={(e) => setNewAgentForm({ ...newAgentForm, license: e.target.value })}
-                      className="w-full bg-brand-midnight border border-brand-gold/20 rounded px-3 py-2 text-brand-paper font-mono"
-                    />
-                  </div>
-
-                  <button type="submit" className="bg-brand-gold hover:bg-brand-gold-hover text-brand-midnight font-bold text-xs px-5 py-2.5 rounded">
-                    Confirm Agency Onboarding
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* SECTION 4: VISA MANAGEMENT */}
-        {/* Sub-items: Countries, Visa Categories, Visa Types, Visa Requirements, Processing Time, Visa Fees, Required Documents */}
-        {/* ============================================================ */}
-        {adminTab === "visa_management" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { key: "countries", label: "Countries" },
-                  { key: "categories", label: "Categories" },
-                  { key: "types", label: "Visa Types" },
-                  { key: "requirements", label: "Requirements" },
-                  { key: "processing", label: "Processing SLA" },
-                  { key: "fees", label: "Fee Matrix" }
-                ].map((st) => (
-                  <button
-                    key={st.key}
-                    onClick={() => setVisaMgmtSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      visaMgmtSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-[#EEF2FF] text-[#4848F7] font-bold border-l-4 border-[#4848F7] shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                     }`}
                   >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {visaMgmtSubTab === "countries" && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { name: "Germany", code: "DE", zone: "Schengen Area", status: "ACTIVE", price: "₹13,280" },
-                  { name: "France", code: "FR", zone: "Schengen Area", status: "ACTIVE", price: "₹12,865" },
-                  { name: "United Kingdom", code: "GB", zone: "UK Visas", status: "ACTIVE", price: "₹16,185" },
-                  { name: "Canada", code: "CA", zone: "IRCC", status: "ACTIVE", price: "₹23,240" },
-                  { name: "Japan", code: "JP", zone: "eVisa", status: "ACTIVE", price: "₹7,885" },
-                  { name: "United States", code: "US", zone: "DS-160", status: "ACTIVE", price: "₹16,500" }
-                ].map((c) => (
-                  <div key={c.code} className="bg-brand-slate border border-brand-gold/15 p-5 rounded-lg space-y-2 text-xs">
-                    <div className="flex justify-between font-bold text-sm text-brand-paper">
-                      <span>{c.name} ({c.code})</span>
-                      <span className="font-mono text-brand-gold">{c.price}</span>
+                    <div className="flex items-center gap-2.5">
+                      <IconComp size={16} className={isActive ? "text-[#4848F7]" : "text-slate-500"} />
+                      <span>{menuItem.name}</span>
                     </div>
-                    <p className="text-brand-paper/50">{c.zone}</p>
-                    <span className="inline-block bg-brand-teal/20 text-brand-teal font-mono text-[10px] font-bold px-2 py-0.5 rounded">
-                      {c.status}
-                    </span>
+                  </button>
+                );
+              }
+
+              // Accordion Group
+              const isAccordionOpen = openAccordions[menuItem.name];
+              const isGroupActive = activeSection === menuItem.name;
+
+              return (
+                <div key={menuItem.name} className="space-y-0.5">
+                  <button
+                    onClick={() => {
+                      toggleAccordion(menuItem.name);
+                      setActiveSection(menuItem.name);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                      isGroupActive
+                        ? "bg-slate-100/80 text-slate-900 font-bold"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <IconComp size={16} className={isGroupActive ? "text-[#4848F7]" : "text-slate-500"} />
+                      <span>{menuItem.name}</span>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      className={`text-slate-400 transition-transform duration-200 ${
+                        isAccordionOpen ? "rotate-180 text-[#4848F7]" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Accordion Sub-items */}
+                  {isAccordionOpen && (
+                    <div className="pl-8 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-5 animate-in fade-in duration-150">
+                      {menuItem.children?.map((subName) => {
+                        const isSubActive = activeSection === menuItem.name && activeSubItem === subName;
+                        return (
+                          <button
+                            key={subName}
+                            onClick={() => {
+                              setActiveSection(menuItem.name);
+                              setActiveSubItem(subName);
+                            }}
+                            className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium flex items-center gap-2 transition cursor-pointer ${
+                              isSubActive
+                                ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
+                                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/60"
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? "bg-[#4848F7]" : "bg-slate-300"}`} />
+                            <span className="truncate">{subName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* MAIN DASHBOARD CONTENT DISPLAY AREA */}
+        <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F8FAFC]">
+          
+          {/* ============================================================ */}
+          {/* 1. MAIN ADMIN DASHBOARD VIEW (WHEN ACTIVE SECTION IS DASHBOARD) */}
+          {/* ============================================================ */}
+          {activeSection === "Dashboard" && !activeSubItem && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              
+              {/* WELCOME BANNER */}
+              <div>
+                <h1 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                  <span>Welcome back, Geeta</span>
+                  <span className="text-xl">👋</span>
+                </h1>
+              </div>
+
+              {/* 5 KEY STAT CARDS GRID */}
+              <div className="space-y-4">
+                {/* Row 1: 3 Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  {/* Total Applications */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
+                    <p className="text-xs font-semibold text-slate-500">Total Applications</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">1,248</h3>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* ============================================================ */}
-        {/* SECTION 5: APPLICATIONS */}
-        {/* Sub-items: All Applications, New Applications, Assigned Applications, Under Review, Pending Documents, Approved, Rejected, Completed, Cancelled */}
-        {/* ============================================================ */}
-        {adminTab === "applications" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { key: "all", label: "All Applications" },
-                  { key: "new", label: "New Applications" },
-                  { key: "under_review", label: "Under Review" },
-                  { key: "approved", label: "Approved" },
-                  { key: "rejected", label: "Rejected" }
-                ].map((st) => (
-                  <button
-                    key={st.key}
-                    onClick={() => setAppSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      appSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  {/* Under Review */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
+                    <p className="text-xs font-semibold text-slate-500">Under Review</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">342</h3>
+                  </div>
 
-            <div className="bg-brand-slate border border-brand-gold/15 rounded-lg overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-brand-midnight text-brand-gold font-mono uppercase text-[10px]">
-                  <tr>
-                    <th className="p-3">App ID</th>
-                    <th className="p-3">Applicant Name</th>
-                    <th className="p-3">Destination</th>
-                    <th className="p-3">Visa Type</th>
-                    <th className="p-3">Fee</th>
-                    <th className="p-3">Status Override</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-gold/10">
-                  {applications.map((a) => (
-                    <tr key={a.id} className="hover:bg-brand-midnight/40">
-                      <td className="p-3 font-mono font-bold text-brand-gold">{a.id}</td>
-                      <td className="p-3 font-bold text-brand-paper">{a.travelerName}</td>
-                      <td className="p-3 text-brand-paper/80">{a.destination}</td>
-                      <td className="p-3 text-brand-paper/70">{a.visaType}</td>
-                      <td className="p-3 font-mono font-bold text-brand-paper">₹{formatINR(a.fees)}</td>
-                      <td className="p-3 flex gap-2">
-                        <button
-                          onClick={() => {
-                            updateApplicationStatus(a.id, "Approved");
-                            showToast(`Super Admin Override: ${a.id} APPROVED`);
-                          }}
-                          className="bg-brand-teal/20 text-brand-teal hover:bg-brand-teal hover:text-brand-midnight font-bold text-[10px] px-2.5 py-1 rounded"
+                  {/* Approved Visas */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
+                    <p className="text-xs font-semibold text-slate-500">Approved Visas</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">688</h3>
+                  </div>
+                </div>
+
+                {/* Row 2: 2 Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Rejected Applications */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
+                    <p className="text-xs font-semibold text-slate-500">Rejected Applications</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">156</h3>
+                  </div>
+
+                  {/* Total Revenue */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
+                    <p className="text-xs font-semibold text-slate-500">Total Revenue</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">₹28,75,400</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* APPLICATION OVERVIEW CHART WIDGET */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-800">Application Overview</h3>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      ⚡ +14.5% vs 30d
+                    </span>
+                    <select
+                      value={timeRange}
+                      onChange={(e) => setTimeRange(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none"
+                    >
+                      <option>Last 30 Days</option>
+                      <option>Last 90 Days</option>
+                      <option>This Year</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* SMOOTH GOLD/AMBER AREA LINE CHART SVG */}
+                <div className="w-full h-56 relative">
+                  <svg className="w-full h-full overflow-visible" viewBox="0 0 800 200" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="amberAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Gridlines */}
+                    <line x1="0" y1="40" x2="800" y2="40" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="80" x2="800" y2="80" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="120" x2="800" y2="120" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="160" x2="800" y2="160" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4 4" />
+
+                    {/* Area Gradient Fill */}
+                    <path
+                      d="M 0 130 C 50 110, 80 100, 130 140 C 180 180, 240 160, 300 130 C 360 100, 420 110, 480 100 C 540 90, 600 110, 660 150 C 720 120, 760 100, 800 130 L 800 190 L 0 190 Z"
+                      fill="url(#amberAreaGrad)"
+                    />
+
+                    {/* Stroke Line */}
+                    <path
+                      d="M 0 130 C 50 110, 80 100, 130 140 C 180 180, 240 160, 300 130 C 360 100, 420 110, 480 100 C 540 90, 600 110, 660 150 C 720 120, 760 100, 800 130"
+                      fill="none"
+                      stroke="#F59E0B"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+
+                  {/* Month X-Axis Labels */}
+                  <div className="flex justify-between text-[10px] font-semibold text-slate-400 pt-2 px-1">
+                    <span>Jan</span>
+                    <span>Feb</span>
+                    <span>Mar</span>
+                    <span>Apr</span>
+                    <span>May</span>
+                    <span>Jun</span>
+                    <span>Jul</span>
+                    <span>Aug</span>
+                    <span>Sep</span>
+                    <span>Oct</span>
+                    <span>Nov</span>
+                    <span>Dec</span>
+                  </div>
+                </div>
+
+                {/* 4 METRIC INDICATOR BADGES */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-[#EEF2FF] text-[#4848F7] flex items-center justify-center font-bold">
+                      <Users size={16} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-semibold">New Applications</p>
+                      <p className="text-sm font-extrabold text-slate-800">412</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <CheckCircle2 size={16} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-semibold">Completed</p>
+                      <p className="text-sm font-extrabold text-slate-800">587</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
+                      <Clock size={16} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-semibold">In Process</p>
+                      <p className="text-sm font-extrabold text-slate-800">342</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+                      <AlertCircle size={16} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-semibold">Pending Documents</p>
+                      <p className="text-sm font-extrabold text-slate-800">210</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* TWO COLUMN ROW 1: APPLICATIONS BY STATUS & RECENT ACTIVITIES */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Left Card: Applications by Status (Polar / Radial Chart) */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                  <h3 className="text-sm font-bold text-slate-800">Applications by Status</h3>
+
+                  {/* Polar Area Nightingale Rose Chart matching screenshot */}
+                  <div className="flex items-center justify-center py-2 relative">
+                    <svg className="w-64 h-64 overflow-visible" viewBox="0 0 300 300">
+                      {/* Concentric Radial Grid Circles */}
+                      {[18, 36, 54, 72, 90, 108, 126, 144].map((r, i) => (
+                        <circle
+                          key={i}
+                          cx="150"
+                          cy="150"
+                          r={r}
+                          fill="none"
+                          stroke="#E2E8F0"
+                          strokeWidth="1"
+                        />
+                      ))}
+
+                      {/* Top Vertical Axis Line */}
+                      <line x1="150" y1="150" x2="150" y2="5" stroke="#CBD5E1" strokeWidth="1" />
+
+                      {/* Radial Scale Numbers along Vertical Axis */}
+                      {[
+                        { text: "10", y: 132 },
+                        { text: "20", y: 114 },
+                        { text: "30", y: 96 },
+                        { text: "40", y: 78 },
+                        { text: "50", y: 60 },
+                        { text: "60", y: 42 },
+                        { text: "70", y: 24 },
+                        { text: "80", y: 6 }
+                      ].map((tick, i) => (
+                        <text
+                          key={i}
+                          x="150"
+                          y={tick.y}
+                          textAnchor="middle"
+                          fill="#64748B"
+                          fontSize="9"
+                          fontWeight="600"
+                          className="font-mono"
                         >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => {
-                            updateApplicationStatus(a.id, "Rejected", "Super Admin Discretion");
-                            showToast(`Super Admin Override: ${a.id} REJECTED`);
-                          }}
-                          className="bg-brand-red/20 text-brand-red hover:bg-brand-red hover:text-white font-bold text-[10px] px-2.5 py-1 rounded"
-                        >
-                          Reject
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                          {tick.text}
+                        </text>
+                      ))}
 
-        {/* ============================================================ */}
-        {/* SECTION 10: NOTIFICATIONS & BROADCAST */}
-        {/* ============================================================ */}
-        {adminTab === "notifications" && (
-          <div className="space-y-6 max-w-3xl">
-            <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4">
-              <h3 className="font-outfit font-bold text-lg text-brand-gold">Platform Broadcast Notification Center</h3>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  showToast(`Broadcast notification dispatched to ${broadcastMessage.targetRole} via ${broadcastMessage.channel}!`);
-                  setBroadcastMessage({ targetRole: "All", subject: "", content: "", channel: "Push & Email" });
-                }}
-                className="space-y-4 text-xs"
-              >
-                <div>
-                  <label className="block text-brand-paper/70 font-semibold mb-1">Target Audience</label>
-                  <select
-                    value={broadcastMessage.targetRole}
-                    onChange={(e) => setBroadcastMessage({ ...broadcastMessage, targetRole: e.target.value })}
-                    className="w-full bg-brand-midnight border border-brand-gold/20 rounded px-3 py-2 text-brand-paper"
-                  >
-                    <option value="All">All Users & Agencies (Global Broadcast)</option>
-                    <option value="Agents">B2B Travel Agencies Only</option>
-                    <option value="Customers">End Applicants Only</option>
-                  </select>
+                      {/* Sector 1: Under Review (Top-Right Blue/Indigo - Radius ~92) */}
+                      <path
+                        d="M 150 150 L 150 58 A 92 92 0 0 1 242 150 Z"
+                        fill="rgba(99, 102, 241, 0.28)"
+                        stroke="#4F46E5"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* Sector 2: Rejected (Bottom-Right Orange - Radius ~58) */}
+                      <path
+                        d="M 150 150 L 208 150 A 58 58 0 0 1 150 208 Z"
+                        fill="rgba(249, 115, 22, 0.28)"
+                        stroke="#F97316"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* Sector 3: Approved (Bottom-Left Lime Green - Radius ~130) */}
+                      <path
+                        d="M 150 150 L 150 280 A 130 130 0 0 1 20 150 Z"
+                        fill="rgba(132, 204, 22, 0.32)"
+                        stroke="#84CC16"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* Sector 4: Cancelled (Top-Left Red/Coral - Radius ~28) */}
+                      <path
+                        d="M 150 150 L 122 150 A 28 28 0 0 1 150 122 Z"
+                        fill="rgba(239, 68, 68, 0.35)"
+                        stroke="#EF4444"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  </div>
+
+                  {/* Status Legend Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#818CF8]" />
+                      <span className="text-slate-600">Under Review:</span>
+                      <strong className="text-slate-800 font-mono">27.4% (342)</strong>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="text-slate-600">Approved:</span>
+                      <strong className="text-slate-800 font-mono">55.2% (689)</strong>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+                      <span className="text-slate-600">Rejected:</span>
+                      <strong className="text-slate-800 font-mono">12.5% (156)</strong>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                      <span className="text-slate-600">Cancelled:</span>
+                      <strong className="text-slate-800 font-mono">4.9% (61)</strong>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-brand-paper/70 font-semibold mb-1">Alert Subject</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Schengen Visa SLA Maintenance Update"
-                    value={broadcastMessage.subject}
-                    onChange={(e) => setBroadcastMessage({ ...broadcastMessage, subject: e.target.value })}
-                    className="w-full bg-brand-midnight border border-brand-gold/20 rounded px-3 py-2 text-brand-paper"
-                  />
+                {/* Right Card: Recent Activities */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800">Recent Activities</h3>
+                    <button
+                      onClick={() => {
+                        setActiveSection("Apply for You");
+                        setActiveSubItem("User Activity Logs");
+                      }}
+                      className="text-xs text-[#4848F7] font-bold hover:underline"
+                    >
+                      View All &gt;
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      {
+                        title: "New Application Received",
+                        desc: "By Rajesh Sharma (Canada Tourist Visa)",
+                        time: "2 min. ago"
+                      },
+                      {
+                        title: "Document Verified",
+                        desc: "By Agent Geeta Bisht",
+                        time: "15 min. ago"
+                      },
+                      {
+                        title: "Payment Received",
+                        desc: "₹23,000 - By Rahul Kumawat",
+                        time: "30 min. ago"
+                      },
+                      {
+                        title: "Application Approved",
+                        desc: "By Agent Balram Suman",
+                        time: "1 hr ago"
+                      },
+                      {
+                        title: "New Agent Registered",
+                        desc: "Agent Animesh Jain",
+                        time: "2 hr ago"
+                      }
+                    ].map((act, i) => (
+                      <div key={i} className="p-3 bg-slate-50/70 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-bold text-slate-800">{act.title}</p>
+                          <p className="text-[11px] text-slate-500">{act.desc}</p>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0">{act.time}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-brand-paper/70 font-semibold mb-1">Notification Body</label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={broadcastMessage.content}
-                    onChange={(e) => setBroadcastMessage({ ...broadcastMessage, content: e.target.value })}
-                    className="w-full bg-brand-midnight border border-brand-gold/20 rounded px-3 py-2 text-brand-paper"
-                  />
-                </div>
-
-                <button type="submit" className="bg-brand-gold text-brand-midnight font-bold text-xs px-5 py-2.5 rounded">
-                  Dispatch Broadcast Alert
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* SECTION 12: SYSTEM SETTINGS (Tenants, Matrix, Audit, BYO Settings) */}
-        {/* ============================================================ */}
-        {adminTab === "system_settings" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-brand-gold/15 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  { key: "general", label: "General Settings" },
-                  { key: "roles", label: "Roles & Permissions Matrix" },
-                  { key: "gateway", label: "BYO Gateways & Integrations" },
-                  { key: "security", label: "Feature Flags & Security" },
-                  { key: "backup", label: "Backup & Disaster Recovery" }
-                ].map((st) => (
-                  <button
-                    key={st.key}
-                    onClick={() => setSettingsSubTab(st.key as any)}
-                    className={`text-xs font-bold px-4 py-1.5 rounded-full transition ${
-                      settingsSubTab === st.key
-                        ? "bg-brand-gold text-brand-midnight font-bold shadow-md"
-                        : "bg-brand-slate text-brand-paper/60 hover:text-brand-paper"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
               </div>
-            </div>
 
-            {settingsSubTab === "roles" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4">
-                <h3 className="font-outfit font-bold text-lg text-brand-gold">Global Roles Permission Matrix</h3>
-                <div className="bg-brand-midnight rounded border border-brand-gold/10 overflow-hidden">
+              {/* TWO COLUMN ROW 2: TOP COUNTRIES & RECENT APPLICATIONS */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Left Card: Top Countries */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800">Top Countries</h3>
+                    <span className="text-xs font-mono text-slate-400">Last 30 Days</span>
+                  </div>
+
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-brand-midnight text-brand-gold font-mono uppercase text-[10px]">
-                      <tr>
-                        <th className="p-3">Role</th>
-                        <th className="p-3">View Wallet</th>
-                        <th className="p-3">Approve Visas</th>
-                        <th className="p-3">Manage Companies</th>
+                    <thead>
+                      <tr className="text-slate-400 border-b border-slate-100 text-[11px]">
+                        <th className="pb-2 font-semibold">Countries</th>
+                        <th className="pb-2 font-semibold">Applications</th>
+                        <th className="pb-2 font-semibold text-right">Percentage %</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-brand-gold/10">
-                      {permissions.map((p, idx) => (
-                        <tr key={p.role} className="hover:bg-brand-slate/40">
-                          <td className="p-3 font-bold text-brand-paper">{p.role}</td>
-                          <td className="p-3">
-                            <input type="checkbox" checked={p.viewWallet} onChange={() => togglePermission(idx, "viewWallet")} />
+                    <tbody className="divide-y divide-slate-100">
+                      {[
+                        { flag: "🇨🇦", name: "Canada", apps: 432, pct: "34.64%" },
+                        { flag: "🇦🇺", name: "Australia", apps: 321, pct: "25.72%" },
+                        { flag: "🇺🇸", name: "United States", apps: 218, pct: "17.47%" },
+                        { flag: "🇬🇧", name: "United Kingdom", apps: 156, pct: "12.50%" },
+                        { flag: "🌐", name: "Others", apps: 121, pct: "09.70%" }
+                      ].map((row, i) => (
+                        <tr key={i} className="hover:bg-slate-50 transition">
+                          <td className="py-2.5 font-semibold text-slate-800 flex items-center gap-2">
+                            <span>{row.flag}</span>
+                            <span>{row.name}</span>
                           </td>
-                          <td className="p-3">
-                            <input type="checkbox" checked={p.approveVisa} onChange={() => togglePermission(idx, "approveVisa")} />
-                          </td>
-                          <td className="p-3">
-                            <input type="checkbox" checked={p.manageCompanies} onChange={() => togglePermission(idx, "manageCompanies")} />
+                          <td className="py-2.5 font-mono text-slate-600">{row.apps}</td>
+                          <td className="py-2.5 text-right font-mono font-bold text-emerald-600">
+                            {row.pct} ↗
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
 
-            {settingsSubTab === "security" && (
-              <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-                <h3 className="font-outfit font-bold text-lg text-brand-gold">Feature Flags & Rollout Engine</h3>
-                <div className="space-y-3">
-                  {featureFlags.map((ff) => (
-                    <div key={ff.key} className="bg-brand-midnight p-4 rounded border border-brand-gold/10 flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-brand-paper">{ff.name}</p>
-                        <p className="font-mono text-[10px] text-brand-gold">{ff.key}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-bold text-brand-teal">{ff.percentage}% Rollout</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="25"
-                          value={ff.percentage}
-                          onChange={(e) => setFeatureFlagPercentage(ff.key, parseInt(e.target.value))}
-                          className="w-32 accent-brand-gold"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                {/* Right Card: Recent Applications */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800">Recent Applications</h3>
+                    <button
+                      onClick={() => {
+                        setActiveSection("Applications");
+                        setActiveSubItem("All Applications");
+                      }}
+                      className="text-xs text-[#4848F7] font-bold hover:underline"
+                    >
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-400 border-b border-slate-100 text-[11px]">
+                          <th className="pb-2 font-semibold">Application ID</th>
+                          <th className="pb-2 font-semibold">Applicant Name</th>
+                          <th className="pb-2 font-semibold">Country</th>
+                          <th className="pb-2 font-semibold">Submit On</th>
+                          <th className="pb-2 font-semibold text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {[
+                          { id: "VO-2026-1256", name: "Rahul Kumawat", country: "🇨🇦 Canada", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
+                          { id: "VO-2026-1255", name: "Animesh Jain", country: "🇦🇺 Australia", date: "25 Jul 2026", status: "Approved", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                          { id: "VO-2026-1254", name: "Bhavani Sharma", country: "🇺🇸 United States", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
+                          { id: "VO-2026-1253", name: "Balram Suman", country: "🇬🇧 United Kingdom", date: "25 Jul 2026", status: "Rejected", stClass: "bg-red-50 text-red-700 border-red-200" },
+                          { id: "VO-2026-1252", name: "Som Gupta", country: "🌐 Others", date: "25 Jul 2026", status: "Approved", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                        ].map((row, i) => (
+                          <tr key={i} className="hover:bg-slate-50 transition">
+                            <td className="py-2.5 font-mono font-bold text-[#4848F7]">{row.id}</td>
+                            <td className="py-2.5 font-semibold text-slate-800">{row.name}</td>
+                            <td className="py-2.5 text-slate-600">{row.country}</td>
+                            <td className="py-2.5 font-mono text-slate-500">{row.date}</td>
+                            <td className="py-2.5 text-right">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${row.stClass}`}>
+                                {row.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* REVENUE OVERVIEW BAR CHART WIDGET */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Revenue Overview</h3>
+                    <p className="text-xs text-emerald-600 font-semibold font-mono">
+                      Total Revenue +18.6% vs last 30 days
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className="text-xl font-extrabold text-slate-900">₹28,75,400</span>
+                    <select className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none">
+                      <option>Last 30 Days</option>
+                      <option>Last 90 Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 30 VERTICAL REVENUE BARS SVG */}
+                <div className="w-full h-44 relative">
+                  <svg className="w-full h-full overflow-visible" viewBox="0 0 900 150">
+                    {[
+                      45, 60, 85, 30, 95, 110, 75, 65, 80, 120,
+                      40, 90, 105, 55, 70, 115, 80, 95, 60, 45,
+                      35, 75, 90, 40, 65, 110, 85, 95, 125, 130
+                    ].map((height, idx) => (
+                      <rect
+                        key={idx}
+                        x={idx * 30 + 5}
+                        y={140 - height}
+                        width="18"
+                        height={height}
+                        rx="4"
+                        fill="#4848F7"
+                        opacity={idx % 4 === 0 ? "1" : "0.65"}
+                      />
+                    ))}
+                  </svg>
+
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400 pt-2">
+                    <span>27 Jun</span>
+                    <span>02 Jul</span>
+                    <span>07 Jul</span>
+                    <span>12 Jul</span>
+                    <span>17 Jul</span>
+                    <span>22 Jul</span>
+                    <span>25 Jul</span>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* DEFAULT FALLBACK VIEWS FOR OTHER ADMIN TABS (Documents, Payments, Reports, Support, Profile) */}
-        {adminTab === "documents" && (
-          <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-            <h3 className="font-outfit font-bold text-base text-brand-gold">Global Document Verification & Templates Vault</h3>
-            <p className="text-brand-paper/60">Manage master document checklists, NOC templates, and AI scanning thresholds.</p>
-          </div>
-        )}
+            </div>
+          )}
 
-        {adminTab === "payments" && (
-          <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-            <h3 className="font-outfit font-bold text-base text-brand-gold">Platform Payments Ledger & Refund Clearances</h3>
-            <p className="text-brand-paper/60">Master audit of all agency wallet top-ups and consular fee debits.</p>
-          </div>
-        )}
+          {/* ============================================================ */}
+          {/* 2. SUB-SECTION DETAILED MANAGEMENT PANELS */}
+          {/* ============================================================ */}
+          {(activeSubItem || activeSection !== "Dashboard") && (
+            <>
+              {activeSubItem === "All Applicants" || (activeSection === "Apply for You" && (!activeSubItem || activeSubItem === "All Applicants")) ? (
+                <AllApplicants />
+              ) : activeSubItem === "Active Users" ? (
+                <ActiveUsers />
+              ) : activeSubItem === "Blocked Users" ? (
+                <BlockedUsers />
+              ) : activeSubItem === "KYC Verifications" ? (
+                <KycVerifications />
+              ) : activeSubItem === "User Activity Logs" ? (
+                <UserActivityLogs />
+              ) : (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  
+                  {/* Header Breadcrumb & Title */}
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                        <span className="hover:text-[#4848F7] cursor-pointer" onClick={() => { setActiveSection("Dashboard"); setActiveSubItem(""); }}>Admin Dashboard</span>
+                        <ChevronRight size={12} />
+                        <span>{activeSection}</span>
+                        {activeSubItem && (
+                          <>
+                            <ChevronRight size={12} />
+                            <span className="text-[#4848F7] font-bold">{activeSubItem}</span>
+                          </>
+                        )}
+                      </div>
 
-        {adminTab === "reports" && (
-          <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-            <h3 className="font-outfit font-bold text-base text-brand-gold">System Reports & Financial Analytics</h3>
-            <p className="text-brand-paper/60">Export daily, monthly, and country-wise visa revenue reports.</p>
-          </div>
-        )}
+                      <h2 className="text-xl font-extrabold text-slate-900 mt-1">
+                        {activeSubItem || activeSection}
+                      </h2>
+                    </div>
 
-        {adminTab === "support" && (
-          <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs">
-            <h3 className="font-outfit font-bold text-base text-brand-gold">Super Admin Master Support Ticket Queue</h3>
-            <p className="text-brand-paper/60">Resolve support tickets escalated by agency partners and consular staff.</p>
-          </div>
-        )}
+                    <button
+                      onClick={() => showToast(`Action triggered for ${activeSubItem || activeSection}`)}
+                      className="bg-[#4848F7] hover:bg-[#3838D6] text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow-md shadow-[#4848F7]/20 cursor-pointer"
+                    >
+                      <Plus size={14} /> Add New Entry
+                    </button>
+                  </div>
 
-        {adminTab === "profile" && (
-          <div className="bg-brand-slate border border-brand-gold/15 p-6 rounded-lg space-y-4 text-xs max-w-xl">
-            <h3 className="font-outfit font-bold text-lg text-brand-gold">Super Admin Security Profile</h3>
-            <p className="text-brand-paper/70">Master Root Credentials & Security Token Logs</p>
-          </div>
-        )}
+                  {/* Data Table / Panel Container */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-800">
+                        {activeSubItem || activeSection} Register
+                      </h3>
 
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Filter records..."
+                          className="bg-slate-50 border border-slate-200 text-xs px-3 py-1.5 rounded-lg w-56 focus:outline-none focus:border-[#4848F7]"
+                        />
+                        <button className="bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1 font-bold">
+                          <Filter size={13} /> Filter
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sub-Item Dynamic Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500 border-y border-slate-200 font-bold uppercase text-[10px]">
+                            <th className="py-2.5 px-3">Reference ID</th>
+                            <th className="py-2.5 px-3">Primary Entity</th>
+                            <th className="py-2.5 px-3">Category</th>
+                            <th className="py-2.5 px-3">Timestamp</th>
+                            <th className="py-2.5 px-3">Status</th>
+                            <th className="py-2.5 px-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {applications.map((appItem) => (
+                            <tr key={appItem.id} className="hover:bg-slate-50/80 transition">
+                              <td className="py-3 px-3 font-mono font-bold text-[#4848F7]">{appItem.id}</td>
+                              <td className="py-3 px-3 font-bold text-slate-800">{appItem.travelerName}</td>
+                              <td className="py-3 px-3 text-slate-600">{appItem.visaType}</td>
+                              <td className="py-3 px-3 font-mono text-slate-500">{appItem.submissionDate}</td>
+                              <td className="py-3 px-3">
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {appItem.status}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-right space-x-2">
+                                <button
+                                  onClick={() => showToast(`Viewing details for ${appItem.id}`)}
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-[#EEF2FF] text-[#4848F7] rounded-lg font-bold text-[10px] border border-slate-200"
+                                >
+                                  Manage
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+            </>
+          )}
+
+        </main>
       </div>
+
+      {/* FOOTER */}
+      <footer className="bg-white border-t border-slate-200 py-2.5 text-center text-[11px] font-mono text-slate-400 z-10">
+        &copy;2026 Visa OS. All Rights Reserved
+      </footer>
+
     </div>
   );
 }
