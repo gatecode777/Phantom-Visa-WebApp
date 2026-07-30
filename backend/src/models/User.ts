@@ -2,6 +2,8 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IUser extends Document {
   phone: string;
+  email?: string;
+  passwordHash?: string;
   role: "Admin" | "Applicant" | "Staff" | "Agent";
   name: string;
   isDeactivated?: boolean;
@@ -12,7 +14,9 @@ export interface IUser extends Document {
 const UserSchema: Schema = new Schema(
   {
     phone: { type: String, required: true, unique: true, index: true },
-    role: { type: String, enum: ["Admin", "Applicant", "Staff", "Agent"], required: true },
+    email: { type: String, lowercase: true, trim: true, sparse: true },
+    passwordHash: { type: String },
+    role: { type: String, enum: ["Admin", "Applicant", "Staff", "Agent"], required: true, default: "Applicant" },
     name: { type: String, required: true },
     isDeactivated: { type: Boolean, default: false }
   },

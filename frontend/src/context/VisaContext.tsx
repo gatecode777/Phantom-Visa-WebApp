@@ -159,7 +159,8 @@ export type AdminTab =
 export interface AuthSession {
   user: {
     id: string;
-    email: string;
+    email?: string;
+    phone?: string;
     name: string;
     role: "Admin" | "Agent" | "Staff" | "Applicant";
   };
@@ -196,6 +197,9 @@ interface VisaContextType {
   requestPayout: (amount: number) => boolean;
   togglePermission: (roleIndex: number, field: "viewWallet" | "approveVisa" | "manageCompanies") => void;
 
+  applicantDashboardData: { greetingName: string; metrics: any; application: any } | null;
+  fetchApplicantDashboardData: () => Promise<void>;
+
   // TIER 3 & ENHANCEMENT STATE EXTENSIONS
   subscriptionTier: SubscriptionTier;
   setSubscriptionTier: (tier: SubscriptionTier) => void;
@@ -216,23 +220,126 @@ let txnCounter = 9813;
 let comCounter = 4;
 
 export function VisaProvider({ children }: { children: React.ReactNode }) {
-  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
-  const [currentRole, setCurrentRole] = useState<"Agent" | "Staff" | "Customer" | "Super Admin">("Agent");
+  const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
+    try {
+      const saved = localStorage.getItem("phantom_auth_session");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  const [currentRole, setCurrentRole] = useState<"Agent" | "Staff" | "Customer" | "Super Admin">(() => {
+    try {
+      const saved = localStorage.getItem("phantom_auth_session");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const roleMap: Record<string, "Agent" | "Staff" | "Customer" | "Super Admin"> = {
+          Admin: "Super Admin",
+          Applicant: "Customer",
+          Staff: "Staff",
+          Agent: "Agent"
+        };
+        return roleMap[parsed.user?.role] || "Customer";
+      }
+    } catch (e) {}
+    return "Agent";
+  });
+
+  const [applicantDashboardData, setApplicantDashboardData] = useState<{
+    greetingName: string;
+    metrics: any;
+    application: any;
+  } | null>(null);
+
+  const fetchApplicantDashboardData = async () => {
+    if (!authSession?.token) return;
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/applicant/dashboard", {
+        headers: {
+          Authorization: `Bearer ${authSession.token}`
+        }
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        setApplicantDashboardData(json.data);
+        if (json.data.application) {
+          const appData = json.data.application;
+          setApplications((prev) => {
+            const exists = prev.some((a) => a.id === appData.id);
+            if (exists) {
+              return prev.map((a) => (a.id === appData.id ? { ...a, ...appData } : a));
+            }
+            return [appData, ...prev];
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch applicant dashboard:", err);
+    }
+  };
 
   const loginSession = (session: AuthSession) => {
     setAuthSession(session);
+    try {
+      localStorage.setItem("phantom_auth_session", JSON.stringify(session));
+    } catch (e) {}
     const roleMap: Record<string, "Agent" | "Staff" | "Customer" | "Super Admin"> = {
       Admin: "Super Admin",
       Applicant: "Customer",
       Staff: "Staff",
       Agent: "Agent"
     };
-    const mappedRole = roleMap[session.user.role] || "Customer";
+    const mappedRole = roleMap[session.user?.role] || "Customer";
     setCurrentRole(mappedRole);
   };
 
-  const logoutSession = () => {
+  // Restore & verify refresh token on application mount
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/v1/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include"
+        });
+        const json = await res.json();
+        if (res.ok && json.success && json.data) {
+          const newSession: AuthSession = {
+            user: json.data.user,
+            token: json.data.accessToken
+          };
+          loginSession(newSession);
+        }
+      } catch (err) {
+        // Silently preserve local session if offline or backend unavailable
+      }
+    };
+
+    checkAndRefreshToken();
+  }, []);
+
+  useEffect(() => {
+    if (authSession?.token && currentRole === "Customer") {
+      fetchApplicantDashboardData();
+    }
+  }, [authSession, currentRole]);
+
+  const logoutSession = async () => {
+    try {
+      await fetch("http://localhost:5000/api/v1/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (err) {
+      console.error("Logout fetch error:", err);
+    }
+    try {
+      localStorage.removeItem("phantom_auth_session");
+    } catch (e) {}
     setAuthSession(null);
+    setApplicantDashboardData(null);
   };
   const [agentTab, setAgentTab] = useState<AgentTab>("dashboard");
   const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
@@ -759,7 +866,9 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         startImpersonation,
         stopImpersonation,
         featureFlags,
-        setFeatureFlagPercentage
+        setFeatureFlagPercentage,
+        applicantDashboardData,
+        fetchApplicantDashboardData
       }}
     >
       {children}
