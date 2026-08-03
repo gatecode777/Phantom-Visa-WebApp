@@ -9,6 +9,7 @@ import {
   Role,
   getDashboardPath
 } from "../lib/authService";
+import { API_V1_URL } from "../config/api";
 import { Logo } from "./Logo";
 import {
   Smartphone,
@@ -221,7 +222,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
     try {
       // Query backend to verify if account exists in MongoDB
-      const checkRes = await fetch("http://localhost:5000/api/v1/auth/verify-phone", {
+      const checkRes = await fetch(`${API_V1_URL}/auth/verify-phone`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: targetE164 })
@@ -349,7 +350,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
     try {
       // Attempt backend OTP authentication against MongoDB database
-      const res = await fetch("http://localhost:5000/api/v1/auth/verify-otp", {
+      const res = await fetch(`${API_V1_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: e164Phone || phoneNumber, otp: codeToVerify })
