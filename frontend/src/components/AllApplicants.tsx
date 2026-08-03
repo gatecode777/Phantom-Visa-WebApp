@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   Search,
   Filter,
@@ -332,7 +333,7 @@ export default function AllApplicants() {
   const fetchApplicantsFromDB = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("http://localhost:5000/api/v1/applicant/all");
+      const res = await fetch(`${API_V1_URL}/applicant/all`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setApplicants(json.data);
@@ -454,7 +455,7 @@ export default function AllApplicants() {
     }
 
     try {
-      await fetch("http://localhost:5000/api/v1/applicant/toggle-block", {
+      await fetch(`${API_V1_URL}/applicant/toggle-block`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -479,7 +480,7 @@ export default function AllApplicants() {
     }
 
     try {
-      await fetch(`http://localhost:5000/api/v1/applicant/${mongoId}`, {
+      await fetch(`${API_V1_URL}/applicant/${mongoId}`, {
         method: "DELETE"
       });
       triggerToast(`Applicant ${target?.id || id} removed from database.`);

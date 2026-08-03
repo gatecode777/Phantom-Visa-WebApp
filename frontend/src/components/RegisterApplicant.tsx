@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   UserPlus,
   User,
@@ -609,7 +610,7 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
         payload.append(key, attachedFiles[key]);
       });
 
-      const res = await fetch("http://localhost:5000/api/v1/auth/register-applicant", {
+      const res = await fetch(`${API_V1_URL}/auth/register-applicant`, {
         method: "POST",
         body: payload
       });

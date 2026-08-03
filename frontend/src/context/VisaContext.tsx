@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 
 export function formatINR(val: number, decimals: number = 0): string {
   if (isNaN(val) || val === null || val === undefined) return "0";
@@ -256,7 +257,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   const fetchApplicantDashboardData = async () => {
     if (!authSession?.token) return;
     try {
-      const res = await fetch("http://localhost:5000/api/v1/applicant/dashboard", {
+      const res = await fetch(`${API_V1_URL}/applicant/dashboard`, {
         headers: {
           Authorization: `Bearer ${authSession.token}`
         }
@@ -299,7 +300,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAndRefreshToken = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/v1/auth/refresh", {
+        const res = await fetch(`${API_V1_URL}/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include"
@@ -328,7 +329,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
 
   const logoutSession = async () => {
     try {
-      await fetch("http://localhost:5000/api/v1/auth/logout", {
+      await fetch(`${API_V1_URL}/auth/logout`, {
         method: "POST",
         credentials: "include"
       });
