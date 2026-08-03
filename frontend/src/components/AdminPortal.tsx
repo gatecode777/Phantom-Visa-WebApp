@@ -12,6 +12,28 @@ import AllAgents from "./AllAgents";
 import AddNewAgent from "./AddNewAgent";
 import PendingApprovalAgents from "./PendingApprovalAgents";
 import ActiveAgents from "./ActiveAgents";
+import InactiveAgents from "./InactiveAgents";
+import AgentPerformance from "./AgentPerformance";
+import CountriesManagement from "./CountriesManagement";
+import VisaCategoriesManagement from "./VisaCategoriesManagement";
+import VisaTypesManagement from "./VisaTypesManagement";
+import VisaRequirementsManagement from "./VisaRequirementsManagement";
+import ProcessingTimeManagement from "./ProcessingTimeManagement";
+import VisaFeesManagement from "./VisaFeesManagement";
+import RequiredDocumentsManagement from "./RequiredDocumentsManagement";
+import AllApplicationsManagement from "./AllApplicationsManagement";
+import NewApplicationsManagement from "./NewApplicationsManagement";
+import AssignedApplicationsManagement from "./AssignedApplicationsManagement";
+import UnderReviewManagement from "./UnderReviewManagement";
+import PendingDocumentsManagement from "./PendingDocumentsManagement";
+import ApprovedApplicationsManagement from "./ApprovedApplicationsManagement";
+import RejectedApplicationsManagement from "./RejectedApplicationsManagement";
+import CompletedApplicationsManagement from "./CompletedApplicationsManagement";
+import CancelledApplicationsManagement from "./CancelledApplicationsManagement";
+import AllDocumentsManagement from "./AllDocumentsManagement";
+import PendingVerificationManagement from "./PendingVerificationManagement";
+import VerifiedDocumentsManagement from "./VerifiedDocumentsManagement";
+import RejectedDocumentsManagement from "./RejectedDocumentsManagement";
 import {
   LayoutDashboard,
   Users,
@@ -929,6 +951,50 @@ export default function AdminPortal() {
                 <PendingApprovalAgents />
               ) : activeSubItem === "Active Agents" ? (
                 <ActiveAgents />
+              ) : activeSubItem === "Inactive Agents" ? (
+                <InactiveAgents />
+              ) : activeSubItem === "Agent Performance" ? (
+                <AgentPerformance />
+              ) : activeSubItem === "Countries" || (activeSection === "Visa Management" && (!activeSubItem || activeSubItem === "Countries")) ? (
+                <CountriesManagement />
+              ) : activeSubItem === "Visa Categories" ? (
+                <VisaCategoriesManagement />
+              ) : activeSubItem === "Visa Types" ? (
+                <VisaTypesManagement />
+              ) : activeSubItem === "Visa Requirements" ? (
+                <VisaRequirementsManagement />
+              ) : activeSubItem === "Processing Time" ? (
+                <ProcessingTimeManagement />
+              ) : activeSubItem === "Visa Fees" ? (
+                <VisaFeesManagement />
+              ) : activeSubItem === "Required Documents" ? (
+                <RequiredDocumentsManagement />
+              ) : activeSubItem === "All Applications" || (activeSection === "Applications" && (!activeSubItem || activeSubItem === "All Applications")) ? (
+                <AllApplicationsManagement />
+              ) : activeSubItem === "New Applications" ? (
+                <NewApplicationsManagement />
+              ) : activeSubItem === "Assigned Applications" ? (
+                <AssignedApplicationsManagement />
+              ) : activeSubItem === "Under Review" ? (
+                <UnderReviewManagement />
+              ) : activeSubItem === "Pending Documents" ? (
+                <PendingDocumentsManagement />
+              ) : activeSubItem === "Approved" ? (
+                <ApprovedApplicationsManagement />
+              ) : activeSubItem === "Rejected" ? (
+                <RejectedApplicationsManagement />
+              ) : activeSubItem === "Completed" ? (
+                <CompletedApplicationsManagement />
+              ) : activeSubItem === "Cancelled" ? (
+                <CancelledApplicationsManagement />
+              ) : activeSubItem === "All Documents" || (activeSection === "Documents" && (!activeSubItem || activeSubItem === "All Documents")) ? (
+                <AllDocumentsManagement />
+              ) : activeSubItem === "Pending Verification" ? (
+                <PendingVerificationManagement />
+              ) : activeSubItem === "Verified Documents" ? (
+                <VerifiedDocumentsManagement />
+              ) : activeSubItem === "Rejected Documents" ? (
+                <RejectedDocumentsManagement />
               ) : (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   
