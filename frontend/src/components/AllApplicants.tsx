@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -285,8 +285,6 @@ const mockApplicants: ApplicantRecord[] = [
       ]
     },
     timeline: [
-      { title: "Account Created", time: "15 Jul 2026, 09:30 AM", completed: true },
-      { title: "Visa Application Submitted", time: "15 Jul 2026, 11:00 AM", completed: true },
       { title: "Documents Uploaded", time: "16 Jul 2026, 02:00 PM", completed: false }
     ]
   }
@@ -299,6 +297,10 @@ export default function AllApplicants() {
   const [countryFilter, setCountryFilter] = useState("All");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Selection States for Bulk Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -316,8 +318,38 @@ export default function AllApplicants() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Applicants List State (Allows mutating block/delete status in session)
+  // Applicants List State & Metrics State
   const [applicants, setApplicants] = useState<ApplicantRecord[]>(mockApplicants);
+  const [dbMetrics, setDbMetrics] = useState<{
+    totalApplicants: number;
+    activeApplicants: number;
+    newRegistrations: number;
+    blockedApplicants: number;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch real database records from backend
+  const fetchApplicantsFromDB = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("http://localhost:5000/api/v1/applicant/all");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setApplicants(json.data);
+        if (json.metrics) {
+          setDbMetrics(json.metrics);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch applicant records from MongoDB:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApplicantsFromDB();
+  }, []);
 
   // Filter Logic
   const filteredApplicants = applicants.filter((app) => {
@@ -333,10 +365,46 @@ export default function AllApplicants() {
     const matchesStatus = statusFilter === "All" || app.status === statusFilter;
 
     // Country matching
-    const matchesCountry = countryFilter === "All" || app.country === countryFilter;
+    const matchesCountry = countryFilter === "All" || app.country === countryFilter || app.destinationCountry === countryFilter;
 
-    return matchesSearch && matchesStatus && matchesCountry;
+    // Date range matching
+    let matchesDate = true;
+    if (fromDate && (app as any).rawCreatedAt) {
+      matchesDate = new Date((app as any).rawCreatedAt) >= new Date(fromDate);
+    }
+    if (toDate && matchesDate && (app as any).rawCreatedAt) {
+      matchesDate = new Date((app as any).rawCreatedAt) <= new Date(toDate + "T23:59:59");
+    }
+
+    return matchesSearch && matchesStatus && matchesCountry && matchesDate;
   });
+
+  // Calculate dynamic pagination bounds
+  const totalItems = filteredApplicants.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedApplicants = filteredApplicants.slice(startIndex, endIndex);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, countryFilter, fromDate, toDate]);
+
+  // Unique country options
+  const uniqueCountries = Array.from(
+    new Set(applicants.map((a) => a.country || a.destinationCountry).filter(Boolean))
+  );
+
+  // Computed KPI Metrics
+  const totalApplicantsCount = dbMetrics?.totalApplicants ?? applicants.length;
+  const activeApplicantsCount =
+    dbMetrics?.activeApplicants ?? applicants.filter((a) => a.status === "Active" || !(a as any).isDeactivated).length;
+  const newRegistrationsCount = dbMetrics?.newRegistrations ?? applicants.length;
+  const blockedApplicantsCount =
+    dbMetrics?.blockedApplicants ?? applicants.filter((a) => a.status === "Blocked" || (a as any).isDeactivated).length;
+  const activeRatio =
+    totalApplicantsCount > 0 ? ((activeApplicantsCount / totalApplicantsCount) * 100).toFixed(1) : "100.0";
 
   // Select All logic
   const handleSelectAll = (checked: boolean) => {
@@ -354,28 +422,70 @@ export default function AllApplicants() {
   };
 
   // Actions
-  const handleBlockUser = (id: string) => {
+  const handleBlockUser = async (id: string) => {
+    const target = applicants.find((a) => a.id === id || (a as any)._id === id);
+    if (!target) return;
+
+    const willBeBlocked = target.status !== "Blocked" && !(target as any).isDeactivated;
+
+    // Optimistic UI state update
     setApplicants((prev) =>
       prev.map((app) =>
-        app.id === id
-          ? { ...app, status: app.status === "Blocked" ? "Active" : "Blocked" }
+        app.id === id || (app as any)._id === id
+          ? {
+              ...app,
+              status: willBeBlocked ? "Blocked" : "Active",
+              isDeactivated: willBeBlocked
+            }
           : app
       )
     );
-    if (viewApplicant && viewApplicant.id === id) {
+
+    if (viewApplicant && (viewApplicant.id === id || (viewApplicant as any)._id === id)) {
       setViewApplicant((prev) =>
-        prev ? { ...prev, status: prev.status === "Blocked" ? "Active" : "Blocked" } : null
+        prev
+          ? {
+              ...prev,
+              status: willBeBlocked ? "Blocked" : "Active",
+              isDeactivated: willBeBlocked
+            }
+          : null
       );
     }
-    triggerToast(`Applicant ${id} status updated successfully.`);
+
+    try {
+      await fetch("http://localhost:5000/api/v1/applicant/toggle-block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: (target as any).userId,
+          applicantId: target.id,
+          isDeactivated: willBeBlocked
+        })
+      });
+      triggerToast(`Applicant ${target.id} (${target.name}) ${willBeBlocked ? "blocked" : "unblocked"} successfully.`);
+    } catch (e) {
+      console.error("Failed to toggle block status:", e);
+    }
   };
 
-  const handleDeleteUser = (id: string) => {
-    setApplicants((prev) => prev.filter((a) => a.id !== id));
-    if (viewApplicant?.id === id) {
+  const handleDeleteUser = async (id: string) => {
+    const target = applicants.find((a) => a.id === id || (a as any)._id === id);
+    const mongoId = (target as any)?._id || id;
+
+    setApplicants((prev) => prev.filter((a) => a.id !== id && (a as any)._id !== id));
+    if (viewApplicant?.id === id || (viewApplicant as any)?._id === id) {
       setViewApplicant(null);
     }
-    triggerToast(`Applicant ${id} removed from register.`);
+
+    try {
+      await fetch(`http://localhost:5000/api/v1/applicant/${mongoId}`, {
+        method: "DELETE"
+      });
+      triggerToast(`Applicant ${target?.id || id} removed from database.`);
+    } catch (e) {
+      console.error("Failed to delete applicant:", e);
+    }
   };
 
   const handleBulkAction = (action: string) => {
@@ -421,6 +531,12 @@ export default function AllApplicants() {
             Manage and monitor all registered applicants, verify profiles, and review application activity.
           </p>
         </div>
+        {isLoading && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#4848F7]">
+            <Clock size={14} className="animate-spin" />
+            <span>Syncing MongoDB Database...</span>
+          </div>
+        )}
       </div>
 
       {/* TOP STATISTICS CARDS (4 CARDS GRID) */}
@@ -433,10 +549,10 @@ export default function AllApplicants() {
               <Users size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">1,248</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{totalApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <ArrowUpRight size={13} />
-            <span>+12.4% vs last month</span>
+            <span>Live Database Records</span>
           </div>
         </div>
 
@@ -448,10 +564,10 @@ export default function AllApplicants() {
               <UserCheck size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">1,032</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{activeApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <CheckCircle2 size={13} />
-            <span>82.7% Active Ratio</span>
+            <span>{activeRatio}% Active Ratio</span>
           </div>
         </div>
 
@@ -463,7 +579,7 @@ export default function AllApplicants() {
               <UserPlus size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">58</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{newRegistrationsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <Clock size={13} />
             <span>Registered past 7 days</span>
@@ -478,10 +594,10 @@ export default function AllApplicants() {
               <UserX size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">12</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{blockedApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-red-600 font-semibold mt-2">
             <ShieldAlert size={13} />
-            <span>Requires Admin Action</span>
+            <span>{blockedApplicantsCount > 0 ? "Requires Admin Review" : "No Blocked Users"}</span>
           </div>
         </div>
       </div>
@@ -554,11 +670,11 @@ export default function AllApplicants() {
               className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-[#4848F7] cursor-pointer"
             >
               <option value="All">All Countries</option>
-              <option value="Canada">Canada 🇨🇦</option>
-              <option value="Australia">Australia 🇦🇺</option>
-              <option value="UK">UK 🇬🇧</option>
-              <option value="USA">USA 🇺🇸</option>
-              <option value="Germany">Germany 🇩🇪</option>
+              {uniqueCountries.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -679,14 +795,14 @@ export default function AllApplicants() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredApplicants.length === 0 ? (
+              {paginatedApplicants.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-8 text-center text-slate-400 font-medium">
                     No applicants found matching current search/filter parameters.
                   </td>
                 </tr>
               ) : (
-                filteredApplicants.map((app) => {
+                paginatedApplicants.map((app) => {
                   const isSelected = selectedIds.includes(app.id);
 
                   return (
@@ -798,35 +914,52 @@ export default function AllApplicants() {
         {/* PAGINATION FOOTER */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
           <div className="text-slate-500 font-medium">
-            Showing <strong className="text-slate-900 font-mono">1–{filteredApplicants.length}</strong> of{" "}
-            <strong className="text-slate-900 font-mono">1,248</strong> Applicants
+            {totalItems === 0 ? (
+              <span>Showing <strong className="text-slate-900 font-mono">0</strong> Applicants</span>
+            ) : (
+              <span>
+                Showing <strong className="text-slate-900 font-mono">{startIndex + 1}–{endIndex}</strong> of{" "}
+                <strong className="text-slate-900 font-mono">{totalItems}</strong> Applicants
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
-              disabled
-              className="px-2.5 py-1.5 bg-slate-100 text-slate-400 rounded-lg border border-slate-200 text-xs font-bold flex items-center gap-1 cursor-not-allowed opacity-60"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 transition ${
+                currentPage === 1
+                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 cursor-pointer"
+              }`}
             >
               <ChevronLeft size={14} /> Previous
             </button>
 
-            <button className="w-8 h-8 rounded-lg bg-[#4848F7] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-              3
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-              4
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-              5
-            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition border cursor-pointer ${
+                  currentPage === pageNum
+                    ? "bg-[#4848F7] text-white border-[#4848F7] shadow-xs"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
 
-            <button className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalItems === 0}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 transition ${
+                currentPage === totalPages || totalItems === 0
+                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 cursor-pointer"
+              }`}
+            >
               Next <ChevronRight size={14} />
             </button>
           </div>

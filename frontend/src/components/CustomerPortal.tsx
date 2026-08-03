@@ -1226,9 +1226,9 @@ export default function CustomerPortal() {
               <button
                 onClick={() => {
                   setShowLogoutModal(false);
-                  setRole("Agent");
+                  logoutSession();
                 }}
-                className="flex-1 bg-[#4848F7] hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs"
+                className="flex-1 bg-[#4848F7] hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer"
               >
                 Log Out
               </button>

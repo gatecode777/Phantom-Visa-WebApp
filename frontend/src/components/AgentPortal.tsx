@@ -64,7 +64,7 @@ export default function AgentPortal() {
     setAgentTab,
     updateApplicationStatus,
     updateApplicationDocs,
-    setRole
+    logoutSession
   } = useVisa();
 
   // Active sub-tab states matching the screenshot sub-sections
@@ -1257,9 +1257,9 @@ export default function AgentPortal() {
               <button
                 onClick={() => {
                   setShowLogoutModal(false);
-                  setRole("Customer");
+                  logoutSession();
                 }}
-                className="bg-brand-red text-white font-bold px-4 py-2 rounded"
+                className="bg-brand-red text-white font-bold px-4 py-2 rounded cursor-pointer"
               >
                 Confirm Logout
               </button>

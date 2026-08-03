@@ -225,6 +225,19 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
   // Yesterday date string for DOB max limit
   const maxDobDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
+  // Dynamic completion percentage calculator (starts at 0% when no fields filled)
+  const getProgressPercentage = () => {
+    const step1Required = ["firstName", "lastName", "email", "phone", "password", "confirmPassword", "dob"];
+    const step1Filled = step1Required.filter((f) => !!formData[f as keyof typeof formData]).length;
+
+    if (currentStep === 1) {
+      return Math.round((step1Filled / step1Required.length) * 16);
+    }
+
+    const baseProgress = ((currentStep - 1) / 6) * 100;
+    return Math.min(100, Math.round(baseProgress));
+  };
+
   // Form State containing all 6 steps of data
   const [formData, setFormData] = useState({
     // Step 1: Personal Information & Credentials
@@ -741,7 +754,7 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
               <span>Step {currentStep} of 6: {stepsConfig[currentStep - 1].title}</span>
             </span>
             <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-              {Math.round((currentStep / 6) * 100)}% Completed
+              {getProgressPercentage()}% Completed
             </span>
           </div>
 
@@ -749,7 +762,7 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
           <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
             <div
               className="bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] h-full transition-all duration-300 rounded-full"
-              style={{ width: `${(currentStep / 6) * 100}%` }}
+              style={{ width: `${getProgressPercentage()}%` }}
             />
           </div>
 
