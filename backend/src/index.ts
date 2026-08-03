@@ -17,10 +17,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration (allow requests with credentials for cookies)
+// CORS configuration (allow requests with credentials for cookies and production frontend deployments)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        /\.vercel\.app$/.test(origin) ||
+        /\.onrender\.com$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true
   })
 );
