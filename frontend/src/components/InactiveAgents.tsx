@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   UserX,
   Search,
@@ -206,8 +207,55 @@ export default function InactiveAgents() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  // Table Data & Selection
-  const [agents, setAgents] = useState<InactiveAgent[]>(MOCK_INACTIVE_AGENTS);
+  // Table Data & Selection (Loaded dynamically from MongoDB)
+  const [agents, setAgents] = useState<InactiveAgent[]>([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/agent/all`);
+        const json = await res.json();
+        if (res.ok && json.success && Array.isArray(json.data)) {
+          const apiAgents: InactiveAgent[] = json.data
+            .filter((item: any) => item.status === "Inactive" || item.status === "Blocked")
+            .map((item: any, index: number) => ({
+              id: item._id || String(index + 1),
+              agentId: item.id || "AGT-1001",
+              agentName: item.name || "Travel Agent",
+              agencyName: item.agencyName || "Visa Agency",
+              agencyType: "Travel Agency",
+              country: item.country || "India",
+              email: item.email || "agent@email.com",
+              mobile: item.phone || "+91 9876543210",
+              registrationDate: item.registeredOn || "Recently",
+              inactiveSince: item.registeredOn || "Recently",
+              reason: item.status === "Blocked" ? "Account Blocked by Admin" : "Inactive Account",
+              lastLogin: "Recently",
+              lastActiveDate: "Recently",
+              status: item.status === "Blocked" ? "Suspended" : "Inactive",
+              emailVerified: true,
+              mobileVerified: true,
+              regNumber: item.agencyRegNo || "REG-99120",
+              officeAddress: item.officeAddress || "N/A",
+              website: item.website || "N/A",
+              appsAssigned: 0,
+              appsCompleted: 0,
+              appsPending: 0,
+              approvalRate: "0%",
+              rating: 5.0,
+              avgProcTime: "1 Day",
+              recentActivities: [
+                { action: "Account status updated in MongoDB", time: "Recently" }
+              ]
+            }));
+          setAgents(apiAgents);
+        }
+      } catch (err) {
+        console.error("Failed to fetch inactive agents:", err);
+      }
+    };
+    fetchAgents();
+  }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Modal State
@@ -282,6 +330,19 @@ export default function InactiveAgents() {
 
     return matchesQuery && matchesStatus && matchesType && matchesReason;
   });
+
+  // Dynamic Pagination State & Math
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatus, selectedAgencyType, selectedReason, fromDate, toDate]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredAgents.length);
+  const paginatedAgents = filteredAgents.slice(startIndex, endIndex);
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
@@ -564,60 +625,45 @@ export default function InactiveAgents() {
             <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
               {filteredAgents.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={11} className="py-12 text-center text-slate-400">
                     <UserX size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
                     <p className="font-bold text-slate-600">No inactive agents found matching your filters.</p>
                   </td>
                 </tr>
               ) : (
-                filteredAgents.map((agent) => (
+                paginatedAgents.map((agent) => (
                   <tr
                     key={agent.id}
-                    className="hover:bg-slate-50/80 transition-colors group"
+                    className={`hover:bg-blue-50/40 transition-colors ${
+                      selectedIds.includes(agent.id) ? "bg-blue-50/60" : ""
+                    }`}
                   >
                     <td className="py-3.5 px-4 text-center">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(agent.id)}
                         onChange={() => handleToggleSelect(agent.id)}
-                        className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
+                        className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
                       />
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">
-                      {agent.agentId}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {agent.agentName}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {agent.agencyName}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium">
-                      {agent.country}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-600">
-                      {agent.inactiveSince}
-                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">{agent.agentId}</td>
+                    <td className="py-3.5 px-4 font-extrabold text-slate-900">{agent.agentName}</td>
+                    <td className="py-3.5 px-4 text-slate-800 font-bold">{agent.agencyName}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-semibold">{agent.agencyType}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-semibold">{agent.country}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{agent.registrationDate}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{agent.inactiveSince}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-700">{agent.reason}</td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        {agent.reason}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                      {agent.lastLogin}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {agent.status === "Inactive" ? (
-                        <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-slate-200">
-                          Inactive
-                        </span>
-                      ) : agent.status === "Suspended" ? (
-                        <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
+                      {agent.status === "Suspended" ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border bg-red-50 text-red-700 border-red-200 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                           Suspended
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          Pending Activation
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border bg-slate-100 text-slate-700 border-slate-200 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                          Inactive
                         </span>
                       )}
                     </td>
@@ -659,18 +705,38 @@ export default function InactiveAgents() {
           </table>
         </div>
 
-        {/* PAGINATION FOOTER */}
-        <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 245 Inactive Agents</div>
+        {/* DYNAMIC PAGINATION FOOTER */}
+        <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div>
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            <strong className="text-slate-900">{filteredAgents.length} Inactive Agents</strong>
+          </div>
           <div className="flex items-center gap-1 font-mono font-bold">
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
               Previous
             </button>
-            <button className="px-3 py-1 bg-[#2563EB] text-white rounded-lg">1</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">2</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">3</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">4</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                  currentPage === pageNum
+                    ? "bg-[#2563EB] text-white"
+                    : "bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
               Next
             </button>
           </div>

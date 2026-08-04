@@ -52,8 +52,11 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
       emergencyPhone,
       passportNo,
       address,
+      addressLine1,
+      addressLine2,
       city,
       state,
+      stateOrProvince,
       country,
       postalCode,
       passportType,
@@ -143,10 +146,10 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
       },
       {
         status: "Docs Uploaded",
-        label: "Documents Uploaded",
-        date: files && Object.keys(files).length > 0 ? nowStr : "",
-        description: "All required KYC & identity proof documents uploaded.",
-        completed: files && Object.keys(files).length > 0 ? true : false
+        label: "Document Verification",
+        date: "Pending",
+        description: "Document integrity and OCR compliance check.",
+        completed: false
       },
       {
         status: "Docs Verified",
@@ -194,6 +197,11 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
       }
     ];
 
+    // Format full combined address string
+    const formattedAddress = addressLine1
+      ? `${addressLine1}${addressLine2 ? ', ' + addressLine2 : ''}`
+      : address || "";
+
     // Create Applicant record in MongoDB
     const applicant = await Applicant.create({
       applicantId,
@@ -207,46 +215,19 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
         nationality: nationality || "Indian",
         phone,
         email: email || "",
-        emergencyPhone,
-        passportNo: passportNo || "UNKNOWN",
-        address: address || "",
-        city: city || "",
-        state: state || "",
         country: country || "India",
+        addressLine1: addressLine1 || "",
+        addressLine2: addressLine2 || "",
+        address: formattedAddress,
+        city: city || "",
+        state: stateOrProvince || state || "",
         postalCode: postalCode || ""
       },
-      passportDetails: {
-        passportType: passportType || "Regular",
-        passportIssueDate,
-        passportExpiryDate: passportExpiryDate || "2035-01-01",
-        passportPlaceOfIssue,
-        passportIssuingCountry: passportIssuingCountry || "India"
-      },
-      visaInfo: {
-        destinationCountry: destinationCountry || "Canada",
-        visaCategory: visaCategory || "Tourist Visa",
-        visaType: visaType || "Express Tourist",
-        purposeOfVisit: purposeOfVisit || "Tourism",
-        entryType: entryType || "Multiple Entry",
-        durationOfStay: durationOfStay || "90 Days",
-        expectedTravelDate,
-        preferredEmbassy
-      },
       kycDetails: {
-        govtIdType: govtIdType || "Aadhaar / National ID",
-        govtIdNumber,
-        aadhaarNumber,
-        panCardNumber,
-        kycStatus: "Pending Audit",
-        faceBiometricVerified: false,
-        addressProofVerified: false
+        kycStatus: "Pending",
+        submittedAt: new Date()
       },
-      documents: documentsObj,
-      status: "Submitted",
-      fees: 18500,
-      timeline: initialTimeline,
-      appointments: initialAppointments,
-      messages: initialMessages
+      status: "Submitted"
     });
 
     return res.status(201).json({

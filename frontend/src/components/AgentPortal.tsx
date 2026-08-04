@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useVisa, Application, VisaStatus, formatINR, AgentTab } from "../context/VisaContext";
 import MRZStrip from "./MRZStrip";
 import {
@@ -66,6 +66,27 @@ export default function AgentPortal() {
     updateApplicationDocs,
     logoutSession
   } = useVisa();
+
+  const handleTabChange = (tab: AgentTab) => {
+    setAgentTab(tab);
+    if (typeof window !== "undefined") {
+      const newUrl = `${window.location.pathname}?tab=${encodeURIComponent(tab)}`;
+      window.history.replaceState(null, "", newUrl);
+      localStorage.setItem("agent_active_tab", tab);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as AgentTab | null;
+      const storedTab = localStorage.getItem("agent_active_tab") as AgentTab | null;
+      const targetTab = urlTab || storedTab;
+      if (targetTab) {
+        setAgentTab(targetTab);
+      }
+    }
+  }, []);
 
   // Active sub-tab states matching the screenshot sub-sections
   // 1. Dashboard: 'overview' | 'today' | 'pending_tasks'
