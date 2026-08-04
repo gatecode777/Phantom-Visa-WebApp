@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
-  ShieldCheck,
+  FileCheck2,
   Search,
   Filter,
   RefreshCw,
@@ -8,695 +9,376 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Send,
-  Download,
+  ShieldCheck,
+  ShieldAlert,
   FileText,
-  UserCheck,
-  RotateCcw,
-  Bell,
-  ArrowUpRight,
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
   X,
-  Layers,
-  MessageSquare,
-  AlertCircle,
-  Check,
   Building,
-  User
+  CreditCard,
+  UserCheck,
+  UserX,
+  Check,
+  Layers,
+  ArrowUpRight
 } from "lucide-react";
 
 export interface KycRecord {
-  id: string;
-  applicantName: string;
-  avatar: string;
-  passportNo: string;
-  country: string;
-  flag: string;
-  submittedOn: string;
-  kycStatus: "Pending" | "Approved" | "Rejected";
-  assignedAgent: string;
-  dob: string;
-  nationality: string;
+  id: string; // applicantId e.g. APP-1025
+  _id?: string;
+  userId?: string;
+  name: string;
+  avatar?: string;
   email: string;
   mobile: string;
-  documentType: "Passport" | "National ID" | "Driving License" | "Residence Permit";
-  submittedDocuments: {
-    name: string;
-    type: string;
-    verified: boolean;
-    size: string;
-  }[];
-  verificationChecklist: {
-    passportNumberMatches: boolean;
-    nameMatches: boolean;
-    dobVerified: boolean;
-    passportExpiryValid: boolean;
-    faceVerification: boolean;
-    addressVerified: boolean;
-  };
-  remarks: string;
+  country: string;
+  flag: string;
+  kycStatus: "Pending" | "Under Audit" | "Approved" | "Rejected";
+  submittedOn: string;
+  govtIdType: string;
+  aadhaarNumber?: string;
+  panCardNumber?: string;
+  ssnOrNationalId?: string;
+  rejectionReason?: string;
 }
 
-const mockKycRecords: KycRecord[] = [
-  {
-    id: "KYC-1001",
-    applicantName: "Geeta Bisht",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-    passportNo: "P12345678",
-    country: "India",
-    flag: "🇮🇳",
-    submittedOn: "24 Jul 2026",
-    kycStatus: "Pending",
-    assignedAgent: "Sarah Wilson",
-    dob: "14 May 1994",
-    nationality: "Indian",
-    email: "geeta@email.com",
-    mobile: "+91 9876543210",
-    documentType: "Passport",
-    submittedDocuments: [
-      { name: "Biometric Passport Front & Back", type: "PDF", verified: true, size: "2.4 MB" },
-      { name: "Passport Size Photograph (Studio White BG)", type: "JPG", verified: true, size: "850 KB" },
-      { name: "National Aadhaar ID Card", type: "PDF", verified: false, size: "1.1 MB" },
-      { name: "Verified Address Proof (Utility Bill)", type: "PDF", verified: true, size: "1.8 MB" },
-      { name: "Live Selfie holding Passport Bio Page", type: "PNG", verified: false, size: "3.2 MB" }
-    ],
-    verificationChecklist: {
-      passportNumberMatches: true,
-      nameMatches: true,
-      dobVerified: true,
-      passportExpiryValid: true,
-      faceVerification: false,
-      addressVerified: true
-    },
-    remarks: "Passport bio page scan verified clean. Pending live selfie face match verification by agent."
-  },
-  {
-    id: "KYC-1002",
-    applicantName: "Rahul Sharma",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256",
-    passportNo: "P98765432",
-    country: "India",
-    flag: "🇮🇳",
-    submittedOn: "24 Jul 2026",
-    kycStatus: "Approved",
-    assignedAgent: "David Lee",
-    dob: "22 Aug 1991",
-    nationality: "Indian",
-    email: "rahul@email.com",
-    mobile: "+91 9812345678",
-    documentType: "Passport",
-    submittedDocuments: [
-      { name: "Official Indian Passport Scan", type: "PDF", verified: true, size: "3.1 MB" },
-      { name: "High-Res Passport Photograph", type: "JPG", verified: true, size: "920 KB" },
-      { name: "Pan Card Identity Proof", type: "PDF", verified: true, size: "1.4 MB" },
-      { name: "Residential Address Verification", type: "PDF", verified: true, size: "2.0 MB" },
-      { name: "Biometric Face Match Selfie", type: "PNG", verified: true, size: "2.8 MB" }
-    ],
-    verificationChecklist: {
-      passportNumberMatches: true,
-      nameMatches: true,
-      dobVerified: true,
-      passportExpiryValid: true,
-      faceVerification: true,
-      addressVerified: true
-    },
-    remarks: "All identity documents cross-verified with government passport portal database. KYC Approved."
-  },
-  {
-    id: "KYC-1003",
-    applicantName: "Maria Wilson",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=256",
-    passportNo: "X45678901",
-    country: "USA",
-    flag: "🇺🇸",
-    submittedOn: "24 Jul 2026",
-    kycStatus: "Rejected",
-    assignedAgent: "Sarah Wilson",
-    dob: "10 Oct 1996",
-    nationality: "American",
-    email: "maria@email.com",
-    mobile: "+1 5550192834",
-    documentType: "Passport",
-    submittedDocuments: [
-      { name: "US Passport Scan (Low Resolution)", type: "PDF", verified: false, size: "450 KB" },
-      { name: "Passport Photo", type: "JPG", verified: false, size: "310 KB" },
-      { name: "State Driver License", type: "PDF", verified: true, size: "1.5 MB" }
-    ],
-    verificationChecklist: {
-      passportNumberMatches: false,
-      nameMatches: true,
-      dobVerified: true,
-      passportExpiryValid: false,
-      faceVerification: false,
-      addressVerified: true
-    },
-    remarks: "Passport image copy was blurry and bio MRZ barcode unreadable. Resubmission requested."
-  },
-  {
-    id: "KYC-1004",
-    applicantName: "Vikram Malhotra",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256",
-    passportNo: "K9023412",
-    country: "India",
-    flag: "🇮🇳",
-    submittedOn: "23 Jul 2026",
-    kycStatus: "Pending",
-    assignedAgent: "David Lee",
-    dob: "05 Nov 1988",
-    nationality: "Indian",
-    email: "vikram@email.com",
-    mobile: "+91 9988776655",
-    documentType: "Passport",
-    submittedDocuments: [
-      { name: "Indian Passport Copy", type: "PDF", verified: true, size: "2.7 MB" },
-      { name: "Digital Passport Photograph", type: "JPG", verified: true, size: "1.0 MB" },
-      { name: "Voter ID Card", type: "PDF", verified: true, size: "1.2 MB" }
-    ],
-    verificationChecklist: {
-      passportNumberMatches: true,
-      nameMatches: true,
-      dobVerified: true,
-      passportExpiryValid: true,
-      faceVerification: false,
-      addressVerified: true
-    },
-    remarks: "Awaiting final automated OCR MRZ checksum confirmation."
-  },
-  {
-    id: "KYC-1005",
-    applicantName: "Ananya Roy",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256",
-    passportNo: "P1239874",
-    country: "India",
-    flag: "🇮🇳",
-    submittedOn: "22 Jul 2026",
-    kycStatus: "Approved",
-    assignedAgent: "Sarah Wilson",
-    dob: "19 Feb 1995",
-    nationality: "Indian",
-    email: "ananya@email.com",
-    mobile: "+91 9765432109",
-    documentType: "Passport",
-    submittedDocuments: [
-      { name: "Passport Bio & Address Pages", type: "PDF", verified: true, size: "3.5 MB" },
-      { name: "Studio Photo", type: "JPG", verified: true, size: "900 KB" },
-      { name: "Aadhaar Card Copy", type: "PDF", verified: true, size: "1.9 MB" }
-    ],
-    verificationChecklist: {
-      passportNumberMatches: true,
-      nameMatches: true,
-      dobVerified: true,
-      passportExpiryValid: true,
-      faceVerification: true,
-      addressVerified: true
-    },
-    remarks: "All 6 verification checklist items passed. KYC identity approved."
-  }
-];
-
 export default function KycVerifications() {
-  // Search & Filter States
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [docTypeFilter, setDocTypeFilter] = useState("All");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [kycRecords, setKycRecords] = useState<KycRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Selection States for Bulk Actions
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All Statuses");
 
-  // Selected KYC Record for Detail Modal State
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // View Details Modal state
   const [viewRecord, setViewRecord] = useState<KycRecord | null>(null);
-  const [modalTab, setModalTab] = useState<
-    "applicantInfo" | "documents" | "checklist" | "remarks" | "quickActions" | "bulkActions"
-  >("applicantInfo");
 
-  // Notification Toast State
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  // Toast notification
+  const [toastMsg, setToastMsg] = useState<{ title: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (title: string, type: "success" | "error" = "success") => {
+    setToastMsg({ title, type });
+    setTimeout(() => setToastMsg(null), 4000);
   };
 
-  // KYC Records State
-  const [records, setRecords] = useState<KycRecord[]>(mockKycRecords);
+  // Fetch Live Applicants & KYC Records
+  const fetchKycRecords = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`${API_V1_URL}/applicant/all`);
+      const json = await res.json();
+
+      if (res.ok && json.success && Array.isArray(json.data)) {
+        const records: KycRecord[] = json.data.map((item: any) => ({
+          id: item.id || "APP-UNKNOWN",
+          _id: item._id,
+          userId: item.userId,
+          name: item.name || "Applicant",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+          email: item.email || "N/A",
+          mobile: item.mobile || "N/A",
+          country: item.country || "India",
+          flag: item.country === "Canada" ? "🇨🇦" : item.country === "Australia" ? "🇦🇺" : item.country === "United States" ? "🇺🇸" : item.country === "United Kingdom" ? "🇬🇧" : "🇮🇳",
+          kycStatus: item.kycStatus || item.kycDetails?.kycStatus || "Pending",
+          submittedOn: item.registeredOn || "Recently",
+          govtIdType: item.kycDetails?.govtIdType || (item.country === "India" ? "Aadhaar & PAN Card" : "National Passport / ID"),
+          aadhaarNumber: item.kycDetails?.aadhaarNumber,
+          panCardNumber: item.kycDetails?.panCardNumber,
+          ssnOrNationalId: item.kycDetails?.ssnOrNationalId,
+          rejectionReason: item.kycDetails?.rejectionReason
+        }));
+        setKycRecords(records);
+      } else {
+        throw new Error(json.message || "Failed to load KYC records.");
+      }
+    } catch (err: any) {
+      console.error("Error fetching KYC records:", err);
+      setErrorMsg(err.message || "Could not fetch KYC submissions from database.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKycRecords();
+  }, []);
+
+  // Handle Admin Approve / Reject Action
+  const handleVerifyKyc = async (record: KycRecord, status: "Approved" | "Rejected") => {
+    let rejectionReason = "";
+    if (status === "Rejected") {
+      const reasonInput = prompt("Enter rejection reason for KYC audit failure:", "Document scan blurry or mismatched.");
+      if (reasonInput === null) return; // User cancelled
+      rejectionReason = reasonInput.trim() || "Document scan blurry or mismatched.";
+    }
+
+    try {
+      const res = await fetch(`${API_V1_URL}/applicant/verify-kyc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicantId: record.id,
+          userId: record.userId,
+          status,
+          rejectionReason
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to update KYC verification status.");
+      }
+
+      showToast(`KYC status for ${record.name} updated to ${status}!`, "success");
+      fetchKycRecords();
+    } catch (err: any) {
+      showToast(err.message || "Error updating KYC verification status.", "error");
+    }
+  };
 
   // Filter Logic
-  const filteredRecords = records.filter((r) => {
+  const filteredRecords = kycRecords.filter((r) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      r.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.passportNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.id.toLowerCase().includes(searchTerm.toLowerCase());
+      r.name.toLowerCase().includes(q) ||
+      r.email.toLowerCase().includes(q) ||
+      r.mobile.toLowerCase().includes(q) ||
+      r.id.toLowerCase().includes(q) ||
+      r.country.toLowerCase().includes(q);
 
-    const matchesStatus = statusFilter === "All" || r.kycStatus === statusFilter;
-    const matchesDocType = docTypeFilter === "All" || r.documentType === docTypeFilter;
+    const matchesStatus = selectedStatus === "All Statuses" || r.kycStatus === selectedStatus;
 
-    return matchesSearch && matchesStatus && matchesDocType;
+    return matchesSearch && matchesStatus;
   });
 
-  // Checkbox handlers
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(filteredRecords.map((r) => r.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
+  // KPI Metrics
+  const totalCount = kycRecords.length;
+  const pendingCount = kycRecords.filter((r) => r.kycStatus === "Pending" || r.kycStatus === "Under Audit").length;
+  const approvedCount = kycRecords.filter((r) => r.kycStatus === "Approved").length;
+  const rejectedCount = kycRecords.filter((r) => r.kycStatus === "Rejected").length;
 
-  const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  // Actions
-  const handleApproveKyc = (id: string) => {
-    setRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, kycStatus: "Approved" } : r))
-    );
-    const target = records.find((r) => r.id === id);
-    triggerToast(`KYC Approved for ${target?.applicantName || id}`);
-    if (viewRecord?.id === id) {
-      setViewRecord((prev) => (prev ? { ...prev, kycStatus: "Approved" } : null));
-    }
-  };
-
-  const handleRejectKyc = (id: string) => {
-    setRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, kycStatus: "Rejected" } : r))
-    );
-    const target = records.find((r) => r.id === id);
-    triggerToast(`KYC Rejected for ${target?.applicantName || id}`);
-    if (viewRecord?.id === id) {
-      setViewRecord((prev) => (prev ? { ...prev, kycStatus: "Rejected" } : null));
-    }
-  };
-
-  const handleRequestResubmission = (id: string) => {
-    const target = records.find((r) => r.id === id);
-    triggerToast(`Document Resubmission requested for ${target?.applicantName || id}`);
-  };
-
-  const handleBulkAction = (action: string) => {
-    if (selectedIds.length === 0) {
-      triggerToast("Please select at least one KYC request first.");
-      return;
-    }
-
-    if (action === "approve") {
-      setRecords((prev) =>
-        prev.map((r) => (selectedIds.includes(r.id) ? { ...r, kycStatus: "Approved" } : r))
-      );
-      triggerToast(`Approved KYC for ${selectedIds.length} selected request(s).`);
-      setSelectedIds([]);
-    } else if (action === "reject") {
-      setRecords((prev) =>
-        prev.map((r) => (selectedIds.includes(r.id) ? { ...r, kycStatus: "Rejected" } : r))
-      );
-      triggerToast(`Rejected KYC for ${selectedIds.length} selected request(s).`);
-      setSelectedIds([]);
-    } else {
-      triggerToast(`Executed '${action}' for ${selectedIds.length} selected request(s).`);
-    }
-  };
-
-  const handleResetFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("All");
-    setDocTypeFilter("All");
-    setFromDate("");
-    setToDate("");
-    triggerToast("Search & Filter inputs reset to default.");
-  };
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRecords = filteredRecords.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 text-slate-800">
-      {/* TOAST NOTIFICATION */}
-      {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
-          <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
-            <CheckCircle2 size={18} />
-          </div>
-          <span className="text-xs font-semibold">{toastMessage}</span>
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 p-4 rounded-2xl shadow-xl max-w-md border ${
+            toastMsg.type === "success" ? "bg-emerald-900 text-white border-emerald-700" : "bg-rose-900 text-white border-rose-700"
+          }`}
+        >
+          {toastMsg.type === "success" ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-rose-400" />}
+          <span className="text-xs font-bold">{toastMsg.title}</span>
         </div>
       )}
 
-      {/* HEADER SECTION */}
-      <div className="pb-4 border-b border-slate-200">
-        <div className="flex items-center gap-2 text-xs font-mono text-[#2563EB] mb-1">
-          <ShieldCheck size={14} />
-          <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-100 font-bold">
-            KYC Verifications
-          </span>
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-[#4848F7] shadow-inner">
+            <FileCheck2 size={24} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#4848F7] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200 font-mono">
+                Consular Identity Audit
+              </span>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">KYC Verifications Queue</h1>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Review, verify, approve, or request resubmission for applicant identity verification documents.
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">KYC Verifications</h1>
-        <p className="text-xs text-slate-500 font-medium mt-0.5">
-          Review, verify, approve, or reject applicant identity documents submitted for KYC verification.
-        </p>
+
+        <button
+          onClick={fetchKycRecords}
+          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          <span>Refresh Queue</span>
+        </button>
       </div>
 
-      {/* STATISTICS CARDS (4 CARDS GRID) */}
+      {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total KYC Requests */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total KYC Requests</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-              <FileText size={18} />
-            </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total KYC Submissions</span>
+            <h3 className="text-2xl font-black text-slate-900 font-outfit">{totalCount}</h3>
+            <span className="text-[11px] text-indigo-600 font-bold mt-1 inline-block">Registered Applicants</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">1,248</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
-            <ArrowUpRight size={13} />
-            <span>+14.2% vs last month</span>
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <ShieldCheck size={20} />
           </div>
         </div>
 
-        {/* Card 2: Pending Verification */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Pending Verification</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-              <Clock size={18} />
-            </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Pending Verification</span>
+            <h3 className="text-2xl font-black text-amber-600 font-outfit">{pendingCount}</h3>
+            <span className="text-[11px] text-amber-600 font-bold mt-1 inline-block">Requires Action / Complete</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">124</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-            <span>12 Urgent Queue</span>
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Clock size={20} />
           </div>
         </div>
 
-        {/* Card 3: Approved KYC */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Approved KYC</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-              <CheckCircle2 size={18} />
-            </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Approved KYC</span>
+            <h3 className="text-2xl font-black text-emerald-600 font-outfit">{approvedCount}</h3>
+            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">Identity Verified</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">1,082</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
-            <ShieldCheck size={13} />
-            <span>95.2% Approval Rate</span>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <CheckCircle2 size={20} />
           </div>
         </div>
 
-        {/* Card 4: Rejected KYC */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Rejected KYC</span>
-            <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-              <XCircle size={18} />
-            </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Rejected KYC</span>
+            <h3 className="text-2xl font-black text-rose-600 font-outfit">{rejectedCount}</h3>
+            <span className="text-[11px] text-rose-600 font-bold mt-1 inline-block">Doc Mismatch / Blurry</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">42</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-red-600 font-semibold mt-2">
-            <XCircle size={13} />
-            <span>Doc Mismatch / Blurry</span>
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+            <XCircle size={20} />
           </div>
         </div>
       </div>
 
-      {/* SEARCH & MULTI-CRITERIA FILTERS BAR */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-            <Filter size={16} className="text-[#2563EB]" />
-            <span>Search & Filter KYC Submissions</span>
-          </h3>
-          <button
-            onClick={handleResetFilters}
-            className="text-xs text-slate-500 hover:text-[#2563EB] font-semibold flex items-center gap-1 transition cursor-pointer"
-          >
-            <RefreshCw size={12} /> Reset Filters
-          </button>
+      {/* Search & Filter Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="relative w-full md:w-80">
+          <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by Name, Email, Country or User ID..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full text-xs pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#4848F7] text-slate-800"
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 text-xs">
-          {/* Filter 1: Search Query */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-              Search Keyword
-            </label>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Name, Email, Passport, KYC ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-              />
-            </div>
-          </div>
-
-          {/* Filter 2: KYC Status */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-              KYC Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Pending">🟡 Pending Verification</option>
-              <option value="Approved">🟢 Approved</option>
-              <option value="Rejected">🔴 Rejected</option>
-            </select>
-          </div>
-
-          {/* Filter 3: Document Type */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-              Document Type
-            </label>
-            <select
-              value={docTypeFilter}
-              onChange={(e) => setDocTypeFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
-            >
-              <option value="All">All Document Types</option>
-              <option value="Passport">Passport</option>
-              <option value="National ID">National ID</option>
-              <option value="Driving License">Driving License</option>
-              <option value="Residence Permit">Residence Permit</option>
-            </select>
-          </div>
-
-          {/* Filter 4: From Submitted Date */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-              From Submitted Date
-            </label>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-            />
-          </div>
-
-          {/* Filter 5: To Submitted Date */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-              To Submitted Date
-            </label>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end pt-2">
-          <button
-            onClick={() => triggerToast(`Filters applied: ${filteredRecords.length} KYC record(s) found`)}
-            className="px-5 py-2 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-bold rounded-xl shadow-md shadow-[#2563EB]/20 transition cursor-pointer flex items-center gap-1.5"
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <select
+            value={selectedStatus}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 focus:outline-none focus:border-[#4848F7] cursor-pointer"
           >
-            <Filter size={14} /> Apply Filters
-          </button>
+            <option value="All Statuses">All KYC Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Under Audit">Under Audit</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
         </div>
       </div>
 
-      {/* CONTEXTUAL BULK ACTIONS TOOLBAR */}
-      {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
-          <div className="flex items-center gap-2 text-xs text-[#2563EB] font-bold">
-            <CheckCircle2 size={16} />
-            <span>{selectedIds.length} KYC Request(s) Selected</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <button
-              onClick={() => handleBulkAction("approve")}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <CheckCircle2 size={14} /> Approve Selected
-            </button>
-            <button
-              onClick={() => handleBulkAction("reject")}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <XCircle size={14} /> Reject Selected
-            </button>
-            <button
-              onClick={() => handleBulkAction("notification")}
-              className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <Bell size={14} /> Send Notification
-            </button>
-            <button
-              onClick={() => handleBulkAction("export")}
-              className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download size={14} /> Export KYC Report
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* KYC VERIFICATION TABLE */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+      {/* KYC Submissions Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 w-10">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedIds.length > 0 && selectedIds.length === filteredRecords.length
-                    }
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
-                  />
-                </th>
-                <th className="py-3.5 px-4">KYC ID</th>
-                <th className="py-3.5 px-4">Applicant</th>
-                <th className="py-3.5 px-4">Passport No.</th>
-                <th className="py-3.5 px-4">Country</th>
-                <th className="py-3.5 px-4">Submitted On</th>
-                <th className="py-3.5 px-4">KYC Status</th>
-                <th className="py-3.5 px-4">Assigned Agent</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] uppercase tracking-wider font-extrabold text-slate-500">
+                <th className="py-3.5 px-4">USER ID</th>
+                <th className="py-3.5 px-4">APPLICANT</th>
+                <th className="py-3.5 px-4">COUNTRY</th>
+                <th className="py-3.5 px-4">DOCUMENT TYPE</th>
+                <th className="py-3.5 px-4">SUBMITTED ON</th>
+                <th className="py-3.5 px-4 text-center">KYC STATUS</th>
+                <th className="py-3.5 px-4 text-right">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredRecords.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    <AlertCircle size={32} className="mx-auto mb-2 text-slate-300" />
-                    <p className="font-bold">No KYC records match your filter criteria.</p>
-                    <button
-                      onClick={handleResetFilters}
-                      className="mt-2 text-xs text-[#2563EB] font-semibold underline cursor-pointer"
-                    >
-                      Clear search filters
-                    </button>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-[#4848F7] border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-semibold">Loading live KYC queue...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    No KYC verification submissions found matching your search.
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((r) => (
-                  <tr
-                    key={r.id}
-                    className={`hover:bg-blue-50/40 transition-colors ${
-                      selectedIds.includes(r.id) ? "bg-blue-50/60" : ""
-                    }`}
-                  >
-                    <td className="py-3.5 px-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(r.id)}
-                        onChange={() => handleToggleSelect(r.id)}
-                        className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
-                      />
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">
-                      {r.id}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src={r.avatar}
-                          alt={r.applicantName}
-                          className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                        />
-                        <span className="font-extrabold text-slate-900">{r.applicantName}</span>
+                paginatedRecords.map((r) => (
+                  <tr key={r._id || r.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#4848F7]">{r.id}</td>
+                    <td className="py-3.5 px-4 font-extrabold text-slate-900 flex items-center gap-2.5">
+                      <img src={r.avatar} alt={r.name} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                      <div>
+                        <span>{r.name}</span>
+                        <span className="text-[10px] text-slate-400 block font-mono font-normal">{r.email}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 font-mono font-bold">{r.passportNo}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-800">
-                      <span className="flex items-center gap-1.5">
-                        <span>{r.flag}</span> {r.country}
-                      </span>
+                    <td className="py-3.5 px-4 font-semibold text-slate-700">
+                      <span className="mr-1">{r.flag}</span> {r.country}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{r.submittedOn}</td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 font-medium text-slate-800">{r.govtIdType}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-500">{r.submittedOn}</td>
+                    <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border inline-flex items-center gap-1.5 ${
+                        className={`px-3 py-1 rounded-full text-[10px] font-extrabold font-mono border inline-block ${
                           r.kycStatus === "Approved"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : r.kycStatus === "Rejected"
-                            ? "bg-red-50 text-red-700 border-red-200"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : r.kycStatus === "Under Audit"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            r.kycStatus === "Approved"
-                              ? "bg-emerald-500"
-                              : r.kycStatus === "Rejected"
-                              ? "bg-red-500"
-                              : "bg-amber-500"
-                          }`}
-                        />
-                        {r.kycStatus}
+                        • {r.kycStatus}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 font-semibold">{r.assignedAgent}</td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => {
-                            setViewRecord(r);
-                            setModalTab("applicantInfo");
-                          }}
-                          title="View Details & Documents"
-                          className="p-1.5 hover:bg-blue-100 text-slate-600 hover:text-[#2563EB] rounded-lg transition cursor-pointer"
+                          onClick={() => setViewRecord(r)}
+                          className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition cursor-pointer"
+                          title="View Submission Details"
                         >
                           <Eye size={15} />
                         </button>
-                        {r.kycStatus !== "Approved" && (
-                          <button
-                            onClick={() => handleApproveKyc(r.id)}
-                            title="Approve KYC"
-                            className="p-1.5 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded-lg transition cursor-pointer"
-                          >
-                            <CheckCircle2 size={15} />
-                          </button>
-                        )}
-                        {r.kycStatus !== "Rejected" && (
-                          <button
-                            onClick={() => handleRejectKyc(r.id)}
-                            title="Reject KYC"
-                            className="p-1.5 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg transition cursor-pointer"
-                          >
-                            <XCircle size={15} />
-                          </button>
-                        )}
+
                         <button
-                          onClick={() => handleRequestResubmission(r.id)}
-                          title="Request Resubmission"
-                          className="p-1.5 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded-lg transition cursor-pointer"
+                          onClick={() => handleVerifyKyc(r, "Approved")}
+                          className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition cursor-pointer"
+                          title="Approve KYC Verification"
                         >
-                          <RotateCcw size={15} />
+                          <Check size={15} />
+                        </button>
+
+                        <button
+                          onClick={() => handleVerifyKyc(r, "Rejected")}
+                          className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition cursor-pointer"
+                          title="Reject KYC Submission"
+                        >
+                          <X size={15} />
                         </button>
                       </div>
                     </td>
@@ -707,433 +389,104 @@ export default function KycVerifications() {
           </table>
         </div>
 
-        {/* PAGINATION FOOTER */}
-        <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        {/* Dynamic Table Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-600">
           <div>
-            Showing <strong className="text-slate-900">1–{filteredRecords.length}</strong> of{" "}
-            <strong className="text-slate-900">124 Pending KYC Requests</strong>
+            Showing{" "}
+            <span className="font-bold text-slate-900">
+              {filteredRecords.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredRecords.length)}
+            </span>{" "}
+            of <span className="font-bold text-slate-900">{filteredRecords.length}</span> KYC Submissions
           </div>
-          <div className="flex items-center gap-1">
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 cursor-pointer flex items-center gap-1 font-semibold">
-              <ChevronLeft size={14} /> Previous
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              Previous
             </button>
-            <button className="w-8 h-8 rounded-lg bg-[#2563EB] text-white font-bold cursor-pointer">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              2
-            </button>
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1 font-semibold">
-              Next <ChevronRight size={14} />
+            <span className="px-3 py-1.5 font-bold font-mono text-[#4848F7] bg-indigo-50 rounded-lg border border-indigo-100">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              Next
             </button>
           </div>
         </div>
       </div>
 
-      {/* KYC DETAILS CENTERED VIEW MODAL (6 SECTIONS) */}
+      {/* View Details Modal */}
       {viewRecord && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget) setViewRecord(null);
           }}
-          className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
         >
-          <div className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-5 flex items-center justify-between border-b border-blue-700 shrink-0 rounded-t-3xl shadow-md">
-              <div className="flex items-center gap-3.5">
-                <img
-                  src={viewRecord.avatar}
-                  alt={viewRecord.applicantName}
-                  className="w-13 h-13 rounded-full object-cover border-2 border-white/90 shadow-md"
-                />
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={viewRecord.avatar} alt={viewRecord.name} className="w-10 h-10 rounded-full border-2 border-white/80" />
                 <div>
-                  <div className="flex items-center gap-2.5">
-                    <h2 className="text-xl font-black text-white font-outfit tracking-wide">
-                      {viewRecord.applicantName}
-                    </h2>
-                    <span
-                      className={`px-3 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
-                        viewRecord.kycStatus === "Approved"
-                          ? "bg-emerald-500/20 text-white border-white/30"
-                          : viewRecord.kycStatus === "Rejected"
-                          ? "bg-red-500/30 text-white border-white/30"
-                          : "bg-amber-500/20 text-white border-white/30"
-                      }`}
-                    >
-                      KYC Status: {viewRecord.kycStatus}
-                    </span>
-                  </div>
-                  <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
-                    <span>{viewRecord.id}</span>
-                    <span className="text-blue-300">•</span>
-                    <span>Passport: {viewRecord.passportNo}</span>
-                    <span className="text-blue-300">•</span>
-                    <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
-                      <span>{viewRecord.flag}</span> {viewRecord.country}
-                    </span>
-                  </p>
+                  <h3 className="text-base font-black tracking-tight">{viewRecord.name}</h3>
+                  <p className="text-xs text-blue-100 font-mono">{viewRecord.id} • {viewRecord.email}</p>
                 </div>
               </div>
-
               <button
                 onClick={() => setViewRecord(null)}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer border border-white/20"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* 6 Section Navigation Tabs */}
-            <div className="bg-[#EEF2FF] border-b-2 border-blue-200 px-4 flex items-center gap-1.5 overflow-x-auto shrink-0 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-blue-100 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full">
-              {[
-                { id: "applicantInfo", label: "Applicant Information", icon: User },
-                { id: "documents", label: "Submitted Documents", icon: FileText },
-                { id: "checklist", label: "Verification Checklist", icon: CheckCircle2 },
-                { id: "remarks", label: "Admin Remarks", icon: MessageSquare },
-                { id: "quickActions", label: "Quick Actions", icon: UserCheck },
-                { id: "bulkActions", label: "Bulk Actions", icon: Layers }
-              ].map((tab) => {
-                const IconComp = tab.icon;
-                const isActive = modalTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setModalTab(tab.id as any)}
-                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${
-                      isActive
-                        ? "bg-[#2563EB] text-white font-extrabold rounded-t-xl shadow-md border-[#2563EB]"
-                        : "border-transparent text-slate-700 hover:text-[#2563EB] hover:bg-white/80"
-                    }`}
-                  >
-                    <IconComp size={15} className={isActive ? "text-white" : "text-[#2563EB]/70"} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Modal Body Tab Contents */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/90 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#F1F5F9] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-100 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full">
-              {/* 1. APPLICANT INFORMATION TAB */}
-              {modalTab === "applicantInfo" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <User size={16} className="text-[#2563EB]" />
-                      <span>Applicant Information</span>
-                    </h3>
-                    <span className="text-[10px] font-mono text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 font-bold">
-                      KYC Identity Dossier
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Full Name
-                      </span>
-                      <strong className="text-slate-900 text-sm font-extrabold">
-                        {viewRecord.applicantName}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Date of Birth
-                      </span>
-                      <strong className="text-slate-800 font-mono font-bold">
-                        {viewRecord.dob}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Nationality
-                      </span>
-                      <strong className="text-slate-800 font-bold">
-                        {viewRecord.nationality}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Passport Number
-                      </span>
-                      <strong className="text-[#2563EB] font-mono text-sm font-extrabold">
-                        {viewRecord.passportNo}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Email Address
-                      </span>
-                      <strong className="text-[#2563EB] font-mono font-bold">
-                        {viewRecord.email}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Mobile Number
-                      </span>
-                      <strong className="text-slate-800 font-mono font-bold">
-                        {viewRecord.mobile}
-                      </strong>
-                    </div>
-                  </div>
+            <div className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Country</span>
+                  <strong className="text-slate-800 font-bold">{viewRecord.flag} {viewRecord.country}</strong>
                 </div>
-              )}
-
-              {/* 2. SUBMITTED DOCUMENTS TAB */}
-              {modalTab === "documents" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <FileText size={16} className="text-[#2563EB]" />
-                      <span>Submitted Identity Documents</span>
-                    </h3>
-                  </div>
-
-                  <div className="space-y-3 text-xs">
-                    {viewRecord.submittedDocuments.map((doc, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-xl border border-slate-200/80 bg-slate-50 flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText size={18} className="text-[#2563EB]" />
-                          <div>
-                            <span className="font-extrabold text-slate-800 block">{doc.name}</span>
-                            <span className="text-[11px] text-slate-500 font-mono">
-                              {doc.type} • {doc.size}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => triggerToast(`Preview opened for ${doc.name}`)}
-                            className="px-3 py-1 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                          >
-                            <Eye size={13} /> View
-                          </button>
-                          {doc.verified ? (
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold font-mono text-[11px] flex items-center gap-1">
-                              <CheckCircle2 size={13} /> Verified
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-bold font-mono text-[11px] flex items-center gap-1">
-                              <Clock size={13} /> Pending Audit
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">KYC Status</span>
+                  <strong className="text-[#4848F7] font-mono font-bold">{viewRecord.kycStatus}</strong>
                 </div>
-              )}
-
-              {/* 3. VERIFICATION CHECKLIST TAB */}
-              {modalTab === "checklist" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <CheckCircle2 size={16} className="text-[#2563EB]" />
-                      <span>Verification Audit Checklist</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    {[
-                      { key: "passportNumberMatches", label: "Passport Number Matches Database" },
-                      { key: "nameMatches", label: "Applicant Name Matches Document" },
-                      { key: "dobVerified", label: "Date of Birth Verified" },
-                      { key: "passportExpiryValid", label: "Passport Expiry Date Valid (>6 Months)" },
-                      { key: "faceVerification", label: "Biometric Live Selfie Face Match" },
-                      { key: "addressVerified", label: "Residential Address Verified" }
-                    ].map((item) => {
-                      const isPassed =
-                        viewRecord.verificationChecklist[
-                          item.key as keyof typeof viewRecord.verificationChecklist
-                        ];
-
-                      return (
-                        <div
-                          key={item.key}
-                          className={`p-3.5 rounded-xl border flex items-center justify-between font-bold ${
-                            isPassed
-                              ? "bg-emerald-50/70 border-emerald-200 text-emerald-800"
-                              : "bg-amber-50/70 border-amber-200 text-amber-800"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            {isPassed ? (
-                              <CheckCircle2 size={16} className="text-emerald-600" />
-                            ) : (
-                              <XCircle size={16} className="text-amber-600" />
-                            )}
-                            <span>{item.label}</span>
-                          </span>
-                          <span className="font-mono text-[11px] font-extrabold uppercase">
-                            {isPassed ? "PASSED" : "PENDING"}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Submitted Document Scheme</span>
+                  <strong className="text-slate-900 font-bold">{viewRecord.govtIdType}</strong>
                 </div>
-              )}
 
-              {/* 4. ADMIN REMARKS TAB */}
-              {modalTab === "remarks" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <MessageSquare size={16} className="text-[#2563EB]" />
-                      <span>Auditor Remarks & Audit Notes</span>
-                    </h3>
+                {viewRecord.aadhaarNumber && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Aadhaar Card No.</span>
+                    <strong className="text-slate-900 font-mono font-extrabold">{viewRecord.aadhaarNumber}</strong>
                   </div>
+                )}
 
-                  <div className="space-y-4 text-xs">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Current Remarks
-                      </span>
-                      <p className="text-slate-800 font-semibold leading-relaxed">
-                        {viewRecord.remarks}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Add Audit Remark Note
-                      </label>
-                      <textarea
-                        rows={3}
-                        placeholder="Enter internal verification remarks for agent review..."
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-3 rounded-xl focus:outline-none focus:border-[#2563EB]"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          onClick={() => triggerToast("Audit remark updated.")}
-                          className="px-4 py-2 bg-[#2563EB] hover:bg-[#1E40AF] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
-                        >
-                          Save Remarks
-                        </button>
-                      </div>
-                    </div>
+                {viewRecord.panCardNumber && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">PAN Card No.</span>
+                    <strong className="text-slate-900 font-mono font-extrabold">{viewRecord.panCardNumber}</strong>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* 5. QUICK ACTIONS TAB */}
-              {modalTab === "quickActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <UserCheck size={16} className="text-[#2563EB]" />
-                      <span>Quick Operational Actions</span>
-                    </h3>
+                {viewRecord.ssnOrNationalId && (
+                  <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">SSN / National ID</span>
+                    <strong className="text-slate-900 font-mono font-extrabold">{viewRecord.ssnOrNationalId}</strong>
                   </div>
+                )}
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => setModalTab("documents")}
-                      className="p-3.5 bg-white hover:bg-[#EEF2FF] border border-slate-200 hover:border-[#2563EB]/50 rounded-xl font-bold text-[#2563EB] flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Documents</span>
-                      <Eye size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleApproveKyc(viewRecord.id)}
-                      className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl font-bold text-emerald-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Approve KYC</span>
-                      <CheckCircle2 size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleRejectKyc(viewRecord.id)}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-bold text-red-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Reject KYC</span>
-                      <XCircle size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleRequestResubmission(viewRecord.id)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Request Resubmission</span>
-                      <RotateCcw size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Push notification sent to ${viewRecord.applicantName}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Notify Applicant</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 6. BULK ACTIONS TAB */}
-              {modalTab === "bulkActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Layers size={16} className="text-[#2563EB]" />
-                      <span>Bulk KYC Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => handleSelectAll(true)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Select All Requests</span>
-                      <CheckCircle2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("approve")}
-                      className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl font-bold text-emerald-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Approve Selected</span>
-                      <CheckCircle2 size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("reject")}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-bold text-red-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Reject Selected</span>
-                      <XCircle size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("notification")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("export")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Export KYC Report</span>
-                      <Download size={15} className="text-[#2563EB]" />
-                    </button>
-                  </div>
+              {viewRecord.rejectionReason && (
+                <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-800">
+                  <strong className="block mb-0.5 font-bold">Rejection Reason:</strong>
+                  <span>{viewRecord.rejectionReason}</span>
                 </div>
               )}
             </div>

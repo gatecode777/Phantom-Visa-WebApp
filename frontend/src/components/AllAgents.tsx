@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   Briefcase,
   Search,
@@ -34,7 +35,8 @@ import {
   X,
   MessageSquare,
   AlertCircle,
-  Check
+  Check,
+  Save
 } from "lucide-react";
 
 export interface AgentRecord {
@@ -50,6 +52,7 @@ export interface AgentRecord {
   rating: number;
   status: "Active" | "Inactive" | "Pending Approval" | "Blocked";
   country: string;
+  commissionRate?: string;
   flag: string;
   dob: string;
   gender: string;
@@ -371,8 +374,66 @@ export default function AllAgents() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Agent List State
-  const [agents, setAgents] = useState<AgentRecord[]>(mockAgents);
+  // Agent List State (Loaded dynamically from MongoDB)
+  const [agents, setAgents] = useState<AgentRecord[]>([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/agent/all`);
+        const json = await res.json();
+        if (res.ok && json.success && Array.isArray(json.data)) {
+          const apiAgents: AgentRecord[] = json.data.map((item: any) => ({
+            id: item.id || "AGT-1001",
+            name: item.name || "Travel Agent",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+            agencyName: item.agencyName || "Visa Agency",
+            email: item.email || "agent@email.com",
+            mobile: item.phone || "+91 9876543210",
+            assignedApps: 0,
+            completedApps: 0,
+            activeCases: 0,
+            rating: 5.0,
+            status: item.status || "Pending Approval",
+            country: item.country || "India",
+            city: item.city || "New Delhi",
+            commissionRate: item.commission || "15%",
+            registeredOn: item.registeredOn || "Recently",
+            performanceLevel: "Good",
+            agencyDetails: {
+              licenseNo: item.businessLicense || "N/A",
+              taxRegNo: item.gstTaxNo || "N/A",
+              officeAddress: `${item.city || 'New Delhi'}, ${item.country || 'India'}`,
+              businessType: "Authorized Visa Agency",
+              yearsInOperation: "1 Year",
+              monthlyAppCapacity: 100
+            },
+            kyc: {
+              identityProof: true,
+              businessRegistration: true,
+              officeAddressProof: true,
+              bankDetails: true,
+              taxCertificate: true,
+              status: "Verified"
+            },
+            accountInfo: {
+              regDate: item.registeredOn || "Recently",
+              lastLogin: "Just now",
+              emailVerified: true,
+              mobileVerified: true
+            },
+            recentActivities: [
+              { title: "Account registered in MongoDB", time: "Recently" }
+            ]
+          }));
+          setAgents(apiAgents);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live agents:", err);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   // Filter Logic
   const filteredAgents = agents.filter((a) => {
@@ -395,6 +456,19 @@ export default function AllAgents() {
     return matchesSearch && matchesStatus && matchesCountry && matchesPerf;
   });
 
+  // Dynamic Pagination State & Math
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, countryFilter, performanceFilter, fromDate, toDate]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredAgents.length);
+  const paginatedAgents = filteredAgents.slice(startIndex, endIndex);
+
   // Checkbox handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -410,43 +484,173 @@ export default function AllAgents() {
     );
   };
 
-  // Actions
-  const handleApproveAgent = (id: string) => {
-    setAgents((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: "Active" } : a))
-    );
-    const target = agents.find((a) => a.id === id);
-    triggerToast(`Approved agent account for ${target?.name || id}`);
-    if (viewAgent?.id === id) {
-      setViewAgent((prev) => (prev ? { ...prev, status: "Active" } : null));
+  // Block Modal State (Asking reason when blocking agent)
+  const [blockingAgent, setBlockingAgent] = useState<AgentRecord | null>(null);
+  const [blockReasonInput, setBlockReasonInput] = useState("");
+
+  // Edit Modal State
+  const [editingAgent, setEditingAgent] = useState<AgentRecord | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    agencyName: "",
+    email: "",
+    mobile: "",
+    status: "Active",
+    commissionRate: "15%"
+  });
+
+  // Approve Agent live API call
+  const handleApproveAgent = async (id: string) => {
+    try {
+      const res = await fetch(`${API_V1_URL}/agent/toggle-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: id, status: "Active" })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setAgents((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status: "Active" } : a))
+        );
+        triggerToast(`Approved agent account for ${id}`);
+        if (viewAgent?.id === id) {
+          setViewAgent((prev) => (prev ? { ...prev, status: "Active" } : null));
+        }
+      } else {
+        triggerToast(json.message || "Failed to approve agent.");
+      }
+    } catch (err) {
+      triggerToast("Error updating agent status in database.");
     }
   };
 
-  const handleBlockAgent = (id: string) => {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: a.status === "Blocked" ? "Active" : "Blocked" } : a
-      )
-    );
-    const target = agents.find((a) => a.id === id);
-    triggerToast(
-      target?.status === "Blocked"
-        ? `Re-activated agent account for ${target.name}`
-        : `Blocked agent account for ${target?.name}`
-    );
-    if (viewAgent?.id === id) {
-      setViewAgent((prev) =>
-        prev ? { ...prev, status: prev.status === "Blocked" ? "Active" : "Blocked" } : null
-      );
+  // Open Block Modal or Re-activate
+  const initiateBlockAgent = (agent: AgentRecord) => {
+    if (agent.status === "Blocked") {
+      handleApproveAgent(agent.id);
+    } else {
+      setBlockingAgent(agent);
+      setBlockReasonInput("");
     }
   };
 
-  const handleDeleteAgent = (id: string) => {
+  // Submit Block Agent with Reason live API call
+  const handleConfirmBlock = async () => {
+    if (!blockingAgent) return;
+    if (!blockReasonInput.trim()) {
+      triggerToast("Please provide a reason for blocking this agent.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_V1_URL}/agent/toggle-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: blockingAgent.id,
+          status: "Blocked",
+          blockReason: blockReasonInput.trim()
+        })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setAgents((prev) =>
+          prev.map((a) => (a.id === blockingAgent.id ? { ...a, status: "Blocked" } : a))
+        );
+        triggerToast(`Blocked agent ${blockingAgent.name}. Reason: ${blockReasonInput.trim()}`);
+        if (viewAgent?.id === blockingAgent.id) {
+          setViewAgent((prev) => (prev ? { ...prev, status: "Blocked" } : null));
+        }
+        setBlockingAgent(null);
+      } else {
+        triggerToast(json.message || "Failed to block agent.");
+      }
+    } catch (err) {
+      triggerToast("Error updating agent status in database.");
+    }
+  };
+
+  // Delete Agent live API call
+  const handleDeleteAgent = async (id: string) => {
     const target = agents.find((a) => a.id === id);
-    setAgents((prev) => prev.filter((a) => a.id !== id));
-    setSelectedIds((prev) => prev.filter((item) => item !== id));
-    if (viewAgent?.id === id) setViewAgent(null);
-    triggerToast(`Deleted agent record for ${target?.name || id}`);
+    if (!window.confirm(`Are you sure you want to permanently delete agent ${target?.name || id}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_V1_URL}/agent/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: id })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setAgents((prev) => prev.filter((a) => a.id !== id));
+        setSelectedIds((prev) => prev.filter((item) => item !== id));
+        if (viewAgent?.id === id) setViewAgent(null);
+        triggerToast(`Permanently deleted agent record for ${target?.name || id}`);
+      } else {
+        triggerToast(json.message || "Failed to delete agent record.");
+      }
+    } catch (err) {
+      triggerToast("Error deleting agent record from database.");
+    }
+  };
+
+  // Edit Agent modal opener & handler
+  const openEditModal = (agent: AgentRecord) => {
+    setEditingAgent(agent);
+    setEditForm({
+      name: agent.name,
+      agencyName: agent.agencyName,
+      email: agent.email,
+      mobile: agent.mobile,
+      status: agent.status,
+      commissionRate: agent.commissionRate || "15%"
+    });
+  };
+
+  const handleSaveEditAgent = async () => {
+    if (!editingAgent) return;
+    try {
+      const res = await fetch(`${API_V1_URL}/agent/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: editingAgent.id,
+          fullName: editForm.name,
+          agencyName: editForm.agencyName,
+          email: editForm.email,
+          phone: editForm.mobile,
+          status: editForm.status
+        })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const newStatus = editForm.status as "Active" | "Inactive" | "Blocked" | "Pending Approval";
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id === editingAgent.id
+              ? {
+                  ...a,
+                  name: editForm.name,
+                  agencyName: editForm.agencyName,
+                  email: editForm.email,
+                  mobile: editForm.mobile,
+                  status: newStatus,
+                  commissionRate: editForm.commissionRate
+                }
+              : a
+          )
+        );
+        triggerToast(`Agent ${editForm.name} updated successfully in database!`);
+        setEditingAgent(null);
+      } else {
+        triggerToast(json.message || "Failed to update agent.");
+      }
+    } catch (err) {
+      triggerToast("Error updating agent details in database.");
+    }
   };
 
   const handleBulkAction = (action: string) => {
@@ -515,10 +719,10 @@ export default function AllAgents() {
               <Briefcase size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">245</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <ArrowUpRight size={13} />
-            <span>+10.4% vs last quarter</span>
+            <span>Live Database Registry</span>
           </div>
         </div>
 
@@ -530,25 +734,25 @@ export default function AllAgents() {
               <UserCheck size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">215</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Active").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <ShieldCheck size={13} />
-            <span>87.7% Active Operational Rate</span>
+            <span>Active Operational</span>
           </div>
         </div>
 
-        {/* Card 3: Inactive Agents */}
+        {/* Card 3: Inactive / Blocked Agents */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Inactive Agents</span>
+            <span className="text-xs font-bold text-slate-500">Inactive / Blocked</span>
             <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
               <UserX size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">18</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Inactive" || a.status === "Blocked").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold mt-2">
             <Clock size={13} />
-            <span>No activity in 30 days</span>
+            <span>Blocked / Suspended</span>
           </div>
         </div>
 
@@ -560,10 +764,10 @@ export default function AllAgents() {
               <Clock size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">5</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Pending Approval").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-            <span>Awaiting License Review</span>
+            <span>Awaiting Review</span>
           </div>
         </div>
       </div>
@@ -766,7 +970,7 @@ export default function AllAgents() {
                   </td>
                 </tr>
               ) : (
-                filteredAgents.map((agent) => (
+                paginatedAgents.map((agent) => (
                   <tr
                     key={agent.id}
                     className={`hover:bg-blue-50/40 transition-colors ${
@@ -853,7 +1057,7 @@ export default function AllAgents() {
                           <Eye size={15} />
                         </button>
                         <button
-                          onClick={() => triggerToast(`Edit record triggered for ${agent.name}`)}
+                          onClick={() => openEditModal(agent)}
                           title="Edit Agent Profile"
                           className="p-1.5 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition cursor-pointer"
                         >
@@ -869,7 +1073,7 @@ export default function AllAgents() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleBlockAgent(agent.id)}
+                          onClick={() => initiateBlockAgent(agent)}
                           title={agent.status === "Blocked" ? "Activate Agent" : "Block Agent"}
                           className={`p-1.5 rounded-lg transition cursor-pointer ${
                             agent.status === "Blocked"
@@ -895,29 +1099,38 @@ export default function AllAgents() {
           </table>
         </div>
 
-        {/* PAGINATION FOOTER */}
+        {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">1–{filteredAgents.length}</strong> of{" "}
-            <strong className="text-slate-900">245 Registered Agents</strong>
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            <strong className="text-slate-900">{filteredAgents.length} Registered Agents</strong>
           </div>
           <div className="flex items-center gap-1">
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 cursor-pointer flex items-center gap-1 font-semibold">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 font-semibold transition"
+            >
               <ChevronLeft size={14} /> Previous
             </button>
-            <button className="w-8 h-8 rounded-lg bg-[#2563EB] text-white font-bold cursor-pointer">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              3
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              4
-            </button>
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1 font-semibold">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${
+                  currentPage === pageNum
+                    ? "bg-[#2563EB] text-white"
+                    : "border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 font-semibold transition"
+            >
               Next <ChevronRight size={14} />
             </button>
           </div>
@@ -1500,7 +1713,7 @@ export default function AllAgents() {
                     )}
 
                     <button
-                      onClick={() => handleBlockAgent(viewAgent.id)}
+                      onClick={() => initiateBlockAgent(viewAgent)}
                       className={`p-3.5 border rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs ${
                         viewAgent.status === "Blocked"
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
@@ -1583,6 +1796,171 @@ export default function AllAgents() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOCK REASON MODAL */}
+      {blockingAgent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-extrabold text-red-600 flex items-center gap-2 font-outfit">
+                <AlertCircle size={18} />
+                <span>Block Agent Account</span>
+              </h3>
+              <button
+                onClick={() => setBlockingAgent(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium">
+              You are blocking <strong className="text-slate-900">{blockingAgent.name}</strong> ({blockingAgent.agencyName}). Please enter the reason for blocking this agent:
+            </p>
+
+            <div>
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                Reason for Blocking <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Document falsification, repeated policy violations..."
+                value={blockReasonInput}
+                onChange={(e) => setBlockReasonInput(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-3 rounded-xl focus:outline-none focus:border-red-500 focus:bg-white transition"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setBlockingAgent(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBlock}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Lock size={14} /> Confirm Block
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT AGENT MODAL */}
+      {editingAgent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
+                <Edit3 size={18} className="text-[#2563EB]" />
+                <span>Edit Agent Profile ({editingAgent.id})</span>
+              </h3>
+              <button
+                onClick={() => setEditingAgent(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Agent Full Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Agency Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.agencyName}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, agencyName: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="text"
+                  value={editForm.mobile}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, mobile: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Account Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-bold"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Pending Approval">Pending Approval</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Blocked">Blocked</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                  Commission Rate
+                </label>
+                <input
+                  type="text"
+                  value={editForm.commissionRate}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, commissionRate: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setEditingAgent(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEditAgent}
+                className="px-5 py-2 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Save size={14} /> Save Changes
+              </button>
             </div>
           </div>
         </div>

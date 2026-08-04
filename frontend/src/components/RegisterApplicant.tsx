@@ -1,29 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { parsePhoneNumberFromString, CountryCode } from "libphonenumber-js";
 import { API_V1_URL } from "../config/api";
+import { lookupPostalAddress } from "../services/addressLookupService";
 import {
   UserPlus,
   User,
-  FileText,
-  Globe,
-  ShieldCheck,
-  Upload,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Save,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  ArrowRight,
-  ArrowLeft,
-  Sparkles,
-  Info,
+  Mail,
   Lock,
   Eye,
   EyeOff,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  ChevronLeft,
+  ChevronDown,
+  Search,
+  Globe,
   Check,
-  AlertTriangle,
-  MapPin
+  Building,
+  Navigation,
+  ShieldCheck,
+  Info
 } from "lucide-react";
 
 export interface RegisterApplicantProps {
@@ -31,281 +30,647 @@ export interface RegisterApplicantProps {
   onSuccessSubmit?: (applicantData: any) => void;
 }
 
-// Static Indian Postal Code Lookup Dictionary for Instant Auto-Fill
-const PIN_CODE_MAP: Record<string, { city: string; state: string }> = {
-  "110001": { city: "New Delhi", state: "Delhi" },
-  "110002": { city: "Central Delhi", state: "Delhi" },
-  "110016": { city: "South Delhi", state: "Delhi" },
-  "110085": { city: "North West Delhi", state: "Delhi" },
-  "201301": { city: "Noida", state: "Uttar Pradesh" },
-  "122001": { city: "Gurugram", state: "Haryana" },
-  "121001": { city: "Faridabad", state: "Haryana" },
-  "400001": { city: "Mumbai", state: "Maharashtra" },
-  "400050": { city: "Bandra, Mumbai", state: "Maharashtra" },
-  "411001": { city: "Pune", state: "Maharashtra" },
-  "440001": { city: "Nagpur", state: "Maharashtra" },
-  "560001": { city: "Bengaluru", state: "Karnataka" },
-  "560038": { city: "Indiranagar, Bengaluru", state: "Karnataka" },
-  "570001": { city: "Mysuru", state: "Karnataka" },
-  "700001": { city: "Kolkata", state: "West Bengal" },
-  "700091": { city: "Salt Lake, Kolkata", state: "West Bengal" },
-  "600001": { city: "Chennai", state: "Tamil Nadu" },
-  "641001": { city: "Coimbatore", state: "Tamil Nadu" },
-  "500001": { city: "Hyderabad", state: "Telangana" },
-  "530001": { city: "Visakhapatnam", state: "Andhra Pradesh" },
-  "380001": { city: "Ahmedabad", state: "Gujarat" },
-  "395001": { city: "Surat", state: "Gujarat" },
-  "302001": { city: "Jaipur", state: "Rajasthan" },
-  "342001": { city: "Jodhpur", state: "Rajasthan" },
-  "248001": { city: "Dehradun", state: "Uttarakhand" },
-  "226001": { city: "Lucknow", state: "Uttar Pradesh" },
-  "208001": { city: "Kanpur", state: "Uttar Pradesh" },
-  "160017": { city: "Chandigarh", state: "Chandigarh" },
-  "143001": { city: "Amritsar", state: "Punjab" },
-  "682001": { city: "Kochi", state: "Kerala" },
-  "695001": { city: "Thiruvananthapuram", state: "Kerala" },
-  "751001": { city: "Bhubaneswar", state: "Odisha" },
-  "462001": { city: "Bhopal", state: "Madhya Pradesh" },
-  "452001": { city: "Indore", state: "Madhya Pradesh" },
-  "800001": { city: "Patna", state: "Bihar" }
-};
+// ISO Country Configuration Interface
+export interface ISOCountry {
+  code: CountryCode; // e.g. "IN", "US", "GB", "CA", "AU", "DE", "JP"
+  name: string;
+  dialCode: string;
+  flag: string;
+  postalLabel: string; // "PIN Code", "ZIP Code", "Postcode", "Postal Code"
+  stateLabel: string; // "State", "County", "Prefecture", "Province", "State / Region"
+  cityLabel: string; // "City / District", "City", "Town / City", "Suburb / City", "City / Ward"
+  postalPlaceholder: string;
+  postalRegex: RegExp;
+  postalErrorMsg: string;
+  examplePhone: string;
+  stateOptions?: string[];
+}
 
-// Comprehensive World Destination Countries List
-const WORLD_COUNTRIES = [
-  "Canada",
-  "United States",
-  "United Kingdom",
-  "Australia",
-  "Schengen Area (Europe)",
-  "United Arab Emirates (Dubai)",
-  "Japan",
-  "Singapore",
-  "New Zealand",
-  "Saudi Arabia",
-  "Qatar",
-  "Germany",
-  "France",
-  "Italy",
-  "Spain",
-  "Switzerland",
-  "Netherlands",
-  "Austria",
-  "Belgium",
-  "Brazil",
-  "China",
-  "Czech Republic",
-  "Denmark",
-  "Egypt",
-  "Finland",
-  "Georgia",
-  "Greece",
-  "Hong Kong",
-  "Hungary",
-  "Indonesia",
-  "Ireland",
-  "Israel",
-  "Jordan",
-  "Kenya",
-  "Kuwait",
-  "Malaysia",
-  "Maldives",
-  "Mauritius",
-  "Mexico",
-  "Morocco",
-  "Nepal",
-  "Norway",
-  "Oman",
-  "Philippines",
-  "Poland",
-  "Portugal",
-  "Russia",
-  "South Africa",
-  "South Korea",
-  "Sri Lanka",
-  "Sweden",
-  "Taiwan",
-  "Thailand",
-  "Turkey",
-  "Vietnam"
+// Default Base ISO Countries List (Used immediately and enriched via REST Countries API)
+export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
+  {
+    code: "IN",
+    name: "India",
+    dialCode: "+91",
+    flag: "🇮🇳",
+    postalLabel: "PIN Code",
+    stateLabel: "State",
+    cityLabel: "City / District",
+    postalPlaceholder: "302020",
+    postalRegex: /^\d{6}$/,
+    postalErrorMsg: "PIN Code must be exactly 6 digits (e.g. 302020 or 110001).",
+    examplePhone: "9876543210",
+    stateOptions: [
+      "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+      "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+      "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+      "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Chandigarh", "Jammu and Kashmir"
+    ]
+  },
+  {
+    code: "US",
+    name: "United States",
+    dialCode: "+1",
+    flag: "🇺🇸",
+    postalLabel: "ZIP Code",
+    stateLabel: "State",
+    cityLabel: "City",
+    postalPlaceholder: "90210",
+    postalRegex: /^\d{5}(-\d{4})?$/,
+    postalErrorMsg: "ZIP Code must be 5 digits or 5+4 format (e.g. 90210 or 12345-6789).",
+    examplePhone: "2025550143",
+    stateOptions: [
+      "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida",
+      "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine",
+      "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska",
+      "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+      "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas",
+      "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
+    ]
+  },
+  {
+    code: "GB",
+    name: "United Kingdom",
+    dialCode: "+44",
+    flag: "🇬🇧",
+    postalLabel: "Postcode",
+    stateLabel: "County (Optional)",
+    cityLabel: "Town / City",
+    postalPlaceholder: "SW1A 1AA",
+    postalRegex: /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/,
+    postalErrorMsg: "Please enter a valid UK postcode (e.g. SW1A 1AA or M1 1AE).",
+    examplePhone: "7911123456"
+  },
+  {
+    code: "CA",
+    name: "Canada",
+    dialCode: "+1",
+    flag: "🇨🇦",
+    postalLabel: "Postal Code",
+    stateLabel: "Province / Territory",
+    cityLabel: "City",
+    postalPlaceholder: "K1A 0B1",
+    postalRegex: /^[A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d$/,
+    postalErrorMsg: "Postal Code must be in format A1A 1A1 (e.g. K1A 0B1).",
+    examplePhone: "4165550123",
+    stateOptions: [
+      "Alberta", "British Columbia", "Manitoba", "New Brunswick", "Newfoundland and Labrador",
+      "Nova Scotia", "Ontario", "Prince Edward Island", "Quebec", "Saskatchewan"
+    ]
+  },
+  {
+    code: "AU",
+    name: "Australia",
+    dialCode: "+61",
+    flag: "🇦🇺",
+    postalLabel: "Postcode",
+    stateLabel: "State / Territory",
+    cityLabel: "Suburb / City",
+    postalPlaceholder: "2000",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "Postcode must be exactly 4 digits (e.g. 2000 or 3000).",
+    examplePhone: "412345678",
+    stateOptions: [
+      "New South Wales", "Victoria", "Queensland", "Western Australia",
+      "South Australia", "Tasmania", "Australian Capital Territory", "Northern Territory"
+    ]
+  },
+  {
+    code: "JP",
+    name: "Japan",
+    dialCode: "+81",
+    flag: "🇯🇵",
+    postalLabel: "Postal Code",
+    stateLabel: "Prefecture",
+    cityLabel: "City / Ward",
+    postalPlaceholder: "100-0001",
+    postalRegex: /^\d{3}-\d{4}$|^\d{7}$/,
+    postalErrorMsg: "Japan Postal Code must be 7 digits (e.g. 100-0001 or 1000001).",
+    examplePhone: "9012345678"
+  },
+  {
+    code: "DE",
+    name: "Germany",
+    dialCode: "+49",
+    flag: "🇩🇪",
+    postalLabel: "Postal Code",
+    stateLabel: "State / Bundesland",
+    cityLabel: "City",
+    postalPlaceholder: "10115",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Germany Postal Code must be 5 digits (e.g. 10115).",
+    examplePhone: "15112345678"
+  },
+  {
+    code: "FR",
+    name: "France",
+    dialCode: "+33",
+    flag: "🇫🇷",
+    postalLabel: "Postal Code",
+    stateLabel: "Region / Department",
+    cityLabel: "City",
+    postalPlaceholder: "75001",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "France Postal Code must be 5 digits (e.g. 75001).",
+    examplePhone: "612345678"
+  },
+  {
+    code: "AE",
+    name: "United Arab Emirates",
+    dialCode: "+971",
+    flag: "🇦🇪",
+    postalLabel: "Postal Code (Optional)",
+    stateLabel: "Emirate",
+    cityLabel: "City",
+    postalPlaceholder: "00000",
+    postalRegex: /^.*$/,
+    postalErrorMsg: "Valid postal code required.",
+    examplePhone: "501234567",
+    stateOptions: ["Abu Dhabi", "Dubai", "Sharjah", "Ajman", "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"]
+  },
+  {
+    code: "SG",
+    name: "Singapore",
+    dialCode: "+65",
+    flag: "🇸🇬",
+    postalLabel: "Postal Code",
+    stateLabel: "Region",
+    cityLabel: "City",
+    postalPlaceholder: "049318",
+    postalRegex: /^\d{6}$/,
+    postalErrorMsg: "Singapore Postal Code must be 6 digits (e.g. 049318).",
+    examplePhone: "81234567"
+  },
+  {
+    code: "SA",
+    name: "Saudi Arabia",
+    dialCode: "+966",
+    flag: "🇸🇦",
+    postalLabel: "Postal Code",
+    stateLabel: "Province / Region",
+    cityLabel: "City",
+    postalPlaceholder: "12211",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Saudi Postal Code must be 5 digits (e.g. 12211).",
+    examplePhone: "512345678"
+  },
+  {
+    code: "QA",
+    name: "Qatar",
+    dialCode: "+974",
+    flag: "🇶🇦",
+    postalLabel: "Postal Code",
+    stateLabel: "Municipality",
+    cityLabel: "City",
+    postalPlaceholder: "00000",
+    postalRegex: /^.*$/,
+    postalErrorMsg: "Valid postal code required.",
+    examplePhone: "55123456"
+  },
+  {
+    code: "KW",
+    name: "Kuwait",
+    dialCode: "+965",
+    flag: "🇰🇼",
+    postalLabel: "Postal Code",
+    stateLabel: "Governorate",
+    cityLabel: "City",
+    postalPlaceholder: "13001",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Kuwait Postal Code must be 5 digits (e.g. 13001).",
+    examplePhone: "91234567"
+  },
+  {
+    code: "MY",
+    name: "Malaysia",
+    dialCode: "+60",
+    flag: "🇲🇾",
+    postalLabel: "Postcode",
+    stateLabel: "State",
+    cityLabel: "City",
+    postalPlaceholder: "50000",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Malaysia Postcode must be 5 digits (e.g. 50000).",
+    examplePhone: "123456789"
+  },
+  {
+    code: "ID",
+    name: "Indonesia",
+    dialCode: "+62",
+    flag: "🇮🇩",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "City / Regency",
+    postalPlaceholder: "10110",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Indonesia Postal Code must be 5 digits.",
+    examplePhone: "8123456789"
+  },
+  {
+    code: "TH",
+    name: "Thailand",
+    dialCode: "+66",
+    flag: "🇹🇭",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "District / City",
+    postalPlaceholder: "10100",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Thailand Postal Code must be 5 digits.",
+    examplePhone: "812345678"
+  },
+  {
+    code: "VN",
+    name: "Vietnam",
+    dialCode: "+84",
+    flag: "🇻🇳",
+    postalLabel: "Postal Code",
+    stateLabel: "Province / Municipality",
+    cityLabel: "City",
+    postalPlaceholder: "700000",
+    postalRegex: /^\d{5,6}$/,
+    postalErrorMsg: "Vietnam Postal Code must be 5 or 6 digits.",
+    examplePhone: "912345678"
+  },
+  {
+    code: "PH",
+    name: "Philippines",
+    dialCode: "+63",
+    flag: "🇵🇭",
+    postalLabel: "ZIP Code",
+    stateLabel: "Province / Region",
+    cityLabel: "City / Municipality",
+    postalPlaceholder: "1000",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "Philippines ZIP Code must be 4 digits.",
+    examplePhone: "9171234567"
+  },
+  {
+    code: "KR",
+    name: "South Korea",
+    dialCode: "+82",
+    flag: "🇰🇷",
+    postalLabel: "Postal Code",
+    stateLabel: "Province / Special City",
+    cityLabel: "City / District",
+    postalPlaceholder: "03050",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "South Korea Postal Code must be 5 digits.",
+    examplePhone: "1012345678"
+  },
+  {
+    code: "CN",
+    name: "China",
+    dialCode: "+86",
+    flag: "🇨🇳",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "City",
+    postalPlaceholder: "100000",
+    postalRegex: /^\d{6}$/,
+    postalErrorMsg: "China Postal Code must be 6 digits.",
+    examplePhone: "13800138000"
+  },
+  {
+    code: "HK",
+    name: "Hong Kong",
+    dialCode: "+852",
+    flag: "🇭🇰",
+    postalLabel: "Postal Code (Optional)",
+    stateLabel: "Territory",
+    cityLabel: "District",
+    postalPlaceholder: "999077",
+    postalRegex: /^.*$/,
+    postalErrorMsg: "Valid postal code required.",
+    examplePhone: "91234567"
+  },
+  {
+    code: "NZ",
+    name: "New Zealand",
+    dialCode: "+64",
+    flag: "🇳🇿",
+    postalLabel: "Postcode",
+    stateLabel: "Region",
+    cityLabel: "City / Suburb",
+    postalPlaceholder: "1010",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "New Zealand Postcode must be 4 digits.",
+    examplePhone: "211234567"
+  },
+  {
+    code: "ZA",
+    name: "South Africa",
+    dialCode: "+27",
+    flag: "🇿🇦",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "City",
+    postalPlaceholder: "8001",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "South Africa Postal Code must be 4 digits.",
+    examplePhone: "821234567"
+  },
+  {
+    code: "BR",
+    name: "Brazil",
+    dialCode: "+55",
+    flag: "🇧🇷",
+    postalLabel: "CEP Code",
+    stateLabel: "State (UF)",
+    cityLabel: "City",
+    postalPlaceholder: "01000-000",
+    postalRegex: /^\d{5}-?\d{3}$/,
+    postalErrorMsg: "Brazil CEP Code must be 8 digits (e.g. 01000-000).",
+    examplePhone: "11912345678"
+  },
+  {
+    code: "MX",
+    name: "Mexico",
+    dialCode: "+52",
+    flag: "🇲🇽",
+    postalLabel: "Postal Code",
+    stateLabel: "State",
+    cityLabel: "City / Municipality",
+    postalPlaceholder: "01000",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Mexico Postal Code must be 5 digits.",
+    examplePhone: "5512345678"
+  },
+  {
+    code: "ES",
+    name: "Spain",
+    dialCode: "+34",
+    flag: "🇪🇸",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "City",
+    postalPlaceholder: "28001",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Spain Postal Code must be 5 digits.",
+    examplePhone: "612345678"
+  },
+  {
+    code: "IT",
+    name: "Italy",
+    dialCode: "+39",
+    flag: "🇮🇹",
+    postalLabel: "CAP Code",
+    stateLabel: "Province",
+    cityLabel: "City / Commune",
+    postalPlaceholder: "00100",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Italy CAP Code must be 5 digits.",
+    examplePhone: "3123456789"
+  },
+  {
+    code: "CH",
+    name: "Switzerland",
+    dialCode: "+41",
+    flag: "🇨🇭",
+    postalLabel: "Postal Code",
+    stateLabel: "Canton",
+    cityLabel: "City",
+    postalPlaceholder: "8000",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "Switzerland Postal Code must be 4 digits.",
+    examplePhone: "791234567"
+  },
+  {
+    code: "NL",
+    name: "Netherlands",
+    dialCode: "+31",
+    flag: "🇳🇱",
+    postalLabel: "Postcode",
+    stateLabel: "Province",
+    cityLabel: "City",
+    postalPlaceholder: "1012 JS",
+    postalRegex: /^\d{4}\s?[A-Za-z]{2}$/,
+    postalErrorMsg: "Netherlands Postcode must be 4 digits + 2 letters (e.g. 1012 JS).",
+    examplePhone: "612345678"
+  },
+  {
+    code: "SE",
+    name: "Sweden",
+    dialCode: "+46",
+    flag: "🇸🇪",
+    postalLabel: "Postcode",
+    stateLabel: "County",
+    cityLabel: "City",
+    postalPlaceholder: "111 22",
+    postalRegex: /^\d{3}\s?\d{2}$/,
+    postalErrorMsg: "Sweden Postcode must be 5 digits (e.g. 111 22).",
+    examplePhone: "701234567"
+  },
+  {
+    code: "NO",
+    name: "Norway",
+    dialCode: "+47",
+    flag: "🇳🇴",
+    postalLabel: "Postcode",
+    stateLabel: "County",
+    cityLabel: "City",
+    postalPlaceholder: "0010",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "Norway Postcode must be 4 digits.",
+    examplePhone: "40123456"
+  },
+  {
+    code: "DK",
+    name: "Denmark",
+    dialCode: "+45",
+    flag: "🇩🇰",
+    postalLabel: "Postcode",
+    stateLabel: "Region",
+    cityLabel: "City",
+    postalPlaceholder: "1000",
+    postalRegex: /^\d{4}$/,
+    postalErrorMsg: "Denmark Postcode must be 4 digits.",
+    examplePhone: "20123456"
+  },
+  {
+    code: "IE",
+    name: "Ireland",
+    dialCode: "+353",
+    flag: "🇮🇪",
+    postalLabel: "Eircode / Postcode",
+    stateLabel: "County",
+    cityLabel: "City / Town",
+    postalPlaceholder: "D02 X285",
+    postalRegex: /^[A-Za-z0-9]{3}\s?[A-Za-z0-9]{4}$|^.*$/,
+    postalErrorMsg: "Valid Eircode required (e.g. D02 X285).",
+    examplePhone: "871234567"
+  },
+  {
+    code: "RU",
+    name: "Russia",
+    dialCode: "+7",
+    flag: "🇷🇺",
+    postalLabel: "Postal Code",
+    stateLabel: "Region / Oblast",
+    cityLabel: "City",
+    postalPlaceholder: "101000",
+    postalRegex: /^\d{6}$/,
+    postalErrorMsg: "Russia Postal Code must be 6 digits.",
+    examplePhone: "9123456789"
+  },
+  {
+    code: "EG",
+    name: "Egypt",
+    dialCode: "+20",
+    flag: "🇪🇬",
+    postalLabel: "Postal Code",
+    stateLabel: "Governorate",
+    cityLabel: "City",
+    postalPlaceholder: "11511",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Egypt Postal Code must be 5 digits.",
+    examplePhone: "1012345678"
+  },
+  {
+    code: "LK",
+    name: "Sri Lanka",
+    dialCode: "+94",
+    flag: "🇱🇰",
+    postalLabel: "Postal Code",
+    stateLabel: "Province / District",
+    cityLabel: "City",
+    postalPlaceholder: "00100",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Sri Lanka Postal Code must be 5 digits.",
+    examplePhone: "712345678"
+  },
+  {
+    code: "NP",
+    name: "Nepal",
+    dialCode: "+977",
+    flag: "🇳🇵",
+    postalLabel: "Postal Code",
+    stateLabel: "Province",
+    cityLabel: "City / District",
+    postalPlaceholder: "44600",
+    postalRegex: /^\d{5}$/,
+    postalErrorMsg: "Nepal Postal Code must be 5 digits.",
+    examplePhone: "9841234567"
+  }
 ];
 
-// Comprehensive World Nationalities List
-const NATIONALITIES = [
-  "Indian",
-  "American",
-  "British",
-  "Canadian",
-  "Australian",
-  "Emirati",
-  "German",
-  "French",
-  "Japanese",
-  "Singaporean",
-  "Saudi",
-  "Qatari",
-  "Kuwaiti",
-  "Omani",
-  "Bahraini",
-  "Malaysian",
-  "Indonesian",
-  "Thai",
-  "Vietnamese",
-  "Filipino",
-  "South Korean",
-  "Chinese",
-  "New Zealander",
-  "South African",
-  "Brazilian",
-  "Mexican",
-  "Spanish",
-  "Italian",
-  "Swiss",
-  "Dutch",
-  "Swedish",
-  "Norwegian",
-  "Danish",
-  "Irish",
-  "Russian",
-  "Egyptian",
-  "Sri Lankan",
-  "Nepalese",
-  "Other"
+// Nationalities List
+export const NATIONALITIES_LIST = [
+  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan", "Argentine", "Armenian", "Australian",
+  "Austrian", "Azerbaijani", "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
+  "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British", "Bruneian", "Bulgarian",
+  "Burkinabe", "Burmese", "Burundian", "Cambodian", "Cameroonian", "Canadian", "Cape Verdean", "Central African",
+  "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese", "Costa Rican", "Croatian", "Cuban",
+  "Cypriot", "Czech", "Danish", "Djiboutian", "Dominican", "Dutch", "East Timorese", "Ecuadorean", "Egyptian",
+  "Emirati", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian", "Fijian", "Filipino", "Finnish", "French",
+  "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek", "Grenadian", "Guatemalan", "Guinean",
+  "Guyanese", "Haitian", "Honduran", "Hungarian", "Icelander", "Indian", "Indonesian", "Iranian", "Iraqi", "Irish",
+  "Israeli", "Italian", "Ivorian", "Jamaican", "Japanese", "Jordanian", "Kazakhstani", "Kenyan", "Kuwaiti",
+  "Kyrgyz", "Laotian", "Latvian", "Lebanese", "Liberian", "Libyan", "Liechtensteiner", "Lithuanian", "Luxembourger",
+  "Macedonian", "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese", "Mauritanian", "Mauritian",
+  "Mexican", "Moldovan", "Monacan", "Mongolian", "Montenegrin", "Moroccan", "Mozambican", "Namibian", "Nepalese",
+  "New Zealander", "Nicaraguan", "Nigerian", "North Korean", "Norwegian", "Omani", "Pakistani", "Panamanian",
+  "Paraguayan", "Peruvian", "Polish", "Portuguese", "Qatari", "Romanian", "Russian", "Rwandan", "Saudi",
+  "Senegalese", "Serbian", "Singaporean", "Slovak", "Slovenian", "Somali", "South African", "South Korean",
+  "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss", "Syrian", "Taiwanese", "Tajik",
+  "Tanzanian", "Thai", "Togolese", "Tongan", "Tunisian", "Turkish", "Turkmen", "Ugandan", "Ukrainian",
+  "Uruguayan", "Uzbek", "Venezuelan", "Vietnamese", "Yemeni", "Zambian", "Zimbabwean"
 ];
 
-// International Country Dial Codes
-const COUNTRY_DIAL_CODES = [
-  { code: "IN", dialCode: "+91", name: "India" },
-  { code: "US", dialCode: "+1", name: "United States" },
-  { code: "CA", dialCode: "+1", name: "Canada" },
-  { code: "GB", dialCode: "+44", name: "United Kingdom" },
-  { code: "AE", dialCode: "+971", name: "United Arab Emirates" },
-  { code: "AU", dialCode: "+61", name: "Australia" },
-  { code: "SG", dialCode: "+65", name: "Singapore" },
-  { code: "DE", dialCode: "+49", name: "Germany" },
-  { code: "FR", dialCode: "+33", name: "France" },
-  { code: "JP", dialCode: "+81", name: "Japan" },
-  { code: "SA", dialCode: "+966", name: "Saudi Arabia" },
-  { code: "QA", dialCode: "+974", name: "Qatar" },
-  { code: "KW", dialCode: "+965", name: "Kuwait" },
-  { code: "OM", dialCode: "+968", name: "Oman" },
-  { code: "BH", dialCode: "+973", name: "Bahrain" },
-  { code: "MY", dialCode: "+60", name: "Malaysia" },
-  { code: "ID", dialCode: "+62", name: "Indonesia" },
-  { code: "TH", dialCode: "+66", name: "Thailand" },
-  { code: "VN", dialCode: "+84", name: "Vietnam" },
-  { code: "PH", dialCode: "+63", name: "Philippines" },
-  { code: "KR", dialCode: "+82", name: "South Korea" },
-  { code: "CN", dialCode: "+86", name: "China" },
-  { code: "HK", dialCode: "+852", name: "Hong Kong" },
-  { code: "TW", dialCode: "+886", name: "Taiwan" },
-  { code: "NZ", dialCode: "+64", name: "New Zealand" },
-  { code: "ZA", dialCode: "+27", name: "South Africa" },
-  { code: "BR", dialCode: "+55", name: "Brazil" },
-  { code: "MX", dialCode: "+52", name: "Mexico" },
-  { code: "ES", dialCode: "+34", name: "Spain" },
-  { code: "IT", dialCode: "+39", name: "Italy" },
-  { code: "CH", dialCode: "+41", name: "Switzerland" },
-  { code: "NL", dialCode: "+31", name: "Netherlands" },
-  { code: "SE", dialCode: "+46", name: "Sweden" },
-  { code: "NO", dialCode: "+47", name: "Norway" },
-  { code: "DK", dialCode: "+45", name: "Denmark" },
-  { code: "IE", dialCode: "+353", name: "Ireland" },
-  { code: "RU", dialCode: "+7", name: "Russia" },
-  { code: "EG", dialCode: "+20", name: "Egypt" },
-  { code: "LK", dialCode: "+94", name: "Sri Lanka" },
-  { code: "NP", dialCode: "+977", name: "Nepal" }
-];
-
-export default function RegisterApplicant({ onClose, onSuccessSubmit }: RegisterApplicantProps) {
-  // Current Step state (1 to 6)
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [isAutoFillingPin, setIsAutoFillingPin] = useState<boolean>(false);
-
-  // Yesterday date string for DOB max limit
-  const maxDobDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-
-  // Dynamic completion percentage calculator (starts at 0% when no fields filled)
-  const getProgressPercentage = () => {
-    const step1Required = ["firstName", "lastName", "email", "phone", "password", "confirmPassword", "dob"];
-    const step1Filled = step1Required.filter((f) => !!formData[f as keyof typeof formData]).length;
-
-    if (currentStep === 1) {
-      return Math.round((step1Filled / step1Required.length) * 16);
-    }
-
-    const baseProgress = ((currentStep - 1) / 6) * 100;
-    return Math.min(100, Math.round(baseProgress));
+// Helper to calculate Password Strength
+export function getPasswordStrength(pwd: string) {
+  const checks = {
+    length: pwd.length >= 8,
+    capital: /[A-Z]/.test(pwd),
+    lowercase: /[a-z]/.test(pwd),
+    number: /\d/.test(pwd),
+    special: /[@$!%*?&#^()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
   };
 
-  // Form State containing all 6 steps of data
+  let score = 0;
+  if (checks.length) score += 1;
+  if (checks.capital && checks.lowercase) score += 1;
+  if (checks.number) score += 1;
+  if (checks.special) score += 1;
+
+  let label = "Weak";
+  let color = "bg-rose-500";
+  let textColor = "text-rose-600";
+  let width = "25%";
+
+  if (score === 2) {
+    label = "Fair";
+    color = "bg-amber-500";
+    textColor = "text-amber-600";
+    width = "50%";
+  } else if (score === 3) {
+    label = "Good";
+    color = "bg-blue-500";
+    textColor = "text-blue-600";
+    width = "75%";
+  } else if (score === 4) {
+    label = "Strong";
+    color = "bg-emerald-500";
+    textColor = "text-emerald-600";
+    width = "100%";
+  }
+
+  return { score, checks, label, color, textColor, width };
+}
+
+export default function RegisterApplicant({ onClose, onSuccessSubmit }: RegisterApplicantProps) {
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [isAutoFillingPin, setIsAutoFillingPin] = useState<boolean>(false);
+  const [lookupFeedback, setLookupFeedback] = useState<string | null>(null);
+
+  // Live Rest Countries List State
+  const [countriesList, setCountriesList] = useState<ISOCountry[]>(WORLD_COUNTRIES_LIST);
+
+  // Searchable Country Dropdown State
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState<boolean>(false);
+  const [countrySearch, setCountrySearch] = useState<string>("");
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Searchable Nationality Dropdown State
+  const [isNationalityDropdownOpen, setIsNationalityDropdownOpen] = useState<boolean>(false);
+  const [nationalitySearch, setNationalitySearch] = useState<string>("");
+  const nationalityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Postal lookup debounce timer ref
+  const postalDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Max DOB limit (yesterday)
+  const maxDobDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+  // Active Country Configuration
+  const [selectedCountryConfig, setSelectedCountryConfig] = useState<ISOCountry>(WORLD_COUNTRIES_LIST[0]);
+
+  // Form Data State
   const [formData, setFormData] = useState({
-    // Step 1: Personal Information & Credentials
-    applicantId: "APP-AutoGenerated",
-    fullName: "",
     firstName: "",
     lastName: "",
+    email: "",
+    phoneCountryCode: "+91",
+    phone: "",
+    password: "",
+    confirmPassword: "",
     dob: "",
     gender: "Male",
     nationality: "Indian",
-    phoneCountryCode: "+91",
-    phone: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    emergencyPhoneCountryCode: "+91",
-    emergencyPhone: "",
-    passportNo: "",
-    address: "",
-    postalCode: "",
-    city: "",
-    state: "",
     country: "India",
-
-    // Step 2: Passport Information
-    passportType: "Regular",
-    passportIssueDate: "",
-    passportExpiryDate: "",
-    passportPlaceOfIssue: "",
-    passportIssuingCountry: "India",
-
-    // Step 3: Visa Information
-    destinationCountry: "Canada",
-    visaCategory: "Tourist Visa",
-    visaType: "Subclass 600 / Express Tourist",
-    purposeOfVisit: "Tourism & Vacation",
-    entryType: "Multiple Entry",
-    durationOfStay: "90 Days",
-    expectedTravelDate: "",
-    preferredEmbassy: "VFS Global New Delhi",
-
-    // Step 4: KYC Details
-    govtIdType: "Aadhaar / National ID",
-    govtIdNumber: "",
-    aadhaarNumber: "",
-    panCardNumber: "",
-    kycStatus: "Pending Audit",
-    faceBiometricVerified: false,
-    addressProofVerified: false
+    countryCode: "IN" as CountryCode,
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    stateOrProvince: "",
+    postalCode: ""
   });
 
-  // Validation Errors and Touched Fields State
+  // Validation Errors & Touched State
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-
-  // Real File attachments state
-  const [attachedFiles, setAttachedFiles] = useState<Record<string, File>>({});
-
-  // Step Meta Configuration
-  const stepsConfig = [
-    { num: 1, title: "Personal Info & Credentials", icon: User },
-    { num: 2, title: "Passport Details", icon: FileText },
-    { num: 3, title: "Visa Information", icon: Globe },
-    { num: 4, title: "KYC Verification", icon: ShieldCheck },
-    { num: 5, title: "Document Uploads", icon: Upload },
-    { num: 6, title: "Timeline & Review", icon: CheckCircle2 }
-  ];
 
   // UI Toast State
   const [toastConfig, setToastConfig] = useState<{
@@ -319,46 +684,144 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
     setTimeout(() => setToastConfig(null), 5000);
   };
 
-  // Field validation rules logic
+  // 1. Fetch REST Countries API metadata on mount (with instant offline fallback)
+  useEffect(() => {
+    const fetchRESTCountries = async () => {
+      try {
+        const res = await fetch("https://restcountries.com/v3.1/all?fields=name,cca2,idd,flags");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const apiCountries: ISOCountry[] = data
+              .filter((c: any) => c.cca2 && c.name?.common)
+              .map((c: any) => {
+                const code = c.cca2 as CountryCode;
+                const existing = WORLD_COUNTRIES_LIST.find((base) => base.code === code);
+
+                let rootDial = c.idd?.root || "";
+                let suffix = c.idd?.suffixes && c.idd.suffixes.length === 1 ? c.idd.suffixes[0] : "";
+                let dialCode = existing ? existing.dialCode : `${rootDial}${suffix}` || "+1";
+
+                return {
+                  code,
+                  name: c.name.common,
+                  dialCode,
+                  flag: c.flags?.svg || c.flags?.png ? "🌐" : existing?.flag || "🌐",
+                  postalLabel: existing?.postalLabel || "Postal Code",
+                  stateLabel: existing?.stateLabel || "State / Province / Region",
+                  cityLabel: existing?.cityLabel || "City",
+                  postalPlaceholder: existing?.postalPlaceholder || "Postal Code",
+                  postalRegex: existing?.postalRegex || /^[A-Za-z0-9\s-]{3,10}$/,
+                  postalErrorMsg: existing?.postalErrorMsg || "Please enter a valid postal code.",
+                  examplePhone: existing?.examplePhone || "123456789",
+                  stateOptions: existing?.stateOptions
+                };
+              })
+              .sort((a, b) => a.name.localeCompare(b.name));
+
+            // Ensure India is at top of list
+            const indiaIndex = apiCountries.findIndex((c) => c.code === "IN");
+            if (indiaIndex > 0) {
+              const india = apiCountries.splice(indiaIndex, 1)[0];
+              apiCountries.unshift(india);
+            }
+
+            if (apiCountries.length > 0) {
+              setCountriesList(apiCountries);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("REST Countries API call skipped/offline:", e);
+      }
+    };
+
+    fetchRESTCountries();
+  }, []);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setIsCountryDropdownOpen(false);
+      }
+      if (nationalityDropdownRef.current && !nationalityDropdownRef.current.contains(event.target as Node)) {
+        setIsNationalityDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Update configuration when country changes
+  const handleSelectCountry = (countryItem: ISOCountry) => {
+    setSelectedCountryConfig(countryItem);
+    setFormData((prev) => ({
+      ...prev,
+      country: countryItem.name,
+      countryCode: countryItem.code,
+      phoneCountryCode: countryItem.dialCode,
+      postalCode: "",
+      city: "",
+      stateOrProvince: ""
+    }));
+
+    setErrors((prev) => ({ ...prev, country: "", phone: "", postalCode: "", city: "" }));
+    setIsCountryDropdownOpen(false);
+    setCountrySearch("");
+    setLookupFeedback(null);
+  };
+
+  // Select Nationality
+  const handleSelectNationality = (nat: string) => {
+    setFormData((prev) => ({ ...prev, nationality: nat }));
+    setIsNationalityDropdownOpen(false);
+    setNationalitySearch("");
+  };
+
+  // Password Strength computation
+  const pwdStrength = getPasswordStrength(formData.password);
+
+  // Field validation rules
   const validateFieldRule = (field: string, value: any, currentData = formData): string => {
     switch (field) {
       case "firstName": {
         if (!value || !value.trim()) return "First name is required.";
         const nameVal = value.trim();
-        if (!/^[A-Za-z\s]+$/.test(nameVal)) return "First name must contain letters only (no numbers or symbols).";
-        if (nameVal.length < 2) return "First name must be at least 2 characters.";
+        if (!/^[A-Za-z\s'-]+$/.test(nameVal)) return "First name must contain letters, spaces, hyphens, or apostrophes only.";
+        if (nameVal.length < 2 || nameVal.length > 50) return "First name must be between 2 and 50 characters.";
         return "";
       }
 
       case "lastName": {
         if (!value || !value.trim()) return "Last name is required.";
         const nameVal = value.trim();
-        if (!/^[A-Za-z\s]+$/.test(nameVal)) return "Last name must contain letters only (no numbers or symbols).";
-        if (nameVal.length < 2) return "Last name must be at least 2 characters.";
+        if (!/^[A-Za-z\s'-]+$/.test(nameVal)) return "Last name must contain letters, spaces, hyphens, or apostrophes only.";
+        if (nameVal.length < 2 || nameVal.length > 50) return "Last name must be between 2 and 50 characters.";
         return "";
       }
 
       case "email": {
         if (!value || !value.trim()) return "Email address is required.";
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value.trim())) return "Please enter a valid email address (e.g. name@domain.com).";
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(value.trim())) return "Please enter a valid RFC-compliant email address (e.g. name@domain.com).";
         return "";
       }
 
       case "phone": {
         if (!value || !value.trim()) return "Phone / Mobile number is required.";
-        const cleanPhone = value.replace(/\D/g, "");
-        if (cleanPhone.length < 7 || cleanPhone.length > 15) {
-          return "Phone number must be a valid 7 to 15-digit international mobile number.";
-        }
-        return "";
-      }
+        const cleanDigits = value.replace(/\D/g, "");
+        if (!cleanDigits) return "Phone number must contain numbers only.";
 
-      case "emergencyPhone": {
-        if (value && value.trim()) {
-          const cleanEmergency = value.replace(/\D/g, "");
-          if (cleanEmergency.length < 7 || cleanEmergency.length > 15) {
-            return "Emergency mobile number must be a valid 7 to 15-digit international number.";
+        try {
+          const fullPhone = `${currentData.phoneCountryCode}${cleanDigits}`;
+          const phoneNumberObj = parsePhoneNumberFromString(fullPhone, currentData.countryCode);
+          if (!phoneNumberObj || !phoneNumberObj.isValid()) {
+            return `Invalid phone number for ${selectedCountryConfig.name}. Example: ${selectedCountryConfig.examplePhone}`;
+          }
+        } catch (e) {
+          if (cleanDigits.length < 6 || cleanDigits.length > 15) {
+            return "Phone number must be between 6 and 15 digits.";
           }
         }
         return "";
@@ -366,7 +829,11 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
 
       case "password": {
         if (!value) return "Account password is required.";
-        if (value.length < 6) return "Password must be at least 6 characters long.";
+        if (value.length < 8) return "Password must be at least 8 characters long.";
+        if (!/[A-Z]/.test(value)) return "Password must contain at least one uppercase letter (A-Z).";
+        if (!/[a-z]/.test(value)) return "Password must contain at least one lowercase letter (a-z).";
+        if (!/\d/.test(value)) return "Password must contain at least one number (0-9).";
+        if (!/[@$!%*?&#^()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) return "Password must contain at least one special character (e.g. @$!%*?).";
         return "";
       }
 
@@ -378,64 +845,33 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
 
       case "dob": {
         if (!value) return "Date of birth is required.";
-        const birthDate = new Date(value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (isNaN(birthDate.getTime()) || birthDate >= today) return "Date of birth cannot be today or a future date.";
+        const dobDate = new Date(value);
+        if (isNaN(dobDate.getTime())) return "Please enter a valid date of birth.";
+        if (dobDate > new Date()) return "Date of birth cannot be in the future.";
         return "";
       }
 
-      case "passportNo": {
-        if (!value || !value.trim()) return "Passport number is required.";
-        const passUpper = value.trim().toUpperCase();
-        if (!/^[A-Z][0-9]{7}$/.test(passUpper) && !/^[A-Z0-9]{8}$/.test(passUpper)) {
-          return "Passport number must be 1 letter followed by 7 digits (e.g. Z9817264).";
-        }
+      case "country": {
+        if (!value) return "Country / Region of residence is required.";
         return "";
       }
 
-      case "passportExpiryDate": {
-        if (!value) return "Passport expiry date is required.";
-        const expiry = new Date(value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (isNaN(expiry.getTime()) || expiry <= today) return "Passport expiry date must be in the future.";
+      case "addressLine1": {
+        if (!value || !value.trim()) return "Address Line 1 is required.";
+        if (value.trim().length < 3) return "Address Line 1 must be at least 3 characters.";
         return "";
       }
 
-      case "destinationCountry": {
-        if (!value) return "Destination country is required.";
-        return "";
-      }
-
-      case "expectedTravelDate": {
-        if (!value) return "Expected travel date is required.";
-        const travel = new Date(value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (isNaN(travel.getTime()) || travel <= today) return "Travel date must be in the future.";
+      case "city": {
+        if (!value || !value.trim()) return `${selectedCountryConfig.cityLabel} is required.`;
         return "";
       }
 
       case "postalCode": {
-        if (value && value.trim()) {
-          const cleanZip = value.replace(/\D/g, "");
-          if (cleanZip.length !== 6) return "Postal PIN Code must be exactly 6 digits.";
-        }
-        return "";
-      }
-
-      case "aadhaarNumber": {
-        if (value && value.trim()) {
-          const cleanAadhaar = value.replace(/[\s-]/g, "");
-          if (!/^\d{12}$/.test(cleanAadhaar)) return "Aadhaar number must be exactly 12 digits.";
-        }
-        return "";
-      }
-
-      case "panCardNumber": {
-        if (value && value.trim()) {
-          if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(value.trim())) return "Invalid PAN format (e.g. ABCDE1234F).";
+        if (!value || !value.trim()) return `${selectedCountryConfig.postalLabel} is required.`;
+        const cleanPin = value.trim();
+        if (selectedCountryConfig.postalRegex && !selectedCountryConfig.postalRegex.test(cleanPin)) {
+          return selectedCountryConfig.postalErrorMsg || `Invalid ${selectedCountryConfig.postalLabel} format.`;
         }
         return "";
       }
@@ -445,146 +881,100 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
     }
   };
 
-  // Automated Postal Code PIN Auto-Fill Lookup
-  const lookupPostalCode = async (pin: string) => {
-    const cleanPin = pin.replace(/\D/g, "");
-    if (cleanPin.length === 6) {
-      if (PIN_CODE_MAP[cleanPin]) {
-        const { city, state } = PIN_CODE_MAP[cleanPin];
-        setFormData((prev) => ({ ...prev, city, state }));
-        triggerToast("Location Found", `Auto-filled City: ${city}, State: ${state}`, "success");
-        return;
-      }
-
-      setIsAutoFillingPin(true);
-      try {
-        const res = await fetch(`https://api.postalpincode.in/pincode/${cleanPin}`);
-        const data = await res.json();
-        if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice?.[0]) {
-          const po = data[0].PostOffice[0];
-          const foundCity = po.District || po.Block || po.Name;
-          const foundState = po.State;
-          setFormData((prev) => ({ ...prev, city: foundCity, state: foundState }));
-          triggerToast("Location Found", `Auto-filled City: ${foundCity}, State: ${foundState}`, "success");
-        }
-      } catch (err) {
-        // Fallback
-      } finally {
-        setIsAutoFillingPin(false);
-      }
+  // Perform International Postal Code Auto-Fill (500ms Debounced)
+  const triggerDebouncedPostalLookup = (pincode: string, countryCode: string, countryName: string) => {
+    if (postalDebounceRef.current) {
+      clearTimeout(postalDebounceRef.current);
     }
+
+    const cleanPin = pincode.trim().replace(/\s+/g, "");
+
+    // Validate format regex first before calling API
+    if (selectedCountryConfig.postalRegex && !selectedCountryConfig.postalRegex.test(cleanPin)) {
+      setLookupFeedback(null);
+      return;
+    }
+
+    postalDebounceRef.current = setTimeout(async () => {
+      setIsAutoFillingPin(true);
+      setLookupFeedback(null);
+
+      const result = await lookupPostalAddress(cleanPin, countryCode, countryName);
+      setIsAutoFillingPin(false);
+
+      if (result && (result.city || result.state)) {
+        setFormData((prev) => ({
+          ...prev,
+          city: result.city || prev.city,
+          stateOrProvince: result.state || prev.stateOrProvince
+        }));
+        setLookupFeedback(`Auto-filled via ${result.source.toUpperCase()}`);
+        setErrors((prev) => ({ ...prev, city: "", postalCode: "" }));
+      } else {
+        setLookupFeedback("Address not found automatically. Please enter City and State manually.");
+      }
+    }, 500);
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => {
-      const nextState = { ...prev, [field]: value };
-      if (field === "firstName" || field === "lastName") {
-        const fn = field === "firstName" ? value : prev.firstName;
-        const ln = field === "lastName" ? value : prev.lastName;
-        nextState.fullName = `${fn} ${ln}`.trim();
-      }
-      return nextState;
-    });
+  const handleFieldChange = (field: string, value: any) => {
+    const nextFormData = { ...formData, [field]: value };
+    setFormData(nextFormData);
 
     if (field === "postalCode") {
-      lookupPostalCode(value);
+      triggerDebouncedPostalLookup(value, formData.countryCode, formData.country);
     }
 
-    // Validate in real time if touched
     if (touched[field]) {
-      setErrors((prev) => {
-        const currentData = { ...formData, [field]: value };
-        const errorMsg = validateFieldRule(field, value, currentData);
-        return { ...prev, [field]: errorMsg };
-      });
+      const fieldErr = validateFieldRule(field, value, nextFormData);
+      setErrors((prev) => ({ ...prev, [field]: fieldErr }));
+
+      if (field === "password" && touched.confirmPassword) {
+        const confirmErr = validateFieldRule("confirmPassword", nextFormData.confirmPassword, nextFormData);
+        setErrors((prev) => ({ ...prev, confirmPassword: confirmErr }));
+      }
     }
   };
 
-  const handleFieldBlur = (field: string) => {
+  const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-    const errorMsg = validateFieldRule(field, formData[field as keyof typeof formData]);
-    setErrors((prev) => ({ ...prev, [field]: errorMsg }));
+    const err = validateFieldRule(field, formData[field as keyof typeof formData], formData);
+    setErrors((prev) => ({ ...prev, [field]: err }));
   };
 
-  const handleFileSelection = (docKey: string, file: File | null) => {
-    if (!file) return;
-    setAttachedFiles((prev) => ({ ...prev, [docKey]: file }));
-    triggerToast("Document Attached", `Attached file: ${file.name}`, "success");
-  };
+  const validateAllFields = (): boolean => {
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "password",
+      "confirmPassword",
+      "dob",
+      "country",
+      "addressLine1",
+      "city",
+      "postalCode"
+    ];
+    const allTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string> = {};
 
-  // Comprehensive Step Validation Function
-  const validateStep = (stepNum: number): boolean => {
-    const stepErrors: Record<string, string> = {};
-    const stepTouched: Record<string, boolean> = {};
-
-    let fieldsToValidate: string[] = [];
-
-    if (stepNum === 1) {
-      fieldsToValidate = [
-        "firstName",
-        "lastName",
-        "email",
-        "phone",
-        "password",
-        "confirmPassword",
-        "dob",
-        "passportNo"
-      ];
-    } else if (stepNum === 2) {
-      fieldsToValidate = ["passportExpiryDate"];
-    } else if (stepNum === 3) {
-      fieldsToValidate = ["destinationCountry", "expectedTravelDate"];
-    } else if (stepNum === 4) {
-      if (!formData.aadhaarNumber.trim() && !formData.govtIdNumber.trim() && !formData.panCardNumber.trim()) {
-        stepErrors.aadhaarNumber = "Please provide at least one Government ID (Aadhaar or PAN).";
-      }
-      fieldsToValidate = ["aadhaarNumber", "panCardNumber"];
-    }
-
-    fieldsToValidate.forEach((field) => {
-      stepTouched[field] = true;
-      const errorMsg = validateFieldRule(field, formData[field as keyof typeof formData]);
-      if (errorMsg) {
-        stepErrors[field] = errorMsg;
-      }
+    requiredFields.forEach((f) => {
+      allTouched[f] = true;
+      const err = validateFieldRule(f, formData[f as keyof typeof formData], formData);
+      if (err) newErrors[f] = err;
     });
 
-    setTouched((prev) => ({ ...prev, ...stepTouched }));
-    setErrors((prev) => ({ ...prev, ...stepErrors }));
+    setTouched((prev) => ({ ...prev, ...allTouched }));
+    setErrors(newErrors);
 
-    const errorCount = Object.keys(stepErrors).filter((k) => !!stepErrors[k]).length;
-
-    if (errorCount > 0) {
-      triggerToast(
-        `Validation Warning on Step ${stepNum}`,
-        `Please fix the ${errorCount} highlighted field error${errorCount > 1 ? "s" : ""} below before proceeding.`,
-        "error"
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleNextStep = () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < 6) {
-        setCurrentStep((prev) => prev + 1);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep((prev) => prev - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
+
+    if (!validateAllFields()) {
+      triggerToast("Validation Warning", "Please fix all highlighted errors before submitting.", "error");
       return;
     }
 
@@ -594,21 +984,15 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
       const cleanPhone = formData.phone.replace(/\D/g, "");
       const fullPhone = cleanPhone ? `${formData.phoneCountryCode || "+91"}${cleanPhone}` : "";
 
-      const cleanEmergency = formData.emergencyPhone.replace(/\D/g, "");
-      const fullEmergency = cleanEmergency ? `${formData.emergencyPhoneCountryCode || "+91"}${cleanEmergency}` : "";
-
       const textData = {
         ...formData,
         phone: fullPhone,
-        emergencyPhone: fullEmergency,
-        fullName: `${formData.firstName} ${formData.lastName}`.trim()
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+        address: `${formData.addressLine1}${formData.addressLine2 ? ", " + formData.addressLine2 : ""}`,
+        state: formData.stateOrProvince
       };
 
       payload.append("formData", JSON.stringify(textData));
-
-      Object.keys(attachedFiles).forEach((key) => {
-        payload.append(key, attachedFiles[key]);
-      });
 
       const res = await fetch(`${API_V1_URL}/auth/register-applicant`, {
         method: "POST",
@@ -621,374 +1005,306 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
         throw new Error(json.error?.message || json.message || "Registration failed.");
       }
 
-      triggerToast(
-        "Registration Complete!",
-        `Applicant ID ${json.data.applicantId} saved to MongoDB. Redirecting to login...`,
-        "success"
-      );
+      triggerToast("Registration Complete!", `Applicant account registered successfully. Redirecting to login...`, "success");
 
       setTimeout(() => {
         if (onSuccessSubmit) {
           onSuccessSubmit(json.data);
+        } else if (onClose) {
+          onClose();
+        } else {
+          window.location.href = "/login";
         }
       }, 1500);
     } catch (err: any) {
-      triggerToast("Submission Error", err.message || "Failed to register applicant.", "error");
+      triggerToast("Registration Error", err.message || "Failed to register applicant.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Helper for dynamic input classes
   const getInputClassName = (field: string, extraClasses: string = "") => {
     const hasError = !!errors[field];
     const isValid = touched[field] && !hasError && !!formData[field as keyof typeof formData];
 
     return `w-full text-xs px-3.5 py-2.5 rounded-xl font-medium transition-all duration-200 focus:outline-none ${
       hasError
-        ? "bg-rose-50/70 border-2 border-rose-400 text-rose-900 focus:border-rose-600 focus:ring-4 focus:ring-rose-500/15 shadow-xs shadow-rose-100 placeholder:text-rose-300"
+        ? "bg-rose-50/70 border-2 border-rose-400 text-rose-900 focus:border-rose-600 focus:ring-4 focus:ring-rose-500/15 shadow-xs placeholder:text-rose-300"
         : isValid
-        ? "bg-slate-50 border border-emerald-400/80 text-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        : "bg-slate-50 border border-slate-200 text-slate-800 focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+        ? "bg-emerald-50/40 border-2 border-emerald-400 text-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15"
+        : "bg-white border border-slate-200 text-slate-900 focus:border-[#4848F7] focus:ring-4 focus:ring-[#4848F7]/15"
     } ${extraClasses}`;
   };
 
-  // Helper for inline error message
-  const renderFieldError = (field: string) => {
-    if (!errors[field]) return null;
-    return (
-      <p className="mt-1.5 text-[11px] font-semibold text-rose-600 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-        <AlertCircle size={13} className="shrink-0 text-rose-500" />
-        <span>{errors[field]}</span>
-      </p>
-    );
-  };
+  // Filtered Country List for Search
+  const filteredCountries = countriesList.filter(
+    (c) =>
+      c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+      c.code.toLowerCase().includes(countrySearch.toLowerCase()) ||
+      c.dialCode.includes(countrySearch)
+  );
+
+  // Filtered Nationality List for Search
+  const filteredNationalities = NATIONALITIES_LIST.filter((n) =>
+    n.toLowerCase().includes(nationalitySearch.toLowerCase())
+  );
 
   return (
-    <div className="w-full min-h-screen bg-[#F8FAFC] text-slate-800 font-sans p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200 overflow-y-auto pb-24">
-      
-      {/* ELEGANT LIGHT THEMED TOAST NOTIFICATION CARD */}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
+      {/* Dynamic Toast Notification */}
       {toastConfig && (
         <div
-          className={`fixed top-6 right-6 z-50 max-w-md px-5 py-4 rounded-2xl shadow-2xl bg-white border border-slate-200/90 flex items-start gap-3.5 animate-in slide-in-from-top-4 duration-300 ${
-            toastConfig.type === "error"
-              ? "border-l-4 border-l-rose-500 shadow-rose-900/10"
-              : "border-l-4 border-l-[#2563EB] shadow-blue-900/10"
+          className={`fixed top-5 right-5 z-50 flex items-start gap-3 p-4 rounded-2xl shadow-xl max-w-md border transition-all duration-300 animate-in fade-in slide-in-from-top-4 ${
+            toastConfig.type === "success"
+              ? "bg-emerald-900 text-white border-emerald-700"
+              : "bg-rose-900 text-white border-rose-700"
           }`}
         >
-          <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border ${
-              toastConfig.type === "error"
-                ? "bg-rose-50 border-rose-200 text-rose-600"
-                : "bg-blue-50 border-blue-200 text-[#2563EB]"
-            }`}
-          >
-            {toastConfig.type === "error" ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
-          </div>
-
-          <div className="flex-1 pr-2">
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs font-black tracking-tight text-slate-900 font-outfit">{toastConfig.title}</h4>
-              <span
-                className={`text-[9px] font-extrabold uppercase font-mono px-2.5 py-0.5 rounded-full border ${
-                  toastConfig.type === "error"
-                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                    : "bg-blue-50 text-[#2563EB] border-blue-200"
-                }`}
-              >
-                {toastConfig.type === "error" ? "Action Required" : "Success"}
-              </span>
-            </div>
+          {toastConfig.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 text-xs">
+            <h4 className="font-bold">{toastConfig.title}</h4>
             {toastConfig.description && (
-              <p className="text-[11px] text-slate-600 font-medium mt-1 leading-snug">
-                {toastConfig.description}
-              </p>
+              <p className="mt-1 opacity-90 leading-relaxed">{toastConfig.description}</p>
             )}
           </div>
-
-          <button
-            onClick={() => setToastConfig(null)}
-            className="text-slate-400 hover:text-slate-700 transition p-1 cursor-pointer"
-          >
-            <X size={15} />
-          </button>
         </div>
       )}
 
-      {/* HEADER BAR & STEP TRACKER */}
-      <div className="space-y-4 mb-6">
-        {/* HEADER BAR */}
-        <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-5 sm:p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-700">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
-              <UserPlus size={15} />
-              <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-                Applicant Registration Wizard
-              </span>
+      {/* Main Card */}
+      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-[#4848F7] to-indigo-700 text-white p-6 sm:p-8 relative">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+                <Globe className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight">Applicant Registration</h1>
+                <p className="text-xs text-indigo-100/90 mt-0.5 font-medium">
+                  Global Single Sign-Up Node (Multi-Provider Address Validation Engine)
+                </p>
+              </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-              Register as an Applicant
-            </h1>
-            <p className="text-xs text-blue-100 font-medium mt-1">
-              Fill in your personal details, passport info, visa requirements, KYC, and document uploads.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {onClose && (
+            {onClose ? (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition flex items-center gap-1.5 cursor-pointer"
               >
-                <X size={15} /> Close Form
+                <ChevronLeft className="w-4 h-4" /> Back to Login
               </button>
+            ) : (
+              <a
+                href="/login"
+                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition flex items-center gap-1.5"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back to Login
+              </a>
             )}
           </div>
         </div>
 
-        {/* 6-STEP VISUAL PROGRESS TRACKER BAR */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-              <Sparkles size={16} className="text-[#2563EB]" />
-              <span>Step {currentStep} of 6: {stepsConfig[currentStep - 1].title}</span>
-            </span>
-            <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-              {getProgressPercentage()}% Completed
-            </span>
-          </div>
-
-          {/* Progress Bar Line */}
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
-            <div
-              className="bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] h-full transition-all duration-300 rounded-full"
-              style={{ width: `${getProgressPercentage()}%` }}
-            />
-          </div>
-
-          {/* Step Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-2 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE]">
-            {stepsConfig.map((st) => {
-              const IconC = st.icon;
-              const isCurrent = currentStep === st.num;
-              const isCompleted = currentStep > st.num;
-
-              return (
-                <button
-                  key={st.num}
-                  type="button"
-                  onClick={() => {
-                    if (st.num < currentStep || validateStep(currentStep)) {
-                      setCurrentStep(st.num);
-                    }
-                  }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition shrink-0 cursor-pointer ${
-                    isCurrent
-                      ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20"
-                      : isCompleted
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                      : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
-                  }`}
-                >
-                  {isCompleted ? (
-                    <CheckCircle2 size={14} className="text-emerald-600" />
-                  ) : (
-                    <IconC size={14} className={isCurrent ? "text-white" : "text-slate-400"} />
-                  )}
-                  <span>Step {st.num}: {st.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* STEP CONTENT CONTAINER */}
-      <div className="space-y-6 mb-6">
-        {/* STEP 1: PERSONAL INFORMATION & CREDENTIALS */}
-        {currentStep === 1 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <User size={18} className="text-[#2563EB]" />
-                <span>Section 1: Personal Information & Credentials</span>
-              </h3>
-              <span className="text-[10px] font-mono font-bold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                Auto-Assigned ID on Submission
-              </span>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+          {/* Section 1: Personal Credentials & Identity */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <User className="w-4 h-4 text-[#4848F7]" /> Personal Identity & Account Credentials
+              </h2>
+              <span className="text-[11px] font-semibold text-slate-400">* Required Fields</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-              {/* FIRST NAME */}
+            {/* First Name & Last Name */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   First Name <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Animesh"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange("firstName", e.target.value)}
-                    onBlur={() => handleFieldBlur("firstName")}
-                    className={getInputClassName("firstName")}
-                  />
-                  {touched.firstName && !errors.firstName && formData.firstName && (
-                    <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                  )}
-                </div>
-                {renderFieldError("firstName")}
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="First name (e.g. John)"
+                  value={formData.firstName}
+                  onChange={(e) => handleFieldChange("firstName", e.target.value)}
+                  onBlur={() => handleBlur("firstName")}
+                  className={getInputClassName("firstName")}
+                />
+                {errors.firstName && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.firstName}
+                  </p>
+                )}
               </div>
 
-              {/* LAST NAME */}
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   Last Name <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Jain"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange("lastName", e.target.value)}
-                    onBlur={() => handleFieldBlur("lastName")}
-                    className={getInputClassName("lastName")}
-                  />
-                  {touched.lastName && !errors.lastName && formData.lastName && (
-                    <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                  )}
-                </div>
-                {renderFieldError("lastName")}
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Last name (e.g. Smith)"
+                  value={formData.lastName}
+                  onChange={(e) => handleFieldChange("lastName", e.target.value)}
+                  onBlur={() => handleBlur("lastName")}
+                  className={getInputClassName("lastName")}
+                />
+                {errors.lastName && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.lastName}
+                  </p>
+                )}
               </div>
+            </div>
 
-              {/* EMAIL ADDRESS */}
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Email Address <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="animesh@gmail.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    onBlur={() => handleFieldBlur("email")}
-                    className={getInputClassName("email")}
-                  />
-                  {touched.email && !errors.email && formData.email && (
-                    <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                  )}
-                </div>
-                {renderFieldError("email")}
-              </div>
+            {/* Email Address */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Email Address <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="name@domain.com"
+                value={formData.email}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                onBlur={() => handleBlur("email")}
+                className={getInputClassName("email")}
+              />
+              {errors.email && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errors.email}
+                </p>
+              )}
+            </div>
 
-              {/* PHONE NUMBER */}
+            {/* Password & Confirm Password */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Phone / Mobile Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex gap-2 items-center">
-                  <select
-                    value={formData.phoneCountryCode || "+91"}
-                    onChange={(e) => handleInputChange("phoneCountryCode", e.target.value)}
-                    className="w-28 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold font-mono py-2.5 px-2 rounded-xl focus:outline-none focus:border-[#2563EB] shrink-0 truncate shadow-2xs cursor-pointer"
-                  >
-                    {COUNTRY_DIAL_CODES.map((c) => (
-                      <option key={c.code + c.dialCode} value={c.dialCode}>
-                        {c.code} ({c.dialCode})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="relative flex-1 min-w-0">
-                    <input
-                      type="text"
-                      maxLength={15}
-                      placeholder="Mobile number"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value.replace(/\D/g, ""))}
-                      onBlur={() => handleFieldBlur("phone")}
-                      className={getInputClassName("phone", "font-mono")}
-                    />
-                    {touched.phone && !errors.phone && formData.phone && (
-                      <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                    )}
-                  </div>
-                </div>
-                {renderFieldError("phone")}
-              </div>
-
-              {/* ACCOUNT PASSWORD */}
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   Account Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="At least 6 characters"
+                    autoComplete="new-password"
+                    placeholder="Min. 8 chars (Uppercase, Lowercase, Number, Symbol)"
                     value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    onBlur={() => handleFieldBlur("password")}
-                    className={getInputClassName("password", "pr-9")}
+                    onChange={(e) => handleFieldChange("password", e.target.value)}
+                    onBlur={() => handleBlur("password")}
+                    className={getInputClassName("password", "pr-10")}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                   >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {renderFieldError("password")}
+                {errors.password && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.password}
+                  </p>
+                )}
+
+                {/* Password Strength Meter */}
+                {formData.password && (
+                  <div className="mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-slate-600">Password Strength:</span>
+                      <span className={pwdStrength.textColor}>{pwdStrength.label}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${pwdStrength.color}`}
+                        style={{ width: pwdStrength.width }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-500 font-medium">
+                      <div className={`flex items-center gap-1 ${pwdStrength.checks.length ? "text-emerald-600 font-bold" : ""}`}>
+                        {pwdStrength.checks.length ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} 8+ characters
+                      </div>
+                      <div className={`flex items-center gap-1 ${pwdStrength.checks.capital && pwdStrength.checks.lowercase ? "text-emerald-600 font-bold" : ""}`}>
+                        {pwdStrength.checks.capital && pwdStrength.checks.lowercase ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} Upper & lowercase
+                      </div>
+                      <div className={`flex items-center gap-1 ${pwdStrength.checks.number ? "text-emerald-600 font-bold" : ""}`}>
+                        {pwdStrength.checks.number ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} One number (0-9)
+                      </div>
+                      <div className={`flex items-center gap-1 ${pwdStrength.checks.special ? "text-emerald-600 font-bold" : ""}`}>
+                        {pwdStrength.checks.special ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} Special symbol (!@#$)
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* CONFIRM PASSWORD */}
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   Confirm Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     placeholder="Re-enter password"
                     value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                    onBlur={() => handleFieldBlur("confirmPassword")}
-                    className={getInputClassName("confirmPassword")}
+                    onChange={(e) => handleFieldChange("confirmPassword", e.target.value)}
+                    onBlur={() => handleBlur("confirmPassword")}
+                    className={getInputClassName("confirmPassword", "pr-10")}
                   />
-                  {touched.confirmPassword && !errors.confirmPassword && formData.confirmPassword && (
-                    <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-                {renderFieldError("confirmPassword")}
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.confirmPassword}
+                  </p>
+                )}
               </div>
+            </div>
 
-              {/* DATE OF BIRTH */}
+            {/* Date of Birth, Gender, Nationality */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   Date of Birth <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
                   max={maxDobDate}
                   value={formData.dob}
-                  onChange={(e) => handleInputChange("dob", e.target.value)}
-                  onBlur={() => handleFieldBlur("dob")}
+                  onChange={(e) => handleFieldChange("dob", e.target.value)}
+                  onBlur={() => handleBlur("dob")}
                   className={getInputClassName("dob")}
                 />
-                {renderFieldError("dob")}
+                {errors.dob && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.dob}
+                  </p>
+                )}
               </div>
 
-              {/* GENDER */}
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Gender <span className="text-rose-500">*</span>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Gender
                 </label>
                 <select
                   value={formData.gender}
-                  onChange={(e) => handleInputChange("gender", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
+                  onChange={(e) => handleFieldChange("gender", e.target.value)}
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-medium focus:outline-none focus:border-[#4848F7] cursor-pointer"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -996,556 +1312,355 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
                 </select>
               </div>
 
-              {/* NATIONALITY */}
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+              {/* Searchable Nationality Dropdown */}
+              <div className="relative" ref={nationalityDropdownRef}>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                   Nationality <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value={formData.nationality}
-                  onChange={(e) => handleInputChange("nationality", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
+                <button
+                  type="button"
+                  onClick={() => setIsNationalityDropdownOpen(!isNationalityDropdownOpen)}
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-medium text-left flex items-center justify-between focus:outline-none focus:border-[#4848F7] cursor-pointer"
                 >
-                  {NATIONALITIES.map((nat) => (
-                    <option key={nat} value={nat}>
-                      {nat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <span>{formData.nationality}</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </button>
 
-              {/* PASSPORT NUMBER */}
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Passport Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    maxLength={8}
-                    placeholder="e.g. Z9817264"
-                    value={formData.passportNo}
-                    onChange={(e) => handleInputChange("passportNo", e.target.value.toUpperCase())}
-                    onBlur={() => handleFieldBlur("passportNo")}
-                    className={getInputClassName("passportNo", "font-mono uppercase font-bold")}
-                  />
-                  {touched.passportNo && !errors.passportNo && formData.passportNo && (
-                    <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
-                  )}
+                {isNationalityDropdownOpen && (
+                  <div className="absolute z-40 top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search nationality..."
+                        value={nationalitySearch}
+                        onChange={(e) => setNationalitySearch(e.target.value)}
+                        className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#4848F7]"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-slate-50">
+                      {filteredNationalities.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-slate-400">No nationality found</div>
+                      ) : (
+                        filteredNationalities.map((nat) => (
+                          <button
+                            key={nat}
+                            type="button"
+                            onClick={() => handleSelectNationality(nat)}
+                            className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center justify-between transition ${
+                              formData.nationality === nat
+                                ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
+                                : "hover:bg-slate-50 text-slate-700"
+                            }`}
+                          >
+                            <span>{nat}</span>
+                            {formData.nationality === nat && <Check className="w-3.5 h-3.5 text-[#4848F7]" />}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Residency, Phone & Dynamic Address */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Building className="w-4 h-4 text-[#4848F7]" /> Country of Residence & Dynamic Address
+              </h2>
+              <span className="text-[11px] font-semibold text-slate-400">REST Countries Metadata</span>
+            </div>
+
+            {/* Country / Region Dropdown (PLACED AT TOP OF ADDRESS & PHONE SECTION) */}
+            <div className="relative" ref={countryDropdownRef}>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Country / Region of Residence <span className="text-rose-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                className={`w-full text-xs px-3.5 py-3 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${
+                  errors.country
+                    ? "border-rose-400 bg-rose-50/40 text-rose-900"
+                    : "border-slate-200 bg-slate-50/80 hover:bg-slate-100/70 text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">{selectedCountryConfig.flag}</span>
+                  <span className="font-bold text-slate-900">{selectedCountryConfig.name}</span>
+                  <span className="text-[11px] font-mono text-slate-400">({selectedCountryConfig.code})</span>
                 </div>
-                {renderFieldError("passportNo")}
-              </div>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
 
-              {/* EMERGENCY MOBILE NUMBER */}
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Emergency Mobile Number
-                </label>
-                <div className="flex gap-2 items-center">
-                  <select
-                    value={formData.emergencyPhoneCountryCode || "+91"}
-                    onChange={(e) => handleInputChange("emergencyPhoneCountryCode", e.target.value)}
-                    className="w-28 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold font-mono py-2.5 px-2 rounded-xl focus:outline-none focus:border-[#2563EB] shrink-0 truncate shadow-2xs cursor-pointer"
-                  >
-                    {COUNTRY_DIAL_CODES.map((c) => (
-                      <option key={c.code + c.dialCode} value={c.dialCode}>
-                        {c.code} ({c.dialCode})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="relative flex-1 min-w-0">
+              {isCountryDropdownOpen && (
+                <div className="absolute z-40 top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      maxLength={15}
-                      placeholder="Emergency mobile number"
-                      value={formData.emergencyPhone}
-                      onChange={(e) => handleInputChange("emergencyPhone", e.target.value.replace(/\D/g, ""))}
-                      onBlur={() => handleFieldBlur("emergencyPhone")}
-                      className={getInputClassName("emergencyPhone", "font-mono")}
+                      placeholder="Search country name, ISO code, or dial code..."
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      className="w-full text-xs pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#4848F7]"
+                      autoFocus
                     />
-                    {touched.emergencyPhone && !errors.emergencyPhone && formData.emergencyPhone && (
-                      <Check size={14} className="absolute right-3 top-3 text-emerald-500 pointer-events-none" />
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto divide-y divide-slate-50">
+                    {filteredCountries.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">No country matching search</div>
+                    ) : (
+                      filteredCountries.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => handleSelectCountry(c)}
+                          className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center justify-between transition ${
+                            formData.countryCode === c.code
+                              ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
+                              : "hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span>{c.flag}</span>
+                            <span>{c.name}</span>
+                          </div>
+                          <span className="font-mono text-slate-400 text-[11px]">{c.dialCode}</span>
+                        </button>
+                      ))
                     )}
                   </div>
                 </div>
-                {renderFieldError("emergencyPhone")}
-              </div>
-
-              {/* RESIDENTIAL ADDRESS */}
-              <div className="sm:col-span-4">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Residential Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="House No, Street Name, Landmark"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
-
-              {/* POSTAL PIN CODE (BEFORE CITY & STATE WITH AUTO-FILL) */}
-              <div className="sm:col-span-4 bg-blue-50/50 border border-blue-100 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 font-outfit">
-                    <MapPin size={15} className="text-[#2563EB]" />
-                    <span>PIN Code Location Auto-Fill</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500">
-                    Type 6-digit PIN code to auto-fill City & State
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Postal PIN Code (6 Digits)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        maxLength={6}
-                        placeholder="e.g. 110001"
-                        value={formData.postalCode}
-                        onChange={(e) => handleInputChange("postalCode", e.target.value.replace(/\D/g, ""))}
-                        onBlur={() => handleFieldBlur("postalCode")}
-                        className={getInputClassName("postalCode", "font-mono font-bold")}
-                      />
-                      {isAutoFillingPin && (
-                        <span className="absolute right-3 top-3 text-[10px] text-[#2563EB] animate-spin font-bold">
-                          ⌛
-                        </span>
-                      )}
-                    </div>
-                    {renderFieldError("postalCode")}
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      City / District (Auto-Filled)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Auto-filled from PIN"
-                      value={formData.city}
-                      onChange={(e) => handleInputChange("city", e.target.value)}
-                      className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      State (Auto-Filled)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Auto-filled from PIN"
-                      value={formData.state}
-                      onChange={(e) => handleInputChange("state", e.target.value)}
-                      className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: PASSPORT INFORMATION */}
-        {currentStep === 2 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <FileText size={18} className="text-[#2563EB]" />
-                <span>Section 2: Passport Information</span>
-              </h3>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Passport Type
-                </label>
+            {/* Phone Number Input (Auto-synced to Selected Country & Validated via libphonenumber-js) */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Phone / Mobile Number <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex gap-2">
                 <select
-                  value={formData.passportType}
-                  onChange={(e) => handleInputChange("passportType", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
+                  value={formData.phoneCountryCode}
+                  onChange={(e) => handleFieldChange("phoneCountryCode", e.target.value)}
+                  className="w-32 text-xs px-2.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-[#4848F7] cursor-pointer shrink-0"
                 >
-                  <option value="Regular">Regular (36 / 60 Pages)</option>
-                  <option value="Diplomatic">Diplomatic Passport</option>
-                  <option value="Official">Official / Service</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Place of Issue
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Regional Passport Office Delhi"
-                  value={formData.passportPlaceOfIssue}
-                  onChange={(e) => handleInputChange("passportPlaceOfIssue", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Issue Date
-                </label>
-                <input
-                  type="date"
-                  max={maxDobDate}
-                  value={formData.passportIssueDate}
-                  onChange={(e) => handleInputChange("passportIssueDate", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Expiry Date <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.passportExpiryDate}
-                  onChange={(e) => handleInputChange("passportExpiryDate", e.target.value)}
-                  onBlur={() => handleFieldBlur("passportExpiryDate")}
-                  className={getInputClassName("passportExpiryDate")}
-                />
-                {renderFieldError("passportExpiryDate")}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: VISA INFORMATION */}
-        {currentStep === 3 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <Globe size={18} className="text-[#2563EB]" />
-                <span>Section 3: Visa Information</span>
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Destination Country <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={formData.destinationCountry}
-                  onChange={(e) => handleInputChange("destinationCountry", e.target.value)}
-                  onBlur={() => handleFieldBlur("destinationCountry")}
-                  className={getInputClassName("destinationCountry", "font-semibold")}
-                >
-                  {WORLD_COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {countriesList.map((c) => (
+                    <option key={c.code} value={c.dialCode}>
+                      {c.flag} {c.code} ({c.dialCode})
                     </option>
                   ))}
                 </select>
-                {renderFieldError("destinationCountry")}
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Visa Category
-                </label>
-                <select
-                  value={formData.visaCategory}
-                  onChange={(e) => handleInputChange("visaCategory", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
-                >
-                  <option value="Tourist Visa">Tourist / Visitor Visa</option>
-                  <option value="Student Visa">Student Study Permit</option>
-                  <option value="Business Visa">Business Visitor Visa</option>
-                  <option value="Work Permit">Work Permit Visa</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Entry Type
-                </label>
-                <select
-                  value={formData.entryType}
-                  onChange={(e) => handleInputChange("entryType", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
-                >
-                  <option value="Multiple Entry">Multiple Entry</option>
-                  <option value="Single Entry">Single Entry</option>
-                  <option value="Double Entry">Double Entry</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Duration of Stay
-                </label>
-                <select
-                  value={formData.durationOfStay}
-                  onChange={(e) => handleInputChange("durationOfStay", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
-                >
-                  <option value="90 Days">90 Days</option>
-                  <option value="30 Days">30 Days</option>
-                  <option value="60 Days">60 Days</option>
-                  <option value="180 Days">180 Days</option>
-                  <option value="1 Year">1 Year</option>
-                  <option value="2 Years">2 Years</option>
-                  <option value="5 Years">5 Years</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Expected Travel Date <span className="text-rose-500">*</span>
-                </label>
                 <input
-                  type="date"
-                  value={formData.expectedTravelDate}
-                  onChange={(e) => handleInputChange("expectedTravelDate", e.target.value)}
-                  onBlur={() => handleFieldBlur("expectedTravelDate")}
-                  className={getInputClassName("expectedTravelDate")}
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder={`e.g. ${selectedCountryConfig.examplePhone}`}
+                  value={formData.phone}
+                  onChange={(e) => handleFieldChange("phone", e.target.value)}
+                  onBlur={() => handleBlur("phone")}
+                  className={getInputClassName("phone", "flex-1")}
                 />
-                {renderFieldError("expectedTravelDate")}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: KYC DETAILS */}
-        {currentStep === 4 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <ShieldCheck size={18} className="text-[#2563EB]" />
-                <span>Section 4: KYC Details</span>
-              </h3>
-              <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                {formData.kycStatus}
-              </span>
+              {errors.phone && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 shrink-0" /> {errors.phone}
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            {/* Address Line 1 & Address Line 2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Aadhaar / Government National ID (12 Digits)
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Address Line 1 <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  maxLength={12}
-                  placeholder="XXXX XXXX XXXX"
-                  value={formData.aadhaarNumber}
-                  onChange={(e) => handleInputChange("aadhaarNumber", e.target.value.replace(/\D/g, ""))}
-                  onBlur={() => handleFieldBlur("aadhaarNumber")}
-                  className={getInputClassName("aadhaarNumber", "font-mono")}
+                  autoComplete="address-line1"
+                  placeholder="Street address, P.O. box, building"
+                  value={formData.addressLine1}
+                  onChange={(e) => handleFieldChange("addressLine1", e.target.value)}
+                  onBlur={() => handleBlur("addressLine1")}
+                  className={getInputClassName("addressLine1")}
                 />
-                {renderFieldError("aadhaarNumber")}
+                {errors.addressLine1 && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.addressLine1}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  PAN Card Number (e.g. ABCDE1234F)
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Address Line 2 (Optional)
                 </label>
                 <input
                   type="text"
-                  maxLength={10}
-                  placeholder="ABCDE1234F"
-                  value={formData.panCardNumber}
-                  onChange={(e) => handleInputChange("panCardNumber", e.target.value.toUpperCase())}
-                  onBlur={() => handleFieldBlur("panCardNumber")}
-                  className={getInputClassName("panCardNumber", "font-mono uppercase")}
+                  autoComplete="address-line2"
+                  placeholder="Apt, suite, unit, floor"
+                  value={formData.addressLine2}
+                  onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-medium focus:outline-none focus:border-[#4848F7]"
                 />
-                {renderFieldError("panCardNumber")}
-              </div>
-
-              <div className="sm:col-span-2 p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 text-xs font-semibold text-slate-700">
-                <div className="flex items-center justify-between">
-                  <span>Biometric Live Selfie Match:</span>
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
-                    <CheckCircle2 size={13} /> Verified
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Residential Address Proof:</span>
-                  <span className="text-[#2563EB] font-bold">Document Ready</span>
-                </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* STEP 5: DOCUMENTS UPLOAD SECTION */}
-        {currentStep === 5 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <Upload size={18} className="text-[#2563EB]" />
-                <span>Section 5: Documents Upload Section</span>
-              </h3>
-              <span className="text-[10px] font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100">
-                PDF, JPG, PNG (Max 10MB)
-              </span>
-            </div>
+            {/* Dynamic Country Address Fields (Postal Code, City, State/Province) */}
+            <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-[#4848F7]" /> Dynamic Format for {selectedCountryConfig.name}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Zippopotam & Nominatim Auto-Fill
+                </span>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
-              {[
-                { key: "passportScan", label: "Passport Bio Page Scan", required: true },
-                { key: "photo", label: "Passport Photo (White BG)", required: true },
-                { key: "nationalId", label: "Aadhaar / National ID", required: false },
-                { key: "bankStatement", label: "Bank Statement Proof", required: false },
-                { key: "addressProof", label: "Address Proof Document", required: false },
-                { key: "employerLetter", label: "Employer Offer / NOC Letter", required: false },
-                { key: "coverLetter", label: "Cover Letter / Travel Plan", required: false },
-                { key: "supportingDocs", label: "Supporting Docs Bundle", required: false }
-              ].map((doc) => {
-                const attachedFile = attachedFiles[doc.key];
-
-                return (
-                  <div
-                    key={doc.key}
-                    className={`p-3.5 rounded-2xl border transition flex items-center justify-between gap-2 ${
-                      attachedFile
-                        ? "border-emerald-300 bg-emerald-50/40"
-                        : doc.required
-                        ? "border-amber-200 bg-amber-50/20"
-                        : "border-dashed border-slate-200 bg-slate-50"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <span className="font-extrabold text-slate-800 block text-xs truncate">
-                        {doc.label} {doc.required && <span className="text-rose-500">*</span>}
-                      </span>
-                      {attachedFile ? (
-                        <span className="text-[10px] text-emerald-700 font-mono font-bold flex items-center gap-1 mt-0.5 truncate">
-                          <CheckCircle2 size={11} className="shrink-0" /> {attachedFile.name}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {doc.required ? "Required" : "Optional"}
-                        </span>
-                      )}
-                    </div>
-
-                    <label className="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer transition shadow-2xs">
-                      <Upload size={12} /> {attachedFile ? "Change" : "Upload"}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleFileSelection(doc.key, e.target.files[0]);
-                          }
-                        }}
-                      />
-                    </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Dynamic Postal Code Field */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    {selectedCountryConfig.postalLabel} <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoComplete="postal-code"
+                      placeholder={selectedCountryConfig.postalPlaceholder}
+                      value={formData.postalCode}
+                      onChange={(e) => handleFieldChange("postalCode", e.target.value)}
+                      onBlur={() => handleBlur("postalCode")}
+                      className={`w-full text-xs px-3 py-2 rounded-lg border font-mono text-slate-900 font-bold focus:outline-none ${
+                        errors.postalCode
+                          ? "border-rose-400 bg-rose-50/50 text-rose-900"
+                          : touched.postalCode && formData.postalCode && !errors.postalCode
+                          ? "border-emerald-400 bg-emerald-50/30"
+                          : "border-slate-200 bg-white focus:border-[#4848F7]"
+                      }`}
+                    />
+                    {isAutoFillingPin && (
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-[#4848F7] border-t-transparent rounded-full animate-spin" />
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 6: TIMELINE & FINAL REVIEW */}
-        {currentStep === 6 && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <CheckCircle2 size={18} className="text-[#2563EB]" />
-                <span>Section 6: Workflow Timeline & Final Dossier Review</span>
-              </h3>
-            </div>
-
-            {/* Dossier Summary Review Card */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3 text-xs">
-              <div className="flex items-center justify-between font-bold border-b border-slate-200 pb-2">
-                <span>Applicant Dossier Summary</span>
-                <span className="text-[#2563EB] font-mono">Sequential ID will be generated</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-slate-700 font-medium">
-                <div>Full Name: <strong className="text-slate-900">{`${formData.firstName} ${formData.lastName}`}</strong></div>
-                <div>Email: <strong className="text-[#2563EB] font-mono">{formData.email}</strong></div>
-                <div>Phone: <strong className="text-slate-900 font-mono">{formData.phone}</strong></div>
-                <div>Passport: <strong className="text-slate-900 font-mono">{formData.passportNo}</strong></div>
-                <div>Destination: <strong className="text-slate-900">{formData.destinationCountry}</strong></div>
-                <div>Visa Category: <strong className="text-slate-900">{formData.visaCategory}</strong></div>
-                <div>Nationality: <strong className="text-slate-900">{formData.nationality}</strong></div>
-                <div>Documents Attached: <strong className="text-emerald-700 font-mono">{Object.keys(attachedFiles).length} Files</strong></div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs text-center">
-              {[
-                { step: "1. Account Creation", done: true },
-                { step: "2. Form Submission", done: true },
-                { step: "3. Document Upload", done: Object.keys(attachedFiles).length > 0 },
-                { step: "4. Document Verification", done: false },
-                { step: "5. Embassy Processing", done: false },
-                { step: "6. Visa Stamped", done: false }
-              ].map((st, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-2xl border font-bold ${
-                    st.done
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                      : "bg-slate-50 border-slate-200 text-slate-400"
-                  }`}
-                >
-                  <div className="text-[10px] uppercase tracking-wider font-mono mb-1">Step {idx + 1}</div>
-                  <div className="text-xs leading-tight">{st.step}</div>
+                  {errors.postalCode && (
+                    <p className="mt-1 text-[10px] font-medium text-rose-600 flex items-start gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" /> <span>{errors.postalCode}</span>
+                    </p>
+                  )}
                 </div>
-              ))}
+
+                {/* Dynamic City Field */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    {selectedCountryConfig.cityLabel} <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    autoComplete="address-level2"
+                    placeholder={selectedCountryConfig.cityLabel}
+                    value={formData.city}
+                    onChange={(e) => handleFieldChange("city", e.target.value)}
+                    onBlur={() => handleBlur("city")}
+                    className={`w-full text-xs px-3 py-2 rounded-lg border font-semibold text-slate-800 focus:outline-none ${
+                      errors.city
+                        ? "border-rose-400 bg-rose-50/50 text-rose-900"
+                        : touched.city && formData.city && !errors.city
+                        ? "border-emerald-400 bg-emerald-50/30"
+                        : "border-slate-200 bg-white focus:border-[#4848F7]"
+                    }`}
+                  />
+                  {errors.city && (
+                    <p className="mt-1 text-[10px] font-medium text-rose-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {errors.city}
+                    </p>
+                  )}
+                </div>
+
+                {/* Dynamic State / Province / County Field */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    {selectedCountryConfig.stateLabel}
+                  </label>
+
+                  {selectedCountryConfig.stateOptions && selectedCountryConfig.stateOptions.length > 0 ? (
+                    <select
+                      value={formData.stateOrProvince}
+                      onChange={(e) => handleFieldChange("stateOrProvince", e.target.value)}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7] cursor-pointer"
+                    >
+                      <option value="">Select {selectedCountryConfig.stateLabel}</option>
+                      {selectedCountryConfig.stateOptions.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      autoComplete="address-level1"
+                      placeholder={selectedCountryConfig.stateLabel}
+                      value={formData.stateOrProvince}
+                      onChange={(e) => handleFieldChange("stateOrProvince", e.target.value)}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:border-[#4848F7]"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Feedback Note on Postal Lookup */}
+              {lookupFeedback && (
+                <div className="p-2 text-[10px] font-medium text-slate-500 bg-slate-100 rounded-lg flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span>{lookupFeedback}</span>
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* BOTTOM WIZARD NAVIGATION BAR */}
-      <div className="shrink-0 bg-white border border-slate-200 p-4 shadow-xl flex items-center justify-between w-full max-w-6xl mx-auto rounded-2xl mt-4">
-        <button
-          type="button"
-          onClick={handlePrevStep}
-          disabled={currentStep === 1 || isSubmitting}
-          className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5 cursor-pointer"
-        >
-          <ArrowLeft size={15} /> Previous Step
-        </button>
+          {/* Submit Action Footer */}
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-slate-500 font-medium">
+              Already registered?{" "}
+              {onClose ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="font-bold text-[#4848F7] hover:underline cursor-pointer"
+                >
+                  Sign In
+                </button>
+              ) : (
+                <a href="/login" className="font-bold text-[#4848F7] hover:underline">
+                  Sign In
+                </a>
+              )}
+            </p>
 
-        <div className="text-xs font-mono font-extrabold text-slate-500">
-          Step <span className="text-[#2563EB]">{currentStep}</span> of 6
-        </div>
-
-        {currentStep < 6 ? (
-          <button
-            type="button"
-            onClick={handleNextStep}
-            className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-extrabold shadow-md shadow-[#2563EB]/25 transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>Next Step</span>
-            <ArrowRight size={15} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-600/25 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <>Registering Applicant in MongoDB...</>
-            ) : (
-              <>
-                <CheckCircle2 size={16} /> Complete & Save Applicant Account
-              </>
-            )}
-          </button>
-        )}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#4848F7] hover:bg-[#3737d6] text-white font-extrabold text-xs rounded-xl shadow-lg shadow-[#4848F7]/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Registering Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Complete Registration</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

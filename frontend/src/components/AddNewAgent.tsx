@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { API_V1_URL } from "../config/api";
+import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
 import {
   UserPlus,
   User,
@@ -26,7 +28,11 @@ import {
   Info
 } from "lucide-react";
 
-export default function AddNewAgent() {
+interface AddNewAgentProps {
+  onSuccess?: () => void;
+}
+
+export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
   // Form State
   const [formData, setFormData] = useState({
     // Step 1: Personal Information
@@ -60,19 +66,19 @@ export default function AddNewAgent() {
     yearsInBusiness: "3",
 
     // Step 3: Business Details
-    agencyTypes: ["Travel Agency"],
+    agencyType: "Travel Agency",
     employeeCount: "10-50",
     monthlyCapacity: "100",
     officePhone: "",
 
-    // Step 4: KYC Verification (Files simulated)
+    // Step 4: KYC Verification Files (Real file metadata)
     kycFiles: {
-      businessReg: null as string | null,
-      govtId: null as string | null,
-      addressProof: null as string | null,
-      taxCert: null as string | null,
-      verificationDocs: null as string | null,
-      agencyLogo: null as string | null
+      businessReg: null as { name: string; size: string } | null,
+      govtId: null as { name: string; size: string } | null,
+      addressProof: null as { name: string; size: string } | null,
+      taxCert: null as { name: { name: string; size: string } | null } | null,
+      verificationDocs: null as { name: string; size: string } | null,
+      agencyLogo: null as { name: string; size: string } | null
     },
 
     // Step 5: Bank Details
@@ -82,93 +88,314 @@ export default function AddNewAgent() {
     ifscSwiftCode: "",
     branchName: "",
 
-    // Step 6: Permissions
-    permissions: {
-      viewApps: true,
-      processApps: true,
-      approveDocs: true,
-      rejectApps: false,
-      managePayments: true,
-      bookAppointments: true,
-      viewReports: true,
-      manageSubAgents: false,
-      manageMessages: true
-    },
-
-    // Step 7: Commission Details
+    // Step 6: Commission Details
     commissionType: "Percentage",
     commissionValue: "15",
     paymentMethod: "Bank Transfer (NEFT/RTGS)",
     paymentFrequency: "Monthly",
 
-    // Step 8: Account Status
+    // Step 7: Account Status
     accountStatus: "Pending Approval",
 
-    // Step 9: Notes
+    // Step 8: Notes
     adminNotes: ""
   });
+
+  // Phone Country Code Dial Code States
+  const [phoneDialCode, setPhoneDialCode] = useState<string>("+91");
+  const [altPhoneDialCode, setAltPhoneDialCode] = useState<string>("+91");
 
   // UI Feedback States
   const [isSuccess, setIsSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Validation Errors State
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  // Helper to validate a single phone field live against country rules
+  const validateSinglePhoneField = (fieldName: "phone" | "altPhone", val: string, dialCode: string) => {
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === dialCode) || COUNTRY_DIAL_CODES[0];
+    const raw = val.replace(/\D/g, "");
+
+    if (!raw) {
+      if (fieldName === "phone") {
+        return `Phone number is required for ${selectedCountry.name}.`;
+      }
+      return "";
+    }
+
+    if (raw.length < selectedCountry.minPhoneDigits || raw.length > selectedCountry.maxPhoneDigits) {
+      return `${selectedCountry.name} (${selectedCountry.dialCode}) phone number must be exactly ${selectedCountry.minPhoneDigits} digits (e.g. ${selectedCountry.examplePhone}).`;
+    }
+
+    if (selectedCountry.phoneRegex && !selectedCountry.phoneRegex.test(raw)) {
+      return selectedCountry.phoneErrorMsg || `Invalid ${selectedCountry.name} phone number format.`;
+    }
+
+    return "";
   };
 
-  const handleCheckboxToggle = (category: "agencyTypes" | "permissions", item: string) => {
-    if (category === "agencyTypes") {
-      setFormData((prev) => {
-        const exists = prev.agencyTypes.includes(item);
-        return {
-          ...prev,
-          agencyTypes: exists
-            ? prev.agencyTypes.filter((i) => i !== item)
-            : [...prev.agencyTypes, item]
-        };
-      });
-    } else if (category === "permissions") {
-      setFormData((prev) => ({
-        ...prev,
-        permissions: {
-          ...prev.permissions,
-          [item]: !prev.permissions[item as keyof typeof prev.permissions]
-        }
-      }));
+  const handlePhoneDialCodeChange = (newDialCode: string) => {
+    setPhoneDialCode(newDialCode);
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === newDialCode) || COUNTRY_DIAL_CODES[0];
+    const truncated = formData.phone.slice(0, selectedCountry.maxPhoneDigits);
+    setFormData((prev) => ({ ...prev, phone: truncated }));
+    const errMsg = validateSinglePhoneField("phone", truncated, newDialCode);
+    setErrors((prev) => ({ ...prev, phone: errMsg }));
+  };
+
+  const handleAltPhoneDialCodeChange = (newDialCode: string) => {
+    setAltPhoneDialCode(newDialCode);
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === newDialCode) || COUNTRY_DIAL_CODES[0];
+    const truncated = formData.altPhone.slice(0, selectedCountry.maxPhoneDigits);
+    setFormData((prev) => ({ ...prev, altPhone: truncated }));
+    const errMsg = validateSinglePhoneField("altPhone", truncated, newDialCode);
+    setErrors((prev) => ({ ...prev, altPhone: errMsg }));
+  };
+
+  // Sync Dial Code when Country changes
+  const handleCountrySelect = (countryName: string) => {
+    const c = getCountryByCodeOrName(countryName);
+    setFormData((prev) => ({ ...prev, country: countryName }));
+    handlePhoneDialCodeChange(c.dialCode);
+    handleAltPhoneDialCodeChange(c.dialCode);
+  };
+
+  // Real-time Input Sanitizer and Handler
+  const handleInputChange = (field: string, value: any) => {
+    let sanitizedVal = value;
+
+    // Sanitize Phone Numbers: digits only & slice to EXACT max digits of selected country!
+    if (field === "phone") {
+      const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === phoneDialCode) || COUNTRY_DIAL_CODES[0];
+      sanitizedVal = value.replace(/\D/g, "").slice(0, selectedCountry.maxPhoneDigits);
+      setFormData((prev) => ({ ...prev, phone: sanitizedVal }));
+      const errMsg = validateSinglePhoneField("phone", sanitizedVal, phoneDialCode);
+      setErrors((prev) => ({ ...prev, phone: errMsg }));
+      return;
+    }
+
+    if (field === "altPhone") {
+      const selectedAltCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === altPhoneDialCode) || COUNTRY_DIAL_CODES[0];
+      sanitizedVal = value.replace(/\D/g, "").slice(0, selectedAltCountry.maxPhoneDigits);
+      setFormData((prev) => ({ ...prev, altPhone: sanitizedVal }));
+      const errMsg = validateSinglePhoneField("altPhone", sanitizedVal, altPhoneDialCode);
+      setErrors((prev) => ({ ...prev, altPhone: errMsg }));
+      return;
+    }
+
+    // Sanitize Names: letters, spaces, hyphens
+    if (field === "firstName" || field === "lastName") {
+      sanitizedVal = value.replace(/[^a-zA-Z\s-]/g, "");
+    }
+
+    // Sanitize IFSC / SWIFT Code
+    if (field === "ifscSwiftCode") {
+      sanitizedVal = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+    }
+
+    // Sanitize Account Number
+    if (field === "accountNumber") {
+      sanitizedVal = value.replace(/\D/g, "").slice(0, 18);
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: sanitizedVal }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleFileUpload = (docKey: string, fileName: string) => {
+  // Handle Real Local File Selection
+  const handleRealFileSelect = (docKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate 10MB size limit
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      triggerToast(`File ${file.name} exceeds 10MB limit.`);
+      return;
+    }
+
+    const sizeStr = file.size > 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${(file.size / 1024).toFixed(1)} KB`;
+
     setFormData((prev) => ({
       ...prev,
       kycFiles: {
         ...prev.kycFiles,
-        [docKey]: fileName
+        [docKey]: { name: file.name, size: sizeStr }
       }
     }));
-    triggerToast(`File attached: ${fileName}`);
+    triggerToast(`Local file attached: ${file.name} (${sizeStr})`);
   };
 
-  const handleSave = (andContinue = false) => {
-    // Validation check
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.agencyName) {
-      triggerToast("Please fill in all mandatory fields marked with (*)");
+  const handleRemoveFile = (docKey: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      kycFiles: {
+        ...prev.kycFiles,
+        [docKey]: null
+      }
+    }));
+    triggerToast(`File removed.`);
+  };
+
+  // Comprehensive Validation Check with Country-Specific Rules
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // 1. First Name
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required.";
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = "First name must be at least 2 characters.";
+    }
+
+    // 2. Last Name
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required.";
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = "Last name must be at least 2 characters.";
+    }
+
+    // 3. Date of Birth
+    if (!formData.dob) {
+      newErrors.dob = "Date of birth is required.";
+    } else {
+      const dobDate = new Date(formData.dob);
+      const today = new Date();
+      if (dobDate > today) {
+        newErrors.dob = "Date of birth cannot be in the future.";
+      } else {
+        const age = today.getFullYear() - dobDate.getFullYear();
+        const monthDiff = today.getMonth() - dobDate.getMonth();
+        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate()) ? age - 1 : age;
+        if (actualAge < 18) {
+          newErrors.dob = `Agent must be at least 18 years old (Calculated age: ${actualAge}).`;
+        }
+      }
+    }
+
+    // 4. Email Address
+    if (!formData.email.trim()) {
+      newErrors.email = "Email address is required.";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Please enter a valid email format (e.g. agent@agency.com).";
+      }
+    }
+
+    // 5. Phone Number Country-Specific Validation
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === phoneDialCode) || COUNTRY_DIAL_CODES[0];
+    const rawPhone = formData.phone.replace(/\D/g, "");
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = `Phone number is required for ${selectedCountry.name}.`;
+    } else if (rawPhone.length < selectedCountry.minPhoneDigits || rawPhone.length > selectedCountry.maxPhoneDigits) {
+      newErrors.phone = `${selectedCountry.name} (${selectedCountry.dialCode}) phone number must be exactly ${selectedCountry.minPhoneDigits} digits (e.g. ${selectedCountry.examplePhone}).`;
+    } else if (selectedCountry.phoneRegex && !selectedCountry.phoneRegex.test(rawPhone)) {
+      newErrors.phone = selectedCountry.phoneErrorMsg || `Invalid ${selectedCountry.name} phone number format.`;
+    }
+
+    // 6. Alternative Phone (Optional, Country-Specific)
+    if (formData.altPhone.trim()) {
+      const selectedAltCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === altPhoneDialCode) || selectedCountry;
+      const rawAlt = formData.altPhone.replace(/\D/g, "");
+      if (rawAlt.length < selectedAltCountry.minPhoneDigits || rawAlt.length > selectedAltCountry.maxPhoneDigits) {
+        newErrors.altPhone = `Alternative number for ${selectedAltCountry.name} must be ${selectedAltCountry.minPhoneDigits} digits.`;
+      } else if (selectedAltCountry.phoneRegex && !selectedAltCountry.phoneRegex.test(rawAlt)) {
+        newErrors.altPhone = selectedAltCountry.phoneErrorMsg || `Invalid alternative mobile number format.`;
+      }
+    }
+
+    // 7. Password & Confirm Password
+    if (!formData.password) {
+      newErrors.password = "Password is required.";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters.";
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password.";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    // 8. Agency Name
+    if (!formData.agencyName.trim()) {
+      newErrors.agencyName = "Agency name is required.";
+    }
+
+    // 9. Website URL (Optional)
+    if (formData.website.trim()) {
+      const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+      if (!urlRegex.test(formData.website.trim())) {
+        newErrors.website = "Please enter a valid URL (e.g. https://agency.com).";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async (andContinue = false) => {
+    if (!validateForm()) {
+      triggerToast("Please fix all form validation errors highlighted in red.");
       return;
     }
 
-    setIsSuccess(true);
-    triggerToast("Agent account registered successfully!");
+    setIsSubmitting(true);
+    try {
+      const fullPhone = `${phoneDialCode} ${formData.phone.trim()}`;
+      const fullAltPhone = formData.altPhone.trim() ? `${altPhoneDialCode} ${formData.altPhone.trim()}` : "";
 
-    if (andContinue) {
+      const payload = {
+        ...formData,
+        phone: fullPhone,
+        altPhone: fullAltPhone
+      };
+
+      const res = await fetch(`${API_V1_URL}/agent/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to register travel agent.");
+      }
+
+      setIsSuccess(true);
+      triggerToast(json.message || "Agent account registered successfully in MongoDB!");
+
       setTimeout(() => {
         setIsSuccess(false);
-        handleReset();
-      }, 2500);
+        if (andContinue) {
+          handleReset();
+        } else if (onSuccess) {
+          onSuccess();
+        }
+      }, 1200);
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        triggerToast("Backend server is now running on http://localhost:5000. Please click Save Agent again!");
+      } else {
+        triggerToast(err.message || "Error registering travel agent account.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -200,7 +427,7 @@ export default function AddNewAgent() {
       officePostalCode: "",
       website: "",
       yearsInBusiness: "3",
-      agencyTypes: ["Travel Agency"],
+      agencyType: "Travel Agency",
       employeeCount: "10-50",
       monthlyCapacity: "100",
       officePhone: "",
@@ -217,17 +444,6 @@ export default function AddNewAgent() {
       accountNumber: "",
       ifscSwiftCode: "",
       branchName: "",
-      permissions: {
-        viewApps: true,
-        processApps: true,
-        approveDocs: true,
-        rejectApps: false,
-        managePayments: true,
-        bookAppointments: true,
-        viewReports: true,
-        manageSubAgents: false,
-        manageMessages: true
-      },
       commissionType: "Percentage",
       commissionValue: "15",
       paymentMethod: "Bank Transfer (NEFT/RTGS)",
@@ -309,8 +525,11 @@ export default function AddNewAgent() {
                   placeholder="e.g. Vikram"
                   value={formData.firstName}
                   onChange={(e) => handleInputChange("firstName", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.firstName ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.firstName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.firstName}</p>}
               </div>
 
               <div>
@@ -322,20 +541,27 @@ export default function AddNewAgent() {
                   placeholder="e.g. Singh"
                   value={formData.lastName}
                   onChange={(e) => handleInputChange("lastName", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.lastName ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.lastName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.lastName}</p>}
               </div>
 
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Date of Birth
+                  Date of Birth <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
+                  max={new Date().toISOString().split("T")[0]}
                   value={formData.dob}
                   onChange={(e) => handleInputChange("dob", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.dob ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.dob && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.dob}</p>}
               </div>
 
               <div>
@@ -362,34 +588,87 @@ export default function AddNewAgent() {
                   placeholder="agent@agency.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.email ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.email && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.email}</p>}
               </div>
 
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
                   Phone Number <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="+91 9876543210"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
+                <div className="flex items-center">
+                  <select
+                    value={phoneDialCode}
+                    onChange={(e) => handlePhoneDialCodeChange(e.target.value)}
+                    className="bg-slate-100 border border-r-0 border-slate-200 text-slate-900 text-xs px-2.5 py-2 rounded-l-xl focus:outline-none font-bold cursor-pointer shrink-0"
+                  >
+                    {COUNTRY_DIAL_CODES.map((c) => (
+                      <option key={c.code} value={c.dialCode}>
+                        {c.flag} {c.dialCode} ({c.name})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder={
+                      (COUNTRY_DIAL_CODES.find((c) => c.dialCode === phoneDialCode) || COUNTRY_DIAL_CODES[0]).examplePhone
+                    }
+                    maxLength={
+                      (COUNTRY_DIAL_CODES.find((c) => c.dialCode === phoneDialCode) || COUNTRY_DIAL_CODES[0]).maxPhoneDigits
+                    }
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    onBlur={() => {
+                      const errMsg = validateSinglePhoneField("phone", formData.phone, phoneDialCode);
+                      setErrors((prev) => ({ ...prev, phone: errMsg }));
+                    }}
+                    className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-r-xl focus:outline-none focus:bg-white transition ${
+                      errors.phone ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                    }`}
+                  />
+                </div>
+                {errors.phone && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.phone}</p>}
               </div>
 
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
                   Alternative Mobile Number
                 </label>
-                <input
-                  type="text"
-                  placeholder="+91 9812345678"
-                  value={formData.altPhone}
-                  onChange={(e) => handleInputChange("altPhone", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
+                <div className="flex items-center">
+                  <select
+                    value={altPhoneDialCode}
+                    onChange={(e) => handleAltPhoneDialCodeChange(e.target.value)}
+                    className="bg-slate-100 border border-r-0 border-slate-200 text-slate-900 text-xs px-2.5 py-2 rounded-l-xl focus:outline-none font-bold cursor-pointer shrink-0"
+                  >
+                    {COUNTRY_DIAL_CODES.map((c) => (
+                      <option key={c.code} value={c.dialCode}>
+                        {c.flag} {c.dialCode} ({c.name})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder={
+                      (COUNTRY_DIAL_CODES.find((c) => c.dialCode === altPhoneDialCode) || COUNTRY_DIAL_CODES[0]).examplePhone
+                    }
+                    maxLength={
+                      (COUNTRY_DIAL_CODES.find((c) => c.dialCode === altPhoneDialCode) || COUNTRY_DIAL_CODES[0]).maxPhoneDigits
+                    }
+                    value={formData.altPhone}
+                    onChange={(e) => handleInputChange("altPhone", e.target.value)}
+                    onBlur={() => {
+                      const errMsg = validateSinglePhoneField("altPhone", formData.altPhone, altPhoneDialCode);
+                      setErrors((prev) => ({ ...prev, altPhone: errMsg }));
+                    }}
+                    className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-r-xl focus:outline-none focus:bg-white transition ${
+                      errors.altPhone ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                    }`}
+                  />
+                </div>
+                {errors.altPhone && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.altPhone}</p>}
               </div>
 
               <div>
@@ -401,8 +680,11 @@ export default function AddNewAgent() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-mono"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition font-mono ${
+                    errors.password ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.password && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.password}</p>}
               </div>
 
               <div>
@@ -414,8 +696,11 @@ export default function AddNewAgent() {
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-mono"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition font-mono ${
+                    errors.confirmPassword ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.confirmPassword && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.confirmPassword}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -450,13 +735,14 @@ export default function AddNewAgent() {
                 </label>
                 <select
                   value={formData.country}
-                  onChange={(e) => handleInputChange("country", e.target.value)}
+                  onChange={(e) => handleCountrySelect(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
                 >
-                  <option value="India">🇮🇳 India</option>
-                  <option value="USA">🇺🇸 USA</option>
-                  <option value="Canada">🇨🇦 Canada</option>
-                  <option value="Australia">🇦🇺 Australia</option>
+                  {COUNTRY_DIAL_CODES.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.flag} {c.name} ({c.dialCode})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -481,13 +767,16 @@ export default function AddNewAgent() {
                   placeholder="e.g. Apex Travel & Visas"
                   value={formData.agencyName}
                   onChange={(e) => handleInputChange("agencyName", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.agencyName ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.agencyName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.agencyName}</p>}
               </div>
 
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                  Agency Registration Number <span className="text-red-500">*</span>
+                  Agency Registration Number
                 </label>
                 <input
                   type="text"
@@ -546,8 +835,11 @@ export default function AddNewAgent() {
                   placeholder="https://agency.com"
                   value={formData.website}
                   onChange={(e) => handleInputChange("website", e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                  className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition ${
+                    errors.website ? "border-rose-500 bg-rose-50/30 focus:border-rose-600" : "border-slate-200 focus:border-[#2563EB]"
+                  }`}
                 />
+                {errors.website && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.website}</p>}
               </div>
 
               <div>
@@ -577,7 +869,7 @@ export default function AddNewAgent() {
             <div className="space-y-4 text-xs">
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-2">
-                  Agency Type
+                  Agency Type <span className="text-slate-400 font-normal">(Select Primary Category)</span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
@@ -586,22 +878,23 @@ export default function AddNewAgent() {
                     "Immigration Consultancy",
                     "Corporate Partner"
                   ].map((type) => {
-                    const checked = formData.agencyTypes.includes(type);
+                    const isSelected = formData.agencyType === type;
 
                     return (
                       <label
                         key={type}
                         className={`p-3 rounded-xl border flex items-center gap-2 font-bold cursor-pointer transition ${
-                          checked
-                            ? "bg-blue-50 border-[#2563EB] text-[#2563EB]"
+                          isSelected
+                            ? "bg-blue-50 border-[#2563EB] text-[#2563EB] shadow-2xs"
                             : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => handleCheckboxToggle("agencyTypes", type)}
-                          className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
+                          type="radio"
+                          name="agencyTypeGroup"
+                          checked={isSelected}
+                          onChange={() => handleInputChange("agencyType", type)}
+                          className="border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
                         />
                         <span>{type}</span>
                       </label>
@@ -647,8 +940,9 @@ export default function AddNewAgent() {
                   <input
                     type="text"
                     placeholder="+91 11 40998800"
+                    maxLength={15}
                     value={formData.officePhone}
-                    onChange={(e) => handleInputChange("officePhone", e.target.value)}
+                    onChange={(e) => handleInputChange("officePhone", e.target.value.replace(/\D/g, "").slice(0, 15))}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
                   />
                 </div>
@@ -656,7 +950,7 @@ export default function AddNewAgent() {
             </div>
           </div>
 
-          {/* STEP 4: KYC VERIFICATION (FILE UPLOADS) */}
+          {/* STEP 4: KYC VERIFICATION (REAL FILE UPLOADS) */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
@@ -674,31 +968,50 @@ export default function AddNewAgent() {
                 { key: "verificationDocs", label: "Additional Verification Docs" },
                 { key: "agencyLogo", label: "Agency Official Logo" }
               ].map((doc) => {
-                const attached = formData.kycFiles[doc.key as keyof typeof formData.kycFiles];
+                const attached = formData.kycFiles[doc.key as keyof typeof formData.kycFiles] as { name: string; size: string } | null;
 
                 return (
                   <div
                     key={doc.key}
-                    className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center justify-between"
+                    className={`p-4 rounded-xl border flex items-center justify-between transition ${
+                      attached ? "bg-emerald-50/40 border-emerald-200" : "bg-slate-50 border-dashed border-slate-200"
+                    }`}
                   >
-                    <div>
+                    <div className="overflow-hidden pr-2">
                       <span className="font-extrabold text-slate-800 block mb-0.5">{doc.label}</span>
                       {attached ? (
                         <span className="text-[11px] text-emerald-600 font-mono font-bold flex items-center gap-1">
-                          <CheckCircle2 size={12} /> {attached}
+                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                          <span className="truncate max-w-[150px]">{attached.name}</span>
+                          <span className="text-slate-400 font-normal shrink-0">({attached.size})</span>
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-400 font-mono">PDF, PNG, JPG (Max 10MB)</span>
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleFileUpload(doc.key, `${doc.key}_document.pdf`)}
-                      className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
-                    >
-                      <Upload size={13} /> Upload
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition shadow-2xs">
+                        <Upload size={13} />
+                        <span>{attached ? "Change" : "Upload"}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          className="hidden"
+                          onChange={(e) => handleRealFileSelect(doc.key, e)}
+                        />
+                      </label>
+                      {attached && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(doc.key)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                          title="Remove File"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -769,58 +1082,12 @@ export default function AddNewAgent() {
             </div>
           </div>
 
-          {/* STEP 6: PERMISSIONS */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <Lock size={16} className="text-[#2563EB]" />
-                <span>Step 6: Permissions Management</span>
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              {[
-                { key: "viewApps", label: "View Applications" },
-                { key: "processApps", label: "Process Applications" },
-                { key: "approveDocs", label: "Approve Documents" },
-                { key: "rejectApps", label: "Reject Applications" },
-                { key: "managePayments", label: "Manage Payments" },
-                { key: "bookAppointments", label: "Book Appointments" },
-                { key: "viewReports", label: "View Reports" },
-                { key: "manageSubAgents", label: "Manage Sub-Agents" },
-                { key: "manageMessages", label: "Manage Messages" }
-              ].map((perm) => {
-                const isChecked =
-                  formData.permissions[perm.key as keyof typeof formData.permissions];
-
-                return (
-                  <label
-                    key={perm.key}
-                    className={`p-3 rounded-xl border flex items-center gap-2.5 font-bold cursor-pointer transition ${
-                      isChecked
-                        ? "bg-blue-50 border-[#2563EB] text-[#2563EB]"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleCheckboxToggle("permissions", perm.key)}
-                      className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
-                    />
-                    <span>{perm.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* STEP 7: COMMISSION DETAILS */}
+          {/* STEP 6: COMMISSION DETAILS */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
                 <DollarSign size={16} className="text-[#2563EB]" />
-                <span>Step 7: Commission Details</span>
+                <span>Step 6: Commission Details</span>
               </h3>
             </div>
 
@@ -885,12 +1152,12 @@ export default function AddNewAgent() {
             </div>
           </div>
 
-          {/* STEP 8: ACCOUNT STATUS */}
+          {/* STEP 7: ACCOUNT STATUS */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
                 <CheckCircle2 size={16} className="text-[#2563EB]" />
-                <span>Step 8: Account Status</span>
+                <span>Step 7: Account Status</span>
               </h3>
             </div>
 
@@ -919,12 +1186,12 @@ export default function AddNewAgent() {
             </div>
           </div>
 
-          {/* STEP 9: NOTES */}
+          {/* STEP 8: NOTES */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
                 <FileText size={16} className="text-[#2563EB]" />
-                <span>Step 9: Internal Admin Notes</span>
+                <span>Step 8: Internal Admin Notes</span>
               </h3>
             </div>
 
@@ -1029,40 +1296,7 @@ export default function AddNewAgent() {
                 ✉ A welcome email with credentials has been sent to {formData.email || "agent@agency.com"}.
               </p>
             </div>
-          ) : (
-            <div className="bg-blue-50/50 border border-blue-200/80 rounded-2xl p-5 shadow-2xs space-y-3">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-[#2563EB]">
-                <Sparkles size={16} />
-                <span>Live Account Summary</span>
-              </div>
-              <div className="text-xs space-y-2 text-slate-700">
-                <div className="flex justify-between py-1 border-b border-blue-100">
-                  <span className="text-slate-500">Full Name:</span>
-                  <strong className="text-slate-900">
-                    {formData.firstName || "Not Specified"} {formData.lastName}
-                  </strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100">
-                  <span className="text-slate-500">Agency:</span>
-                  <strong className="text-[#2563EB]">
-                    {formData.agencyName || "Not Specified"}
-                  </strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100">
-                  <span className="text-slate-500">Status:</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-800">
-                    {formData.accountStatus}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Commission:</span>
-                  <strong className="font-mono text-slate-900">
-                    {formData.commissionValue}% ({formData.commissionType})
-                  </strong>
-                </div>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useVisa, Application, VisaStatus, formatINR } from "../context/VisaContext";
 import Logo from "./Logo";
 import AllApplicants from "./AllApplicants";
@@ -103,6 +103,53 @@ export default function AdminPortal() {
     "System Settings": false
   });
 
+  const switchNav = (sec: string, sub: string = "") => {
+    setActiveSection(sec);
+    setActiveSubItem(sub);
+
+    if (sec && sec !== "Dashboard") {
+      setOpenAccordions((prev) => ({
+        ...prev,
+        [sec]: true
+      }));
+    }
+
+    if (typeof window !== "undefined") {
+      const newUrl = `${window.location.pathname}?sec=${encodeURIComponent(sec)}${
+        sub ? `&sub=${encodeURIComponent(sub)}` : ""
+      }`;
+      window.history.replaceState(null, "", newUrl);
+
+      localStorage.setItem("admin_active_section", sec);
+      localStorage.setItem("admin_active_subitem", sub);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlSec = params.get("sec");
+      const urlSub = params.get("sub");
+
+      const storedSec = localStorage.getItem("admin_active_section");
+      const storedSub = localStorage.getItem("admin_active_subitem");
+
+      const targetSec = urlSec ? decodeURIComponent(urlSec) : storedSec || "Dashboard";
+      const targetSub = urlSub ? decodeURIComponent(urlSub) : storedSub || "";
+
+      if (targetSec) {
+        setActiveSection(targetSec);
+        setActiveSubItem(targetSub);
+        if (targetSec !== "Dashboard") {
+          setOpenAccordions((prev) => ({
+            ...prev,
+            [targetSec]: true
+          }));
+        }
+      }
+    }
+  }, []);
+
   const toggleAccordion = (name: string) => {
     setOpenAccordions((prev) => ({
       ...prev,
@@ -141,8 +188,8 @@ export default function AdminPortal() {
       name: "Agent Management",
       icon: Briefcase,
       children: [
-        "All Agents",
         "Add New Agents",
+        "All Agents",
         "Pending Approval",
         "Active Agents",
         "Inactive Agents",
@@ -273,10 +320,7 @@ export default function AdminPortal() {
           <Logo variant="header" />
 
           <button
-            onClick={() => {
-              setActiveSection("Payments");
-              setActiveSubItem("All Transactions");
-            }}
+            onClick={() => switchNav("Payments", "All Transactions")}
             className="bg-[#EEF2FF] hover:bg-indigo-100 text-[#4848F7] font-semibold px-3.5 py-1.5 rounded-full border border-[#4848F7]/20 text-xs flex items-center gap-2 transition cursor-pointer shadow-2xs"
           >
             <Wallet size={15} className="text-[#4848F7]" />
@@ -300,10 +344,7 @@ export default function AdminPortal() {
 
           {/* Messages */}
           <button
-            onClick={() => {
-              setActiveSection("Messages");
-              setActiveSubItem("");
-            }}
+            onClick={() => switchNav("Messages", "")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer"
             title="Messages"
           >
@@ -312,10 +353,7 @@ export default function AdminPortal() {
 
           {/* Notifications */}
           <button
-            onClick={() => {
-              setActiveSection("Notifications");
-              setActiveSubItem("");
-            }}
+            onClick={() => switchNav("Notifications", "")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer relative"
             title="Notifications"
           >
@@ -325,10 +363,7 @@ export default function AdminPortal() {
 
           {/* User Profile Avatar */}
           <div
-            onClick={() => {
-              setActiveSection("My Profile");
-              setActiveSubItem("");
-            }}
+            onClick={() => switchNav("My Profile", "")}
             className="w-9 h-9 rounded-full overflow-hidden border border-slate-300 cursor-pointer shadow-xs hover:ring-2 hover:ring-[#4848F7]/40 transition"
           >
             <img
@@ -361,8 +396,7 @@ export default function AdminPortal() {
                       if (menuItem.action) {
                         menuItem.action();
                       } else {
-                        setActiveSection(menuItem.name);
-                        setActiveSubItem("");
+                        switchNav(menuItem.name, "");
                       }
                     }}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
@@ -385,28 +419,41 @@ export default function AdminPortal() {
 
               return (
                 <div key={menuItem.name} className="space-y-0.5">
-                  <button
+                  <div
                     onClick={() => {
+                      if (!isGroupActive) {
+                        switchNav(menuItem.name, menuItem.children?.[0] || "");
+                      }
                       toggleAccordion(menuItem.name);
-                      setActiveSection(menuItem.name);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer select-none ${
                       isGroupActive
                         ? "bg-slate-100/80 text-slate-900 font-bold"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-1">
                       <IconComp size={16} className={isGroupActive ? "text-[#4848F7]" : "text-slate-500"} />
                       <span>{menuItem.name}</span>
                     </div>
-                    <ChevronDown
-                      size={14}
-                      className={`text-slate-400 transition-transform duration-200 ${
-                        isAccordionOpen ? "rotate-180 text-[#4848F7]" : ""
-                      }`}
-                    />
-                  </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAccordion(menuItem.name);
+                      }}
+                      className="p-1 rounded-lg hover:bg-slate-200/70 text-slate-400 hover:text-[#4848F7] transition cursor-pointer flex items-center justify-center"
+                      title={isAccordionOpen ? "Collapse Submenu" : "Expand Submenu"}
+                    >
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${
+                          isAccordionOpen ? "rotate-180 text-[#4848F7]" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
 
                   {/* Accordion Sub-items */}
                   {isAccordionOpen && (
@@ -417,8 +464,7 @@ export default function AdminPortal() {
                           <button
                             key={subName}
                             onClick={() => {
-                              setActiveSection(menuItem.name);
-                              setActiveSubItem(subName);
+                              switchNav(menuItem.name, subName);
                             }}
                             className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium flex items-center gap-2 transition cursor-pointer ${
                               isSubActive
@@ -946,7 +992,7 @@ export default function AdminPortal() {
               ) : activeSubItem === "All Agents" || (activeSection === "Agent Management" && (!activeSubItem || activeSubItem === "All Agents")) ? (
                 <AllAgents />
               ) : activeSubItem === "Add New Agents" || activeSubItem === "Add New Agent" ? (
-                <AddNewAgent />
+                <AddNewAgent onSuccess={() => switchNav("Agent Management", "All Agents")} />
               ) : activeSubItem === "Pending Approval" ? (
                 <PendingApprovalAgents />
               ) : activeSubItem === "Active Agents" ? (

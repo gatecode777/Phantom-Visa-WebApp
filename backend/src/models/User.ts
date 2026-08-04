@@ -7,6 +7,10 @@ export interface IUser extends Document {
   role: "Admin" | "Applicant" | "Staff" | "Agent";
   name: string;
   isDeactivated?: boolean;
+  blockReason?: string;
+  blockType?: "Temporary" | "Permanent" | "Security Lockdown";
+  blockedBy?: string;
+  blockedOn?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,7 +22,11 @@ const UserSchema: Schema = new Schema(
     passwordHash: { type: String },
     role: { type: String, enum: ["Admin", "Applicant", "Staff", "Agent"], required: true, default: "Applicant" },
     name: { type: String, required: true },
-    isDeactivated: { type: Boolean, default: false }
+    isDeactivated: { type: Boolean, default: false },
+    blockReason: { type: String, default: "" },
+    blockType: { type: String, default: "Temporary" },
+    blockedBy: { type: String, default: "Admin" },
+    blockedOn: { type: Date }
   },
   { timestamps: true }
 );

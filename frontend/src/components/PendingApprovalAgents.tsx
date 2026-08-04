@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   Clock,
   Search,
@@ -212,8 +213,57 @@ export default function PendingApprovalAgents() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Agent Records List State
-  const [agents, setAgents] = useState<PendingAgentRecord[]>(mockPendingAgents);
+  // Agent Records List State (Loaded dynamically from MongoDB)
+  const [agents, setAgents] = useState<PendingAgentRecord[]>([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/agent/all`);
+        const json = await res.json();
+        if (res.ok && json.success && Array.isArray(json.data)) {
+          const apiAgents: PendingAgentRecord[] = json.data
+            .filter((item: any) => item.status === "Pending Approval")
+            .map((item: any) => ({
+              id: item.id || "AGT-1001",
+              name: item.name || "Travel Agent",
+              avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+              agencyName: item.agencyName || "Visa Agency",
+              agencyType: "Travel Agency",
+              regDate: item.registeredOn || "Recently",
+              kycStatus: "Pending",
+              submittedDocs: "6/6",
+              status: "Pending Approval",
+              email: item.email || "agent@email.com",
+              mobile: item.phone || "+91 9876543210",
+              dob: item.dob || "N/A",
+              address: `${item.city || 'New Delhi'}, ${item.country || 'India'}`,
+              agencyRegNo: item.agencyRegNo || "REG-99120",
+              businessLicense: item.businessLicense || "LIC-11209",
+              gstTaxNo: item.gstTaxNo || "08AAAAA0000A1Z5",
+              officeAddress: item.officeAddress || "N/A",
+              website: item.website || "N/A",
+              documentsList: [
+                { name: "Government ID", submitted: true, size: "2.5 MB" },
+                { name: "Business Registration Certificate", submitted: true, size: "1.8 MB" }
+              ],
+              checklist: {
+                identityVerified: true,
+                businessRegVerified: true,
+                licenseVerified: true,
+                addressVerified: true,
+                bankVerified: true
+              },
+              remarks: "Verification documents submitted and awaiting admin approval."
+            }));
+          setAgents(apiAgents);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pending agents:", err);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   // Filter Logic
   const filteredAgents = agents.filter((a) => {
@@ -229,6 +279,19 @@ export default function PendingApprovalAgents() {
 
     return matchesSearch && matchesAgencyType && matchesKycStatus;
   });
+
+  // Dynamic Pagination State & Math
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, agencyTypeFilter, kycStatusFilter]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredAgents.length);
+  const paginatedAgents = filteredAgents.slice(startIndex, endIndex);
 
   // Checkbox handlers
   const handleSelectAll = (checked: boolean) => {
@@ -575,7 +638,7 @@ export default function PendingApprovalAgents() {
                   </td>
                 </tr>
               ) : (
-                filteredAgents.map((agent) => (
+                paginatedAgents.map((agent) => (
                   <tr
                     key={agent.id}
                     className={`hover:bg-blue-50/40 transition-colors ${
@@ -604,27 +667,19 @@ export default function PendingApprovalAgents() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-slate-800 font-bold">{agent.agencyName}</td>
-                    <td className="py-3.5 px-4 text-slate-600 font-semibold">{agent.agencyType}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{agent.agencyType}</td>
                     <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{agent.regDate}</td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border inline-flex items-center gap-1.5 ${
-                          agent.kycStatus === "Under Review"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-blue-50 text-[#2563EB] border-blue-200"
-                        }`}
-                      >
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border bg-amber-50 text-amber-700 border-amber-200 inline-flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
                         {agent.kycStatus}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-800">
-                      <span className="px-2.5 py-0.5 bg-slate-100 rounded-md border border-slate-200">
-                        {agent.submittedDocs}
-                      </span>
+                    <td className="py-3.5 px-4 text-center font-mono font-extrabold text-slate-800">
+                      {agent.submittedDocs}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold font-mono">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border bg-blue-50 text-[#2563EB] border-blue-200 inline-flex items-center gap-1.5">
                         {agent.status}
                       </span>
                     </td>
@@ -635,14 +690,14 @@ export default function PendingApprovalAgents() {
                             setViewAgent(agent);
                             setModalTab("personal");
                           }}
-                          title="View Agent Details"
+                          title="View Details"
                           className="p-1.5 hover:bg-blue-100 text-slate-600 hover:text-[#2563EB] rounded-lg transition cursor-pointer"
                         >
                           <Eye size={15} />
                         </button>
                         <button
                           onClick={() => setApproveAgentTarget(agent)}
-                          title="Approve Agent"
+                          title="Approve Application"
                           className="p-1.5 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded-lg transition cursor-pointer"
                         >
                           <CheckCircle2 size={15} />
@@ -663,29 +718,38 @@ export default function PendingApprovalAgents() {
           </table>
         </div>
 
-        {/* PAGINATION FOOTER */}
+        {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">1–{filteredAgents.length}</strong> of{" "}
-            <strong className="text-slate-900">24 Pending Agent Requests</strong>
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            <strong className="text-slate-900">{filteredAgents.length} Pending Agent Requests</strong>
           </div>
           <div className="flex items-center gap-1">
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 cursor-pointer flex items-center gap-1 font-semibold">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 font-semibold transition"
+            >
               <ChevronLeft size={14} /> Previous
             </button>
-            <button className="w-8 h-8 rounded-lg bg-[#2563EB] text-white font-bold cursor-pointer">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              3
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer">
-              4
-            </button>
-            <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1 font-semibold">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${
+                  currentPage === pageNum
+                    ? "bg-[#2563EB] text-white"
+                    : "border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 font-semibold transition"
+            >
               Next <ChevronRight size={14} />
             </button>
           </div>

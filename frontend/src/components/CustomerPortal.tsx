@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useVisa, Application, CustomerTab, formatINR } from "../context/VisaContext";
 import Logo from "./Logo";
 import InteractiveWorldMap from "./InteractiveWorldMap";
+import CompleteKycModal from "./CompleteKycModal";
 import {
   Search,
   MessageSquare,
@@ -59,12 +60,14 @@ export default function CustomerPortal() {
     currentRole,
     logoutSession,
     authSession,
-    applicantDashboardData
+    applicantDashboardData,
+    fetchApplicantDashboardData
   } = useVisa();
 
   // Selected active application ID for tracking/documents
   const [selectedAppId, setSelectedAppId] = useState<string>("VO-2026-1025");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCompleteKycModal, setShowCompleteKycModal] = useState<boolean>(false);
 
   // Target app reference
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
@@ -88,6 +91,27 @@ export default function CustomerPortal() {
   const [openPayments, setOpenPayments] = useState(false);
   const [openAppts, setOpenAppts] = useState(false);
   const [openExplore, setOpenExplore] = useState(false);
+
+  const handleTabChange = (tab: CustomerTab) => {
+    setCustomerTab(tab);
+    if (typeof window !== "undefined") {
+      const newUrl = `${window.location.pathname}?tab=${encodeURIComponent(tab)}`;
+      window.history.replaceState(null, "", newUrl);
+      localStorage.setItem("customer_active_tab", tab);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as CustomerTab | null;
+      const storedTab = localStorage.getItem("customer_active_tab") as CustomerTab | null;
+      const targetTab = urlTab || storedTab;
+      if (targetTab) {
+        setCustomerTab(targetTab);
+      }
+    }
+  }, []);
 
   // SUB-TAB STATES
   const [appFilter, setAppFilter] = useState<
@@ -560,7 +584,35 @@ export default function CustomerPortal() {
           {/* SECTION 1: MAIN DASHBOARD OVERVIEW */}
           {customerTab === "dashboard" && (
             <div className="space-y-6">
-              
+
+              {/* KYC Pending Notification Banner */}
+              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-400/50">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+                    <ShieldCheck className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full font-mono">
+                        Action Required • Identity Audit Pending
+                      </span>
+                    </div>
+                    <h3 className="text-base font-extrabold text-white tracking-tight mt-0.5">Your KYC Verification is Pending</h3>
+                    <p className="text-xs text-amber-100 font-medium">
+                      Complete your country-specific identity documents verification to activate full visa processing privileges.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowCompleteKycModal(true)}
+                  className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-900 font-black text-xs rounded-xl shadow-md transition shrink-0 flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Complete KYC Now</span>
+                  <ArrowRight className="w-4 h-4 text-[#4848F7]" />
+                </button>
+              </div>
+
               {/* TOP ROW: Good Morning Card & Upcoming Appointment */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
@@ -1237,6 +1289,24 @@ export default function CustomerPortal() {
         </div>
       )}
 
+      {/* COMPLETE KYC MODAL */}
+      {showCompleteKycModal && (
+        <CompleteKycModal
+          applicant={{
+            id: applicantDashboardData?.application?.id || "APP-MYSELF",
+            userId: authSession?.user?.id,
+            name: authSession?.user?.name || greetingName,
+            email: authSession?.user?.email || "",
+            mobile: authSession?.user?.phone || "",
+            country: "India"
+          }}
+          onClose={() => setShowCompleteKycModal(false)}
+          onSuccess={() => {
+            setShowCompleteKycModal(false);
+            if (fetchApplicantDashboardData) fetchApplicantDashboardData();
+          }}
+        />
+      )}
     </div>
   );
 }

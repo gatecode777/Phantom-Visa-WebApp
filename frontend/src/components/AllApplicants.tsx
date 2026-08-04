@@ -53,6 +53,8 @@ export interface ApplicantRecord {
   passportNumber?: string;
   passportExpiry?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   currentVisa?: string;
   visaType?: string;
   destinationCountry?: string;
@@ -422,6 +424,13 @@ export default function AllApplicants() {
     );
   };
 
+  // Block Modal State
+  const [blockUserTarget, setBlockUserTarget] = useState<ApplicantRecord | null>(null);
+  const [blockType, setBlockType] = useState<"Temporary" | "Permanent" | "Security Lockdown">("Temporary");
+  const [selectedReasonOption, setSelectedReasonOption] = useState<string>("Fake Documents Provided");
+  const [customReasonText, setCustomReasonText] = useState<string>("");
+  const [isSubmittingBlock, setIsSubmittingBlock] = useState<boolean>(false);
+
   // Actions
   const handleBlockUser = async (id: string) => {
     const target = applicants.find((a) => a.id === id || (a as any)._id === id);
@@ -429,44 +438,55 @@ export default function AllApplicants() {
 
     const willBeBlocked = target.status !== "Blocked" && !(target as any).isDeactivated;
 
-    // Optimistic UI state update
-    setApplicants((prev) =>
-      prev.map((app) =>
-        app.id === id || (app as any)._id === id
-          ? {
-              ...app,
-              status: willBeBlocked ? "Blocked" : "Active",
-              isDeactivated: willBeBlocked
-            }
-          : app
-      )
-    );
-
-    if (viewApplicant && (viewApplicant.id === id || (viewApplicant as any)._id === id)) {
-      setViewApplicant((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: willBeBlocked ? "Blocked" : "Active",
-              isDeactivated: willBeBlocked
-            }
-          : null
-      );
+    if (willBeBlocked) {
+      setBlockUserTarget(target);
+    } else {
+      try {
+        await fetch(`${API_V1_URL}/applicant/toggle-block`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: (target as any).userId,
+            applicantId: target.id,
+            isDeactivated: false
+          })
+        });
+        triggerToast(`Applicant ${target.id} (${target.name}) unblocked successfully.`);
+        fetchApplicantsFromDB();
+      } catch (e) {
+        console.error("Failed to unblock:", e);
+      }
     }
+  };
 
+  const handleConfirmBlockUser = async () => {
+    if (!blockUserTarget) return;
+
+    const finalReason = selectedReasonOption === "Custom Reason..."
+      ? customReasonText.trim() || "Policy Violation"
+      : selectedReasonOption;
+
+    setIsSubmittingBlock(true);
     try {
       await fetch(`${API_V1_URL}/applicant/toggle-block`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: (target as any).userId,
-          applicantId: target.id,
-          isDeactivated: willBeBlocked
+          userId: (blockUserTarget as any).userId,
+          applicantId: blockUserTarget.id,
+          isDeactivated: true,
+          blockReason: finalReason,
+          blockType: blockType,
+          blockedBy: "Admin (Consular Officer)"
         })
       });
-      triggerToast(`Applicant ${target.id} (${target.name}) ${willBeBlocked ? "blocked" : "unblocked"} successfully.`);
+      triggerToast(`Applicant ${blockUserTarget.id} (${blockUserTarget.name}) blocked successfully.`);
+      setBlockUserTarget(null);
+      fetchApplicantsFromDB();
     } catch (e) {
-      console.error("Failed to toggle block status:", e);
+      console.error("Failed to block:", e);
+    } finally {
+      setIsSubmittingBlock(false);
     }
   };
 
@@ -1091,13 +1111,15 @@ export default function AllApplicants() {
                     </div>
 
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Passport Number</span>
-                      <strong className="text-[#2563EB] font-mono text-sm font-extrabold">{viewApplicant.passportNumber || "Z9876543"}</strong>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Country of Residence</span>
+                      <strong className="text-slate-800 font-bold">{viewApplicant.country || "India"}</strong>
                     </div>
 
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Passport Expiry</span>
-                      <strong className="text-slate-800 font-mono font-bold">{viewApplicant.passportExpiry || "12 Dec 2031"}</strong>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">City & Postal Code</span>
+                      <strong className="text-slate-800 font-mono font-bold">
+                        {viewApplicant.city ? `${viewApplicant.city} (${viewApplicant.postalCode || 'N/A'})` : viewApplicant.postalCode || "N/A"}
+                      </strong>
                     </div>
 
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
@@ -1111,8 +1133,8 @@ export default function AllApplicants() {
                     </div>
 
                     <div className="md:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Permanent Residential Address</span>
-                      <strong className="text-slate-800 font-semibold">{viewApplicant.address || "B-402, Green Park Avenue, New Delhi, India"}</strong>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Residential Address</span>
+                      <strong className="text-slate-800 font-semibold">{viewApplicant.address || "N/A"}</strong>
                     </div>
                   </div>
                 </div>
@@ -1423,7 +1445,142 @@ export default function AllApplicants() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* BLOCK USER REASON PROMPT MODAL */}
+      {blockUserTarget && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setBlockUserTarget(null);
+          }}
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-rose-600 to-red-700 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight">Block Account Access</h3>
+                  <p className="text-xs text-rose-100/90 font-medium">User: {blockUserTarget.name} ({blockUserTarget.id})</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBlockUserTarget(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {/* Block Type Selection */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Select Block Classification <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["Temporary", "Permanent", "Security Lockdown"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setBlockType(t)}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                        blockType === t
+                          ? "bg-rose-50 border-rose-500 text-rose-700 shadow-xs"
+                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reason Selection */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Reason for Blocking Account <span className="text-rose-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  {[
+                    "Fake Documents Provided",
+                    "Multiple Fraud Attempts",
+                    "Policy Violation",
+                    "Unverified Identity",
+                    "Custom Reason..."
+                  ].map((reasonOpt) => (
+                    <label
+                      key={reasonOpt}
+                      onClick={() => setSelectedReasonOption(reasonOpt)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${
+                        selectedReasonOption === reasonOpt
+                          ? "bg-rose-50/70 border-rose-400 text-rose-900 font-bold"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="blockReasonAll"
+                        checked={selectedReasonOption === reasonOpt}
+                        onChange={() => setSelectedReasonOption(reasonOpt)}
+                        className="text-rose-600 focus:ring-rose-500"
+                      />
+                      <span>{reasonOpt}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Reason Text Area */}
+              {selectedReasonOption === "Custom Reason..." && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Enter Custom Reason Details <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Specify exact audit notes or policy violation details..."
+                    value={customReasonText}
+                    onChange={(e) => setCustomReasonText(e.target.value)}
+                    className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-rose-500 text-slate-800"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBlockUserTarget(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingBlock}
+                onClick={handleConfirmBlockUser}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/25 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isSubmittingBlock ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Blocking User...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={14} />
+                    <span>Confirm & Block User</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
