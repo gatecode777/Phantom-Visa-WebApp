@@ -34,6 +34,22 @@ import AllDocumentsManagement from "./AllDocumentsManagement";
 import PendingVerificationManagement from "./PendingVerificationManagement";
 import VerifiedDocumentsManagement from "./VerifiedDocumentsManagement";
 import RejectedDocumentsManagement from "./RejectedDocumentsManagement";
+import DocumentTemplatesManagement from "./DocumentTemplatesManagement";
+import AllTransactionsManagement from "./AllTransactionsManagement";
+import SuccessfulPaymentsManagement from "./SuccessfulPaymentsManagement";
+import PendingPaymentsManagement from "./PendingPaymentsManagement";
+import FailedPaymentsManagement from "./FailedPaymentsManagement";
+import RefundRequestsManagement from "./RefundRequestsManagement";
+import InvoicesManagement from "./InvoicesManagement";
+import AllAppointmentsManagement from "./AllAppointmentsManagement";
+import UpcomingAppointmentsManagement from "./UpcomingAppointmentsManagement";
+import CompletedAppointmentsManagement from "./CompletedAppointmentsManagement";
+import CancelledAppointmentsManagement from "./CancelledAppointmentsManagement";
+import MessagesManagement from "./MessagesManagement";
+import NotificationsManagement from "./NotificationsManagement";
+import DashboardReportsManagement from "./DashboardReportsManagement";
+import ApplicationReportsManagement from "./ApplicationReportsManagement";
+import PaymentReportsManagement from "./PaymentReportsManagement";
 import {
   LayoutDashboard,
   Users,
@@ -983,9 +999,9 @@ export default function AdminPortal() {
                 <ApprovedApplicationsManagement />
               ) : activeSubItem === "Rejected" ? (
                 <RejectedApplicationsManagement />
-              ) : activeSubItem === "Completed" ? (
+              ) : activeSubItem === "Completed" && activeSection === "Applications" ? (
                 <CompletedApplicationsManagement />
-              ) : activeSubItem === "Cancelled" ? (
+              ) : activeSubItem === "Cancelled" && activeSection === "Applications" ? (
                 <CancelledApplicationsManagement />
               ) : activeSubItem === "All Documents" || (activeSection === "Documents" && (!activeSubItem || activeSubItem === "All Documents")) ? (
                 <AllDocumentsManagement />
@@ -995,6 +1011,38 @@ export default function AdminPortal() {
                 <VerifiedDocumentsManagement />
               ) : activeSubItem === "Rejected Documents" ? (
                 <RejectedDocumentsManagement />
+              ) : activeSubItem === "Document Templates" ? (
+                <DocumentTemplatesManagement />
+              ) : activeSubItem === "All Transactions" || (activeSection === "Payments" && (!activeSubItem || activeSubItem === "All Transactions")) ? (
+                <AllTransactionsManagement />
+              ) : activeSubItem === "Successful Payments" ? (
+                <SuccessfulPaymentsManagement />
+              ) : activeSubItem === "Pending Payments" ? (
+                <PendingPaymentsManagement />
+              ) : activeSubItem === "Failed Payments" ? (
+                <FailedPaymentsManagement />
+              ) : activeSubItem === "Refund Requests" ? (
+                <RefundRequestsManagement />
+              ) : activeSubItem === "Invoices" ? (
+                <InvoicesManagement />
+              ) : activeSubItem === "All Appointments" || (activeSection === "Appointments" && (!activeSubItem || activeSubItem === "All Appointments")) ? (
+                <AllAppointmentsManagement />
+              ) : activeSubItem === "Upcoming Appointments" || activeSubItem === "Upcoming" ? (
+                <UpcomingAppointmentsManagement />
+              ) : activeSubItem === "Completed Appointments" || (activeSection === "Appointments" && activeSubItem === "Completed") ? (
+                <CompletedAppointmentsManagement />
+              ) : activeSubItem === "Cancelled Appointments" || (activeSection === "Appointments" && activeSubItem === "Cancelled") ? (
+                <CancelledAppointmentsManagement />
+              ) : activeSection === "Messages" ? (
+                <MessagesManagement />
+              ) : activeSection === "Notifications" ? (
+                <NotificationsManagement />
+              ) : activeSubItem === "Application Reports" ? (
+                <ApplicationReportsManagement />
+              ) : activeSubItem === "Payment Reports" ? (
+                <PaymentReportsManagement />
+              ) : activeSection === "Reports & Analytics" || activeSection === "Reports" || activeSubItem === "Dashboard Reports" || activeSection === "Dashboard Reports" ? (
+                <DashboardReportsManagement />
               ) : (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   
