@@ -147,21 +147,23 @@ export default function AdminPortal() {
       const urlSec = params.get("sec");
       const urlSub = params.get("sub");
 
-      const storedSec = localStorage.getItem("admin_active_section");
-      const storedSub = localStorage.getItem("admin_active_subitem");
+      // Default strictly to "Dashboard" when navigating to /admin without query params
+      const targetSec = urlSec ? decodeURIComponent(urlSec) : "Dashboard";
+      const targetSub = urlSub ? decodeURIComponent(urlSub) : "";
 
-      const targetSec = urlSec ? decodeURIComponent(urlSec) : storedSec || "Dashboard";
-      const targetSub = urlSub ? decodeURIComponent(urlSub) : storedSub || "";
+      setActiveSection(targetSec);
+      setActiveSubItem(targetSub);
 
-      if (targetSec) {
-        setActiveSection(targetSec);
-        setActiveSubItem(targetSub);
-        if (targetSec !== "Dashboard") {
-          setOpenAccordions((prev) => ({
-            ...prev,
-            [targetSec]: true
-          }));
-        }
+      if (!urlSec) {
+        localStorage.removeItem("admin_active_section");
+        localStorage.removeItem("admin_active_subitem");
+      }
+
+      if (targetSec && targetSec !== "Dashboard") {
+        setOpenAccordions((prev) => ({
+          ...prev,
+          [targetSec]: true
+        }));
       }
     }
   }, []);
@@ -220,10 +222,7 @@ export default function AdminPortal() {
         "Countries",
         "Visa Categories",
         "Visa Types",
-        "Visa Requirements",
-        "Processing Time",
-        "Visa Fees",
-        "Required Documents"
+        "Visa Requirements"
       ]
     },
     {
@@ -1025,12 +1024,6 @@ export default function AdminPortal() {
                 <VisaTypesManagement />
               ) : activeSubItem === "Visa Requirements" ? (
                 <VisaRequirementsManagement />
-              ) : activeSubItem === "Processing Time" ? (
-                <ProcessingTimeManagement />
-              ) : activeSubItem === "Visa Fees" ? (
-                <VisaFeesManagement />
-              ) : activeSubItem === "Required Documents" ? (
-                <RequiredDocumentsManagement />
               ) : activeSubItem === "All Applications" || (activeSection === "Applications" && (!activeSubItem || activeSubItem === "All Applications")) ? (
                 <AllApplicationsManagement />
               ) : activeSubItem === "New Applications" ? (

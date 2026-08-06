@@ -24,7 +24,8 @@ import {
   ChevronDown,
   Info,
   UserCheck,
-  UserPlus
+  UserPlus,
+  Briefcase
 } from "lucide-react";
 import RegisterApplicant from "./RegisterApplicant";
 
@@ -93,6 +94,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
   // Toggle for full Applicant Registration Page
   const [showRegisterApplicant, setShowRegisterApplicant] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role>("Applicant");
 
   // Screen Step: 1 = Phone Input, 2 = OTP Verification
   const [step, setStep] = useState<1 | 2>(1);
@@ -169,8 +171,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
   // Live E.164 Phone Format Validation
   const handlePhoneChange = (val: string, country = selectedCountry) => {
-    // Only allow numeric digits and spaces
-    const cleanDigits = val.replace(/\D/g, "").slice(0, 15);
+    // Cap max digits based on selected country (e.g. 10 digits for India IN)
+    const maxDigits = country.code === "IN" || country.code === "US" || country.code === "GB" || country.code === "CA" || country.code === "AU" ? 10 : 15;
+    const cleanDigits = val.replace(/\D/g, "").slice(0, maxDigits);
     setPhoneNumber(cleanDigits);
     setPhoneError("");
 
@@ -225,7 +228,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       const checkRes = await fetch(`${API_V1_URL}/auth/verify-phone`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: targetE164 })
+        body: JSON.stringify({ phone: targetE164, role: selectedRole })
       });
 
       const checkJson = await checkRes.json();
@@ -353,7 +356,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       const res = await fetch(`${API_V1_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: e164Phone || phoneNumber, otp: codeToVerify })
+        body: JSON.stringify({ phone: e164Phone || phoneNumber, otp: codeToVerify, role: selectedRole })
       });
       const json = await res.json();
 
@@ -426,13 +429,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       {/* HEADER WORDMARK */}
       <header className="relative z-10 flex items-center justify-between max-w-6xl w-full mx-auto pb-4 border-b border-slate-200/80">
         <Logo variant="full" size="md" />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowRegisterApplicant(true)}
-            className="px-4 py-1.5 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-extrabold rounded-full shadow-md transition cursor-pointer flex items-center gap-1.5"
+            onClick={() => navigate("/register")}
+            className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-extrabold rounded-full shadow-md transition cursor-pointer flex items-center gap-1.5"
           >
             <UserPlus size={14} />
             <span>Register as Applicant</span>
+          </button>
+          <button
+            onClick={() => navigate("/register-agent")}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-full shadow-md transition cursor-pointer flex items-center gap-1.5"
+          >
+            <Briefcase size={14} />
+            <span>Register as Agent</span>
           </button>
           <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#4848F7] bg-[#EEF2FF] px-3.5 py-1.5 rounded-full border border-[#4848F7]/20 font-bold shadow-xs">
             <ShieldCheck size={14} className="text-[#4848F7]" />
@@ -466,6 +476,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           {step === 1 && (
             <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
               
+              {/* ROLE SELECTOR TOGGLE TABS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span>Sign In As</span>
+                  <span className="text-[10px] text-[#2563EB] font-mono font-bold">Select Role</span>
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200">
+                  {[
+                    { role: "Applicant" as Role, label: "Applicant", icon: UserCheck },
+                    { role: "Agent" as Role, label: "Agent", icon: Sparkles },
+                    { role: "Admin" as Role, label: "Admin", icon: Lock }
+                  ].map((item) => (
+                    <button
+                      key={item.role}
+                      type="button"
+                      onClick={() => setSelectedRole(item.role)}
+                      className={`py-2 px-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        selectedRole === item.role
+                          ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/20"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                      }`}
+                    >
+                      <item.icon size={13} />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Phone Input Box */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
@@ -552,19 +591,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 )}
               </button>
 
-              {/* REGISTER AS APPLICANT PROMPT BOX */}
-              <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+              {/* REGISTER PROMPT BOX (APPLICANT & AGENT) */}
+              <div className="pt-3 border-t border-slate-100 text-center space-y-2.5">
                 <span className="text-xs text-slate-500 font-medium block">
-                  New to VisaOS or submitting a new application?
+                  New to VisaOS? Choose your registration path:
                 </span>
-                <button
-                  type="button"
-                  onClick={() => navigate("/register")}
-                  className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
-                >
-                  <UserPlus size={15} />
-                  <span>Register as Applicant (Full Dossier Form)</span>
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register")}
+                    className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    <UserPlus size={15} />
+                    <span>Register as Applicant</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register-agent")}
+                    className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    <Briefcase size={15} />
+                    <span>Register as Agent</span>
+                  </button>
+                </div>
               </div>
 
             </div>

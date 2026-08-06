@@ -254,7 +254,7 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
  */
 router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
   try {
-    const { phone, email, password } = req.body;
+    const { phone, email, password, role } = req.body;
 
     if ((!phone && !email) || !password) {
       return res.status(400).json(
@@ -278,7 +278,24 @@ router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
     } else {
       query = { email: (email as string).toLowerCase() };
     }
-    const user = await User.findOne(query);
+
+    let user = null;
+    if (role) {
+      user = await User.findOne({ ...query, role });
+      if (!user) {
+        const anyUser = await User.findOne(query);
+        if (anyUser) {
+          return res.status(400).json(
+            formatErrorEnvelope(
+              "ROLE_MISMATCH",
+              `No ${role} account registered with these credentials. This account is registered as an ${anyUser.role}. Please select the ${anyUser.role} tab to log in.`
+            )
+          );
+        }
+      }
+    } else {
+      user = await User.findOne(query);
+    }
 
     if (!user || user.isDeactivated) {
       return res.status(401).json(
@@ -420,6 +437,26 @@ router.post("/logout", async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/v1/auth/logout-all
+ * Revoke ALL session refresh tokens in MongoDB and clear HTTP-Only cookie
+ */
+router.post("/logout-all", async (req: Request, res: Response) => {
+  try {
+    await RefreshToken.updateMany({}, { $set: { revoked: true } });
+    res.clearCookie("refreshToken", { path: "/api/v1/auth" });
+
+    return res.status(200).json({
+      success: true,
+      message: "All user sessions have been successfully logged out and revoked."
+    });
+  } catch (error: any) {
+    return res.status(500).json(
+      formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to logout all sessions.")
+    );
+  }
+});
+
+/**
  * GET /api/v1/auth/me
  * Protected endpoint returning current user profile
  */
@@ -458,7 +495,7 @@ router.get("/me", authenticateToken, async (req: AuthenticatedRequest, res: Resp
  */
 router.post("/verify-otp", async (req: Request, res: Response) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, otp, role } = req.body;
 
     if (!phone) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number is required."));
@@ -467,14 +504,32 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
     const cleanDigits = phone.replace(/\D/g, "");
     const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
 
-    const user = await User.findOne({
+    const query = {
       $or: [
         { phone },
         { phone: cleanDigits },
         { phone: last10Digits },
         { phone: { $regex: last10Digits, $options: "i" } }
       ]
-    });
+    };
+
+    let user = null;
+    if (role) {
+      user = await User.findOne({ ...query, role });
+      if (!user) {
+        const anyUser = await User.findOne(query);
+        if (anyUser) {
+          return res.status(400).json(
+            formatErrorEnvelope(
+              "ROLE_MISMATCH",
+              `No ${role} account registered with this phone number. This number is registered as an ${anyUser.role}. Please select the ${anyUser.role} tab to log in.`
+            )
+          );
+        }
+      }
+    } else {
+      user = await User.findOne(query);
+    }
 
     if (!user || user.isDeactivated) {
       return res.status(404).json(
@@ -534,9 +589,10 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
     );
   }
 });
+
 router.post("/verify-phone", async (req: Request, res: Response) => {
   try {
-    const { phone } = req.body;
+    const { phone, role } = req.body;
 
     if (!phone) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number is required."));
@@ -545,14 +601,32 @@ router.post("/verify-phone", async (req: Request, res: Response) => {
     const cleanDigits = phone.replace(/\D/g, "");
     const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
 
-    const user = await User.findOne({
+    const query = {
       $or: [
         { phone },
         { phone: cleanDigits },
         { phone: last10Digits },
         { phone: { $regex: last10Digits, $options: "i" } }
       ]
-    });
+    };
+
+    let user = null;
+    if (role) {
+      user = await User.findOne({ ...query, role });
+      if (!user) {
+        const anyUser = await User.findOne(query);
+        if (anyUser) {
+          return res.status(400).json(
+            formatErrorEnvelope(
+              "ROLE_MISMATCH",
+              `No ${role} account registered with this phone number. This number is registered as an ${anyUser.role}. Please select the ${anyUser.role} tab to log in.`
+            )
+          );
+        }
+      }
+    } else {
+      user = await User.findOne(query);
+    }
 
     if (!user || user.isDeactivated) {
       return res.status(404).json(
@@ -569,6 +643,63 @@ router.post("/verify-phone", async (req: Request, res: Response) => {
         role: user.role,
         name: user.name
       }
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * POST /api/v1/auth/check-duplicate
+ * Instant API endpoint to check if an email or phone number is already registered in MongoDB
+ */
+router.post("/check-duplicate", async (req: Request, res: Response) => {
+  try {
+    const { email, phone } = req.body;
+
+    if (email) {
+      const emailMatch = await User.findOne({ email: email.trim().toLowerCase() });
+      if (emailMatch) {
+        return res.status(400).json({
+          success: false,
+          field: "email",
+          error: {
+            code: "DUPLICATE_EMAIL",
+            message: `An account with email address '${email.trim()}' already exists in the system. Please sign in instead.`
+          }
+        });
+      }
+    }
+
+    if (phone) {
+      const cleanPhoneDigits = phone.replace(/\D/g, "");
+      const last10Phone = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
+
+      const phoneMatch = await User.findOne({
+        $or: [
+          { phone },
+          { phone: cleanPhoneDigits },
+          { phone: last10Phone },
+          { phone: { $regex: last10Phone, $options: "i" } }
+        ]
+      });
+
+      if (phoneMatch) {
+        return res.status(400).json({
+          success: false,
+          field: "phone",
+          error: {
+            code: "DUPLICATE_PHONE",
+            message: `An account with phone number '${phone.trim()}' is already registered as an ${phoneMatch.role}. Please sign in instead.`
+          }
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      available: true,
+      message: "Credentials are available for registration."
     });
   } catch (error: any) {
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
