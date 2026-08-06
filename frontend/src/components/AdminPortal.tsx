@@ -50,6 +50,18 @@ import NotificationsManagement from "./NotificationsManagement";
 import DashboardReportsManagement from "./DashboardReportsManagement";
 import ApplicationReportsManagement from "./ApplicationReportsManagement";
 import PaymentReportsManagement from "./PaymentReportsManagement";
+import RevenueReportsManagement from "./RevenueReportsManagement";
+import AgentPerformanceReportsManagement from "./AgentPerformanceReportsManagement";
+import CountryReportsManagement from "./CountryReportsManagement";
+import VisaTypeReportsManagement from "./VisaTypeReportsManagement";
+import UserActivityReportsManagement from "./UserActivityReportsManagement";
+import GeneralSettingsManagement from "./GeneralSettingsManagement";
+import CompanyProfileManagement from "./CompanyProfileManagement";
+import RolesPermissionsManagement from "./RolesPermissionsManagement";
+import PaymentGatewayManagement from "./PaymentGatewayManagement";
+import EmailConfigurationManagement from "./EmailConfigurationManagement";
+import SMSConfigurationManagement from "./SMSConfigurationManagement";
+import SecuritySettingsManagement from "./SecuritySettingsManagement";
 import {
   LayoutDashboard,
   Users,
@@ -1015,7 +1027,7 @@ export default function AdminPortal() {
                 <ActiveAgents />
               ) : activeSubItem === "Inactive Agents" ? (
                 <InactiveAgents />
-              ) : activeSubItem === "Agent Performance" ? (
+              ) : activeSubItem === "Agent Performance" && activeSection === "Agent Management" ? (
                 <AgentPerformance />
               ) : activeSubItem === "Countries" || (activeSection === "Visa Management" && (!activeSubItem || activeSubItem === "Countries")) ? (
                 <CountriesManagement />
@@ -1087,8 +1099,32 @@ export default function AdminPortal() {
                 <ApplicationReportsManagement />
               ) : activeSubItem === "Payment Reports" ? (
                 <PaymentReportsManagement />
+              ) : activeSubItem === "Revenue Reports" ? (
+                <RevenueReportsManagement />
+              ) : activeSubItem === "Agent Performance" ? (
+                <AgentPerformanceReportsManagement />
+              ) : activeSubItem === "Country-wise Reports" ? (
+                <CountryReportsManagement />
+              ) : activeSubItem === "Visa Type Reports" ? (
+                <VisaTypeReportsManagement />
+              ) : activeSubItem === "User Activity Reports" || activeSubItem === "User Activity" ? (
+                <UserActivityReportsManagement />
               ) : activeSection === "Reports & Analytics" || activeSection === "Reports" || activeSubItem === "Dashboard Reports" || activeSection === "Dashboard Reports" ? (
                 <DashboardReportsManagement />
+              ) : activeSubItem === "Company Profile" ? (
+                <CompanyProfileManagement />
+              ) : activeSubItem === "Roles & Permissions" || activeSubItem === "Roles" ? (
+                <RolesPermissionsManagement />
+              ) : activeSubItem === "Payment Gateway" || activeSubItem === "Payment Gateway Settings" ? (
+                <PaymentGatewayManagement />
+              ) : activeSubItem === "Email Configuration" || activeSubItem === "Email Settings" ? (
+                <EmailConfigurationManagement />
+              ) : activeSubItem === "SMS Configuration" || activeSubItem === "SMS Settings" ? (
+                <SMSConfigurationManagement />
+              ) : activeSubItem === "Security Settings" || activeSubItem === "Security" ? (
+                <SecuritySettingsManagement />
+              ) : activeSection === "Settings" || activeSubItem === "General Settings" ? (
+                <GeneralSettingsManagement />
               ) : (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   
