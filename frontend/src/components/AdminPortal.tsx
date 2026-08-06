@@ -62,6 +62,10 @@ import PaymentGatewayManagement from "./PaymentGatewayManagement";
 import EmailConfigurationManagement from "./EmailConfigurationManagement";
 import SMSConfigurationManagement from "./SMSConfigurationManagement";
 import SecuritySettingsManagement from "./SecuritySettingsManagement";
+import ApiIntegrationManagement from "./ApiIntegrationManagement";
+import BackupRestoreManagement from "./BackupRestoreManagement";
+import SupportManagement from "./SupportManagement";
+import MyProfileManagement from "./MyProfileManagement";
 import {
   LayoutDashboard,
   Users,
@@ -1116,7 +1120,15 @@ export default function AdminPortal() {
                 <SMSConfigurationManagement />
               ) : activeSubItem === "Security Settings" || activeSubItem === "Security" ? (
                 <SecuritySettingsManagement />
-              ) : activeSection === "Settings" || activeSubItem === "General Settings" ? (
+              ) : activeSubItem === "API Integrations" || activeSubItem === "API Integration" || activeSubItem === "API Settings" || activeSubItem === "Api Integrations" ? (
+                <ApiIntegrationManagement />
+              ) : activeSubItem === "Backup & Restore" || activeSubItem === "Backup and Restore" || activeSubItem === "Backup & Restore" ? (
+                <BackupRestoreManagement />
+              ) : activeSection === "Support" || activeSubItem === "Support" || activeSubItem === "Help Desk" ? (
+                <SupportManagement />
+              ) : activeSection === "My Profile" || activeSubItem === "My Profile" || activeSection === "Profile" ? (
+                <MyProfileManagement />
+              ) : activeSection === "Settings" || activeSection === "System Settings" || activeSubItem === "General Settings" ? (
                 <GeneralSettingsManagement />
               ) : (
                 <div className="space-y-6 animate-in fade-in duration-200">
