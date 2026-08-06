@@ -6,6 +6,7 @@ import CustomerPortal from "./components/CustomerPortal";
 import StaffPortal from "./components/StaffPortal";
 import AdminPortal from "./components/AdminPortal";
 import RegisterApplicant from "./components/RegisterApplicant";
+import RegisterAgent from "./components/RegisterAgent";
 import LoginPage from "./components/LoginPage";
 
 export function App() {
@@ -62,6 +63,17 @@ export function App() {
         path="/register"
         element={
           <RegisterApplicant
+            onClose={() => navigate("/login")}
+            onSuccessSubmit={() => navigate("/login")}
+          />
+        }
+      />
+
+      {/* AGENT REGISTRATION WIZARD ROUTE */}
+      <Route
+        path="/register-agent"
+        element={
+          <RegisterAgent
             onClose={() => navigate("/login")}
             onSuccessSubmit={() => navigate("/login")}
           />

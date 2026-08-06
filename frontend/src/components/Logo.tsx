@@ -1,8 +1,8 @@
 import React from "react";
 
-const LOGO_URL = "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_fjm238fjm238fjm2-removebg-preview%20(2).png";
-const FALLBACK_URL = "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_fjm238fjm238fjm2-removebg-preview%20(2).png";
-const ICON_FALLBACK_URL = "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_kei20nkei20nkei2-removebg-preview.png";
+const LOGO_URL = "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_fjm238fjm238fjm2-removebg-preview%20(2)_p2j9SE6bD.png";
+const FALLBACK_URL = "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_fjm238fjm238fjm2-removebg-preview%20(2)_p2j9SE6bD.png";
+const ICON_FALLBACK_URL = "hhttps://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/Gemini_Generated_Image_fjm238fjm238fjm2-removebg-preview%20(2)_p2j9SE6bD.png";
 
 interface LogoProps {
   variant?: "full" | "header" | "icon" | "card" | "sidebar";
@@ -47,12 +47,12 @@ export const Logo: React.FC<LogoProps> = ({
   if (variant === "header") {
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
-        <div className="bg-white/95 backdrop-blur px-2.5 py-1 rounded-md shadow-sm border border-brand-gold/30 flex items-center justify-center overflow-hidden">
+        <div className="bg-white/95 backdrop-blur px-2.5 py-1 flex items-center justify-center overflow-hidden">
           <img
             src={LOGO_URL}
             onError={handleImageError}
             alt="Phantom Forex Mart Pvt. Ltd."
-            className="h-7 sm:h-8 w-auto object-contain"
+            className="h-12 sm:h-12 w-auto object-contain"
           />
         </div>
       </div>
@@ -62,7 +62,7 @@ export const Logo: React.FC<LogoProps> = ({
   if (variant === "sidebar") {
     return (
       <div className={`flex flex-col gap-1 ${className}`}>
-        <div className="bg-white/95 backdrop-blur px-3 py-2 rounded-lg shadow-md border border-brand-gold/30 flex items-center justify-center transition-all hover:border-brand-gold/60 overflow-hidden">
+        <div className="bg-white/95 backdrop-blur px-3 py-2 border border-brand-gold/30 flex items-center justify-center transition-all hover:border-brand-gold/60 overflow-hidden">
           <img
             src={LOGO_URL}
             onError={handleImageError}
@@ -96,12 +96,12 @@ export const Logo: React.FC<LogoProps> = ({
   // Default "full" display
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="bg-white p-2 rounded-lg shadow-md border border-brand-gold/30 flex items-center justify-center overflow-hidden">
+      <div className="p-2 rounded-lg flex items-center justify-center overflow-hidden">
         <img
           src={LOGO_URL}
           onError={handleImageError}
           alt="Phantom Forex Mart Pvt. Ltd."
-          className="h-10 w-auto object-contain"
+          className="h-14 w-auto object-contain"
         />
       </div>
     </div>

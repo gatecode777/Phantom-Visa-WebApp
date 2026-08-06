@@ -83,9 +83,18 @@ router.post("/create", async (req: Request, res: Response) => {
       }
     }
 
-    // Check if phone or email already registered
+    // Check if phone or email already registered (using normalized phone digit matching)
+    const cleanPhoneDigits = phone.replace(/\D/g, "");
+    const last10Phone = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
+
     const existingUser = await User.findOne({
-      $or: [{ phone }, { email: email.toLowerCase() }]
+      $or: [
+        { phone },
+        { phone: cleanPhoneDigits },
+        { phone: last10Phone },
+        { phone: { $regex: last10Phone, $options: "i" } },
+        { email: email.toLowerCase() }
+      ]
     });
 
     if (existingUser) {

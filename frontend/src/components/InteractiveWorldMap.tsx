@@ -205,7 +205,7 @@ export default function InteractiveWorldMap({
 
   return (
     <div className="relative w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs select-none">
-      
+
       {/* MAP HEADER BAR */}
       <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-white z-10">
         <div>
@@ -252,9 +252,8 @@ export default function InteractiveWorldMap({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={`relative w-full h-[380px] sm:h-[450px] bg-[#FAFAFC] overflow-hidden cursor-${
-          zoomLevel > 1 ? (isDragging ? "grabbing" : "grab") : "default"
-        }`}
+        className={`relative w-full h-[380px] sm:h-[450px] bg-[#FAFAFC] overflow-hidden cursor-${zoomLevel > 1 ? (isDragging ? "grabbing" : "grab") : "default"
+          }`}
       >
         {/* ZOOM & PAN WRAPPER */}
         <div
@@ -305,20 +304,19 @@ export default function InteractiveWorldMap({
                     onMouseEnter={() => setHoveredCountry(country)}
                     onMouseLeave={() => setHoveredCountry(null)}
                     onClick={() => handleCountryClick(country)}
-                    className={`transition-all duration-300 cursor-pointer ${
-                      active ? "animate-pulse" : ""
-                    }`}
+                    className={`transition-all duration-300 cursor-pointer ${active ? "animate-pulse" : ""
+                      }`}
                     style={{
                       fill: active
                         ? `${statusColor}25` // 20% transparent tint
                         : activeCountry
-                        ? "#D1D5DB" // faded contrast when another is active
-                        : "#E2E8F0", // default clean light grey continent fill
+                          ? "#D1D5DB" // faded contrast when another is active
+                          : "#E2E8F0", // default clean light grey continent fill
                       stroke: active
                         ? statusColor
                         : activeCountry
-                        ? "#FFFFFF"
-                        : "#FFFFFF",
+                          ? "#FFFFFF"
+                          : "#FFFFFF",
                       strokeWidth: isSelected ? 3.5 : isHovered ? 2.5 : 0.75,
                       filter: active ? "url(#neon-glow)" : "none",
                       opacity: active ? 1 : activeCountry ? 0.45 : 0.95
@@ -359,19 +357,17 @@ export default function InteractiveWorldMap({
               >
                 {/* 2-3s PULSING GLOW HALO */}
                 <span
-                  className={`animate-ping absolute inline-flex rounded-full opacity-75 ${
-                    active ? "h-9 w-9 -top-2.5 -left-2.5" : "h-7 w-7 -top-1.5 -left-1.5"
-                  }`}
+                  className={`animate-ping absolute inline-flex rounded-full opacity-75 ${active ? "h-9 w-9 -top-2.5 -left-2.5" : "h-7 w-7 -top-1.5 -left-1.5"
+                    }`}
                   style={{ backgroundColor: statusStyle.hex }}
                 />
 
                 {/* MAIN GLOWING CIRCULAR DOT */}
                 <span
-                  className={`relative inline-flex items-center justify-center rounded-full border-2 border-white shadow-md transition-all duration-300 ${
-                    active
+                  className={`relative inline-flex items-center justify-center rounded-full border-2 border-white shadow-md transition-all duration-300 ${active
                       ? "h-5 w-5 scale-130 shadow-xl ring-4 ring-[#4848F7]/30"
                       : "h-4 w-4 hover:scale-125"
-                  }`}
+                    }`}
                   style={{
                     backgroundColor: statusStyle.hex,
                     boxShadow: active
@@ -410,7 +406,7 @@ export default function InteractiveWorldMap({
                 }}
                 className={`absolute pointer-events-none z-40 transition-all duration-200 animate-in fade-in zoom-in-95 ${posClasses}`}
               >
-                <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-2xl p-3.5 text-xs w-60 space-y-2">
+                <div className="bg-white/95 backdrop-blur-md p-3.5 text-xs w-60 space-y-2">
                   {/* Country & Flag Header */}
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div className="flex items-center gap-2">
@@ -528,7 +524,7 @@ export default function InteractiveWorldMap({
       {selectedCountry && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
-            
+
             {/* Drawer Header */}
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
@@ -557,7 +553,7 @@ export default function InteractiveWorldMap({
 
             {/* Drawer Content */}
             <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-              
+
               {selectedApp ? (
                 <>
                   {/* Status Badge Banner */}

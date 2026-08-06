@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useVisa, Application, VisaStatus, formatINR, AgentTab } from "../context/VisaContext";
 import MRZStrip from "./MRZStrip";
 import {
@@ -51,6 +52,7 @@ import {
 } from "lucide-react";
 
 export default function AgentPortal() {
+  const navigate = useNavigate();
   const {
     applications,
     walletBalance,
@@ -337,10 +339,21 @@ export default function AgentPortal() {
           </button>
           <button
             onClick={() => setShowAddFundsModal(true)}
-            className="bg-brand-teal/20 hover:bg-brand-teal/30 border border-brand-teal/40 text-brand-teal font-mono font-bold text-xs px-3 py-1.5 rounded transition flex items-center gap-1"
+            className="bg-brand-teal/20 hover:bg-brand-teal/30 border border-brand-teal/40 text-brand-teal font-mono font-bold text-xs px-3 py-1.5 rounded transition flex items-center gap-1 cursor-pointer"
           >
             <Coins size={14} />
             <span>Top Up Wallet</span>
+          </button>
+          <button
+            onClick={async () => {
+              await logoutSession();
+              navigate("/login");
+            }}
+            className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs px-3 py-1.5 rounded transition flex items-center gap-1.5 cursor-pointer"
+            title="Log Out Session"
+          >
+            <LogOut size={14} />
+            <span>Logout</span>
           </button>
         </div>
       </div>

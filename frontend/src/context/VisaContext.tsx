@@ -172,6 +172,7 @@ interface VisaContextType {
   authSession: AuthSession | null;
   loginSession: (session: AuthSession) => void;
   logoutSession: () => void;
+  logoutAllSessions: () => Promise<void>;
   applications: Application[];
   walletBalance: number;
   ledger: LedgerEntry[];
@@ -338,6 +339,22 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       localStorage.removeItem("phantom_auth_session");
+    } catch (e) {}
+    setAuthSession(null);
+    setApplicantDashboardData(null);
+  };
+
+  const logoutAllSessions = async () => {
+    try {
+      await fetch(`${API_V1_URL}/auth/logout-all`, {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (err) {
+      console.error("Logout all sessions error:", err);
+    }
+    try {
+      localStorage.clear();
     } catch (e) {}
     setAuthSession(null);
     setApplicantDashboardData(null);
@@ -838,6 +855,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         authSession,
         loginSession,
         logoutSession,
+        logoutAllSessions,
         applications,
         walletBalance,
         ledger,

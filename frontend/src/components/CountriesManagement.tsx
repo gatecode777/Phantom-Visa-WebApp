@@ -1,694 +1,539 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Globe,
   Search,
-  Filter,
-  RefreshCw,
-  Eye,
-  Edit3,
-  Plus,
+  PlusCircle,
   Trash2,
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Clock,
-  Calendar,
-  CreditCard,
-  FileText,
-  Download,
-  Building,
-  Check,
+  Edit3,
+  RefreshCw,
   X,
-  ChevronLeft,
-  ChevronRight,
-  PlusCircle,
-  Layers,
+  Eye,
   Sparkles,
-  TrendingUp,
-  MapPin
+  Layers,
+  FileText,
+  Upload,
+  Image as ImageIcon
 } from "lucide-react";
+import { API_V1_URL } from "../config/api";
 
-export interface CountryRecord {
-  id: string;
+interface CountryRecord {
+  _id: string;
   countryId: string;
+  name: string;
+  code: string;
   flag: string;
-  countryName: string;
-  countryCode: string;
   continent: string;
-  capital: string;
-  currency: string;
-  language: string;
-  timeZone: string;
+  capital?: string;
+  currency?: string;
+  timeZone?: string;
   visaAvailable: boolean;
-  visaTypesCount: number;
   processingTime: string;
-  minProcessingDays: number;
-  maxProcessingDays: number;
-  startingFee: string;
-  serviceCharge: string;
-  status: "Active" | "Inactive";
+  startingFee: number;
+  availableCategories: string[];
   availableVisaTypes: string[];
   requiredDocuments: string[];
-  stats: {
-    received: number;
-    approved: number;
-    rejected: number;
-    pending: number;
-    revenue: string;
-  };
+  status: "Active" | "Inactive";
+  createdAt: string;
 }
 
-const MOCK_COUNTRIES: CountryRecord[] = [
-  {
-    id: "1",
-    countryId: "CNT-001",
-    flag: "🇨🇦",
-    countryName: "Canada",
-    countryCode: "CAN",
-    continent: "North America",
-    capital: "Ottawa",
-    currency: "CAD ($)",
-    language: "English / French",
-    timeZone: "GMT-5 (EST)",
-    visaAvailable: true,
-    visaTypesCount: 6,
-    processingTime: "15 Days",
-    minProcessingDays: 10,
-    maxProcessingDays: 20,
-    startingFee: "8,500",
-    serviceCharge: "1,500",
-    status: "Active",
-    availableVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa",
-      "Transit Visa",
-      "Dependent Visa"
-    ],
-    requiredDocuments: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Flight Booking",
-      "Hotel Booking",
-      "Employment Letter"
-    ],
-    stats: {
-      received: 1240,
-      approved: 1120,
-      rejected: 45,
-      pending: 75,
-      revenue: "₹1,05,40,000"
-    }
-  },
-  {
-    id: "2",
-    countryId: "CNT-002",
-    flag: "🇦🇺",
-    countryName: "Australia",
-    countryCode: "AUS",
-    continent: "Oceania",
-    capital: "Canberra",
-    currency: "AUD ($)",
-    language: "English",
-    timeZone: "GMT+10 (AEST)",
-    visaAvailable: true,
-    visaTypesCount: 5,
-    processingTime: "20 Days",
-    minProcessingDays: 14,
-    maxProcessingDays: 25,
-    startingFee: "9,200",
-    serviceCharge: "1,800",
-    status: "Active",
-    availableVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa",
-      "Dependent Visa"
-    ],
-    requiredDocuments: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Flight Booking",
-      "Invitation Letter"
-    ],
-    stats: {
-      received: 980,
-      approved: 890,
-      rejected: 35,
-      pending: 55,
-      revenue: "₹90,16,000"
-    }
-  },
-  {
-    id: "3",
-    countryId: "CNT-003",
-    flag: "🇬🇧",
-    countryName: "United Kingdom",
-    countryCode: "GBR",
-    continent: "Europe",
-    capital: "London",
-    currency: "GBP (£)",
-    language: "English",
-    timeZone: "GMT+0 (BST)",
-    visaAvailable: true,
-    visaTypesCount: 7,
-    processingTime: "10 Days",
-    minProcessingDays: 7,
-    maxProcessingDays: 15,
-    startingFee: "10,000",
-    serviceCharge: "2,000",
-    status: "Active",
-    availableVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa",
-      "Medical Visa",
-      "Transit Visa",
-      "Dependent Visa"
-    ],
-    requiredDocuments: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Hotel Booking",
-      "Employment Letter"
-    ],
-    stats: {
-      received: 1450,
-      approved: 1310,
-      rejected: 60,
-      pending: 80,
-      revenue: "₹1,45,000,000"
-    }
-  },
-  {
-    id: "4",
-    countryId: "CNT-004",
-    flag: "🇺🇸",
-    countryName: "United States",
-    countryCode: "USA",
-    continent: "North America",
-    capital: "Washington, D.C.",
-    currency: "USD ($)",
-    language: "English",
-    timeZone: "GMT-5 (EST)",
-    visaAvailable: true,
-    visaTypesCount: 8,
-    processingTime: "25 Days",
-    minProcessingDays: 15,
-    maxProcessingDays: 35,
-    startingFee: "12,400",
-    serviceCharge: "2,500",
-    status: "Active",
-    availableVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa",
-      "Medical Visa",
-      "Transit Visa",
-      "Dependent Visa"
-    ],
-    requiredDocuments: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Invitation Letter",
-      "Employment Letter"
-    ],
-    stats: {
-      received: 1890,
-      approved: 1650,
-      rejected: 120,
-      pending: 120,
-      revenue: "₹2,34,36,000"
-    }
-  },
-  {
-    id: "5",
-    countryId: "CNT-005",
-    flag: "🇩🇪",
-    countryName: "Germany",
-    countryCode: "DEU",
-    continent: "Europe",
-    capital: "Berlin",
-    currency: "EUR (€)",
-    language: "German",
-    timeZone: "GMT+1 (CET)",
-    visaAvailable: false,
-    visaTypesCount: 4,
-    processingTime: "14 Days",
-    minProcessingDays: 10,
-    maxProcessingDays: 18,
-    startingFee: "8,000",
-    serviceCharge: "1,200",
-    status: "Inactive",
-    availableVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa"
-    ],
-    requiredDocuments: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Flight Booking"
-    ],
-    stats: {
-      received: 420,
-      approved: 380,
-      rejected: 15,
-      pending: 25,
-      revenue: "₹33,60,000"
-    }
-  }
-];
+interface VisaTypeObject {
+  _id: string;
+  name: string;
+  categoryName: string;
+}
 
 export default function CountriesManagement() {
-  // Search & Filter States
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [visaAvailabilityFilter, setVisaAvailabilityFilter] = useState("All");
-  const [continentFilter, setContinentFilter] = useState("All");
+  const [countries, setCountries] = useState<CountryRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("All");
+  const [continentFilter, setContinentFilter] = useState<string>("All");
 
-  // Country Records State
-  const [countries, setCountries] = useState<CountryRecord[]>(MOCK_COUNTRIES);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // ImageKit Upload state
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
 
-  // Centered Modal View State
-  const [activeModalCountry, setActiveModalCountry] = useState<CountryRecord | null>(null);
-  const [modalTab, setModalTab] = useState<"general" | "summary" | "stats">("general");
+  // Dynamic lists fetched from backend API for modal checkboxes
+  const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
+  const [visaTypeObjects, setVisaTypeObjects] = useState<VisaTypeObject[]>([]);
+  const [dynamicDocs, setDynamicDocs] = useState<string[]>([]);
 
-  // Add / Edit Country Form Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingCountry, setEditingCountry] = useState<CountryRecord | null>(null);
-
-  const [formData, setFormData] = useState({
-    countryName: "",
-    countryCode: "",
-    flag: "🌐",
-    continent: "Asia",
-    currency: "USD ($)",
-    timeZone: "GMT+0",
-    officialLanguage: "English",
-    visaAvailable: true,
-    processingTime: "15 Days",
-    minProcessingDays: 10,
-    maxProcessingDays: 20,
-    startingFee: "8,500",
-    serviceCharge: "1,500",
-    status: "Active" as "Active" | "Inactive",
-    selectedVisaTypes: [
-      "Tourist Visa",
-      "Business Visa",
-      "Student Visa",
-      "Work Visa"
-    ],
-    selectedRequiredDocs: [
-      "Passport",
-      "Passport Photograph",
-      "Bank Statement",
-      "Travel Insurance",
-      "Flight Booking"
-    ]
-  });
-
-  // UI Toast Notification
+  // Toast feedback
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Filter Logic
-  const filteredCountries = countries.filter((c) => {
-    const q = searchQuery.toLowerCase();
-    const matchesQuery =
-      c.countryName.toLowerCase().includes(q) ||
-      c.countryCode.toLowerCase().includes(q) ||
-      c.continent.toLowerCase().includes(q);
+  // Modal States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [viewCountry, setViewCountry] = useState<CountryRecord | null>(null);
+  const [editingCountry, setEditingCountry] = useState<CountryRecord | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-    const matchesStatus = statusFilter === "All" || c.status === statusFilter;
-    const matchesVisaAvail =
-      visaAvailabilityFilter === "All" ||
-      (visaAvailabilityFilter === "Available" ? c.visaAvailable : !c.visaAvailable);
-    const matchesContinent = continentFilter === "All" || c.continent === continentFilter;
-
-    return matchesQuery && matchesStatus && matchesVisaAvail && matchesContinent;
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    code: "",
+    flag: "🌐",
+    continent: "Asia",
+    capital: "",
+    currency: "USD ($)",
+    timeZone: "GMT+0",
+    visaAvailable: true,
+    processingTime: "15 Days",
+    startingFee: 8500,
+    selectedCategories: [] as string[],
+    selectedVisaTypes: [] as string[],
+    selectedDocs: [] as string[],
+    status: "Active" as "Active" | "Inactive"
   });
 
-  // Selection Logic
-  const handleSelectAll = () => {
-    if (selectedIds.length === filteredCountries.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredCountries.map((c) => c.id));
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Handle Image Upload directly to ImageKit via Backend API
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const data = new FormData();
+      data.append("file", file);
+
+      const res = await fetch(`${API_V1_URL}/countries/upload-flag`, {
+        method: "POST",
+        body: data
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success && json.data?.url) {
+        setFormData((prev) => ({ ...prev, flag: json.data.url }));
+        triggerToast("Image uploaded to ImageKit successfully!");
+      } else {
+        triggerToast(json.error?.message || "Failed to upload image to ImageKit.");
+      }
+    } catch (err) {
+      triggerToast("Error uploading image to ImageKit.");
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
-  const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  // Fetch Countries & Dynamic Checkbox Options from Backend APIs
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [cRes, catRes, vtRes, vrRes] = await Promise.all([
+        fetch(`${API_V1_URL}/countries`),
+        fetch(`${API_V1_URL}/visa/categories`),
+        fetch(`${API_V1_URL}/visa/types`),
+        fetch(`${API_V1_URL}/visa/requirements`)
+      ]);
+
+      const cJson = await cRes.json();
+      const catJson = await catRes.json();
+      const vtJson = await vtRes.json();
+      const vrJson = await vrRes.json();
+
+      if (cJson.success && Array.isArray(cJson.data)) {
+        setCountries(cJson.data);
+      }
+
+      // Populate dynamic Visa Categories
+      if (catJson.success && Array.isArray(catJson.data)) {
+        const catNames: string[] = Array.from(new Set(catJson.data.map((c: any) => String(c.name))));
+        if (catNames.length > 0) setDynamicCategories(catNames);
+        else setDynamicCategories(["Tourist Visa", "Business Visa", "Student & Study Visa", "Work & Employment Permit", "Transit & Airport Transfer"]);
+      } else {
+        setDynamicCategories(["Tourist Visa", "Business Visa", "Student & Study Visa", "Work & Employment Permit", "Transit & Airport Transfer"]);
+      }
+
+      // Populate dynamic Visa Type Objects with parent category tracking
+      if (vtJson.success && Array.isArray(vtJson.data)) {
+        const parsedObjects: VisaTypeObject[] = vtJson.data.map((t: any) => ({
+          _id: String(t._id),
+          name: String(t.name),
+          categoryName: String(t.categoryName || "")
+        }));
+        setVisaTypeObjects(parsedObjects);
+      } else {
+        setVisaTypeObjects([
+          { _id: "1", name: "Schengen Tourist (Multiple Entry)", categoryName: "Tourist Visa" },
+          { _id: "2", name: "US B1/B2 Tourist & Business", categoryName: "Tourist Visa" },
+          { _id: "3", name: "UK Standard Visitor Visa", categoryName: "Tourist Visa" },
+          { _id: "4", name: "France Business Fast-Track", categoryName: "Business Visa" }
+        ]);
+      }
+
+      // Populate dynamic Requirement Documents
+      if (vrJson.success && Array.isArray(vrJson.data)) {
+        const docTitles: string[] = Array.from(new Set(vrJson.data.map((r: any) => String(r.title))));
+        if (docTitles.length > 0) setDynamicDocs(docTitles);
+        else setDynamicDocs(["Passport", "Passport Photograph", "Bank Statement", "Travel Insurance", "Flight Booking", "Hotel Booking", "Invitation Letter", "Employment Letter", "Other Documents"]);
+      } else {
+        setDynamicDocs(["Passport", "Passport Photograph", "Bank Statement", "Travel Insurance", "Flight Booking", "Hotel Booking", "Invitation Letter", "Employment Letter", "Other Documents"]);
+      }
+    } catch (err) {
+      console.error("Failed to load country data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Actions
-  const handleToggleStatus = (country: CountryRecord) => {
-    const newStatus = country.status === "Active" ? "Inactive" : "Active";
-    setCountries((prev) =>
-      prev.map((c) => (c.id === country.id ? { ...c, status: newStatus } : c))
-    );
-    triggerToast(`Country ${country.countryName} updated to ${newStatus}.`);
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleDeleteCountry = (country: CountryRecord) => {
-    setCountries((prev) => prev.filter((c) => c.id !== country.id));
-    triggerToast(`Country ${country.countryName} deleted successfully.`);
-    if (activeModalCountry?.id === country.id) setActiveModalCountry(null);
-  };
+  const defaultCategoryList = dynamicCategories.length > 0
+    ? dynamicCategories
+    : ["Tourist Visa", "Business Visa", "Student & Study Visa", "Work & Employment Permit", "Transit & Airport Transfer"];
 
-  const handleBulkActivate = () => {
-    setCountries((prev) =>
-      prev.map((c) => (selectedIds.includes(c.id) ? { ...c, status: "Active" } : c))
-    );
-    triggerToast(`${selectedIds.length} countries activated.`);
-    setSelectedIds([]);
-  };
+  const defaultDocList = dynamicDocs.length > 0
+    ? dynamicDocs
+    : ["Passport", "Passport Photograph", "Bank Statement", "Travel Insurance", "Flight Booking", "Hotel Booking", "Invitation Letter", "Employment Letter", "Other Documents"];
 
-  const handleBulkDeactivate = () => {
-    setCountries((prev) =>
-      prev.map((c) => (selectedIds.includes(c.id) ? { ...c, status: "Inactive" } : c))
-    );
-    triggerToast(`${selectedIds.length} countries deactivated.`);
-    setSelectedIds([]);
-  };
-
-  const handleBulkDelete = () => {
-    setCountries((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
-    triggerToast(`${selectedIds.length} countries deleted.`);
-    setSelectedIds([]);
-  };
-
-  // Open Edit Form
-  const openEditForm = (country: CountryRecord) => {
-    setEditingCountry(country);
+  // Open Modal for Add
+  const handleOpenAdd = () => {
+    setEditingCountry(null);
+    const initialCategories = ["Tourist Visa", "Business Visa"];
     setFormData({
-      countryName: country.countryName,
-      countryCode: country.countryCode,
-      flag: country.flag,
-      continent: country.continent,
-      currency: country.currency,
-      timeZone: country.timeZone,
-      officialLanguage: country.language,
-      visaAvailable: country.visaAvailable,
-      processingTime: country.processingTime,
-      minProcessingDays: country.minProcessingDays,
-      maxProcessingDays: country.maxProcessingDays,
-      startingFee: country.startingFee,
-      serviceCharge: country.serviceCharge,
-      status: country.status,
-      selectedVisaTypes: country.availableVisaTypes,
-      selectedRequiredDocs: country.requiredDocuments
+      name: "",
+      code: "",
+      flag: "🌐",
+      continent: "Asia",
+      capital: "",
+      currency: "USD ($)",
+      timeZone: "GMT+0",
+      visaAvailable: true,
+      processingTime: "15 Days",
+      startingFee: 8500,
+      selectedCategories: initialCategories,
+      selectedVisaTypes: ["Schengen Tourist (Multiple Entry)", "US B1/B2 Tourist & Business"],
+      selectedDocs: ["Passport", "Passport Photograph", "Bank Statement", "Travel Insurance"],
+      status: "Active"
     });
-    setShowAddModal(true);
+    setFormErrors({});
+    setIsAddModalOpen(true);
   };
 
-  // Save Country (Add or Edit)
-  const handleSaveCountry = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.countryName || !formData.countryCode) {
-      triggerToast("Please provide Country Name and Country Code.");
-      return;
+  // Open Modal for Edit
+  const handleOpenEdit = (c: CountryRecord) => {
+    setEditingCountry(c);
+    setFormData({
+      name: c.name,
+      code: c.code,
+      flag: c.flag || "🌐",
+      continent: c.continent || "Asia",
+      capital: c.capital || "",
+      currency: c.currency || "USD ($)",
+      timeZone: c.timeZone || "GMT+0",
+      visaAvailable: c.visaAvailable,
+      processingTime: c.processingTime || "15 Days",
+      startingFee: c.startingFee || 8500,
+      selectedCategories: c.availableCategories || [],
+      selectedVisaTypes: c.availableVisaTypes || [],
+      selectedDocs: c.requiredDocuments || [],
+      status: c.status
+    });
+    setFormErrors({});
+    setIsAddModalOpen(true);
+  };
+
+  // Toggle Category Checkbox Selection & Cascade Filter Visa Types
+  const toggleCategory = (catName: string) => {
+    setFormData((prev) => {
+      const exists = prev.selectedCategories.includes(catName);
+      const updatedCategories = exists
+        ? prev.selectedCategories.filter((c) => c !== catName)
+        : [...prev.selectedCategories, catName];
+
+      const updatedVisaTypes = prev.selectedVisaTypes.filter((typeTitle) => {
+        const typeObj = visaTypeObjects.find((vt) => vt.name === typeTitle);
+        if (typeObj && typeObj.categoryName) {
+          return updatedCategories.includes(typeObj.categoryName);
+        }
+        return true;
+      });
+
+      return {
+        ...prev,
+        selectedCategories: updatedCategories,
+        selectedVisaTypes: updatedVisaTypes
+      };
+    });
+  };
+
+  // Toggle Visa Type Checkbox Selection
+  const toggleVisaType = (typeName: string) => {
+    setFormData((prev) => {
+      const exists = prev.selectedVisaTypes.includes(typeName);
+      const updated = exists
+        ? prev.selectedVisaTypes.filter((t) => t !== typeName)
+        : [...prev.selectedVisaTypes, typeName];
+      return { ...prev, selectedVisaTypes: updated };
+    });
+  };
+
+  // Toggle Document Checkbox Selection
+  const toggleDoc = (docName: string) => {
+    setFormData((prev) => {
+      const exists = prev.selectedDocs.includes(docName);
+      const updated = exists
+        ? prev.selectedDocs.filter((d) => d !== docName)
+        : [...prev.selectedDocs, docName];
+      return { ...prev, selectedDocs: updated };
+    });
+  };
+
+  // Validate Form
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Country name is required.";
+    if (!formData.code.trim()) {
+      errors.code = "Country Code (e.g. CAN, AUS, DEU) is required.";
+    } else if (formData.code.trim().length < 2 || formData.code.trim().length > 3) {
+      errors.code = "Country Code must be 2 or 3 letters (e.g. CA or CAN).";
     }
 
-    if (editingCountry) {
-      setCountries((prev) =>
-        prev.map((c) =>
-          c.id === editingCountry.id
-            ? {
-                ...c,
-                countryName: formData.countryName,
-                countryCode: formData.countryCode.toUpperCase(),
-                flag: formData.flag,
-                continent: formData.continent,
-                currency: formData.currency,
-                timeZone: formData.timeZone,
-                language: formData.officialLanguage,
-                visaAvailable: formData.visaAvailable,
-                processingTime: formData.processingTime,
-                minProcessingDays: formData.minProcessingDays,
-                maxProcessingDays: formData.maxProcessingDays,
-                startingFee: formData.startingFee,
-                serviceCharge: formData.serviceCharge,
-                status: formData.status,
-                availableVisaTypes: formData.selectedVisaTypes,
-                requiredDocuments: formData.selectedRequiredDocs,
-                visaTypesCount: formData.selectedVisaTypes.length
-              }
-            : c
-        )
-      );
-      triggerToast(`Country ${formData.countryName} updated successfully.`);
-    } else {
-      const newCountry: CountryRecord = {
-        id: Date.now().toString(),
-        countryId: `CNT-00${countries.length + 1}`,
-        flag: formData.flag || "🌐",
-        countryName: formData.countryName,
-        countryCode: formData.countryCode.toUpperCase(),
+    if (!formData.startingFee || Number(formData.startingFee) < 0) {
+      errors.startingFee = "Starting visa fee must be a valid positive amount.";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit Form (Create / Update)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase(),
+        flag: formData.flag.trim() || "🌐",
         continent: formData.continent,
-        capital: "Capital City",
+        capital: formData.capital.trim(),
         currency: formData.currency,
-        language: formData.officialLanguage,
         timeZone: formData.timeZone,
         visaAvailable: formData.visaAvailable,
-        visaTypesCount: formData.selectedVisaTypes.length,
-        processingTime: formData.processingTime,
-        minProcessingDays: formData.minProcessingDays,
-        maxProcessingDays: formData.maxProcessingDays,
-        startingFee: formData.startingFee,
-        serviceCharge: formData.serviceCharge,
-        status: formData.status,
+        processingTime: formData.processingTime.trim(),
+        startingFee: Number(formData.startingFee),
+        availableCategories: formData.selectedCategories,
         availableVisaTypes: formData.selectedVisaTypes,
-        requiredDocuments: formData.selectedRequiredDocs,
-        stats: {
-          received: 0,
-          approved: 0,
-          rejected: 0,
-          pending: 0,
-          revenue: "₹0"
-        }
+        requiredDocuments: formData.selectedDocs,
+        status: formData.status
       };
-      setCountries((prev) => [newCountry, ...prev]);
-      triggerToast(`New Country ${formData.countryName} added successfully.`);
-    }
 
-    setShowAddModal(false);
-    setEditingCountry(null);
+      const url = editingCountry
+        ? `${API_V1_URL}/countries/${editingCountry._id}`
+        : `${API_V1_URL}/countries`;
+
+      const method = editingCountry ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        triggerToast(json.error?.message || "Failed to save country.");
+      } else {
+        triggerToast(editingCountry ? "Country updated successfully!" : "New destination country added!");
+        setIsAddModalOpen(false);
+        fetchData();
+      }
+    } catch (err) {
+      triggerToast("Error communicating with server.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // Delete Country
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`${API_V1_URL}/countries/${id}`, {
+        method: "DELETE"
+      });
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("Destination country deleted successfully.");
+        setDeleteConfirmId(null);
+        fetchData();
+      } else {
+        triggerToast(json.error?.message || "Failed to delete country.");
+      }
+    } catch (err) {
+      triggerToast("Failed to delete country.");
+    }
+  };
+
+  // Filtered List
+  const filtered = countries.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.continent && c.continent.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesStatus = statusFilter === "All" || c.status === statusFilter;
+
+    const matchesAvailability =
+      availabilityFilter === "All" ||
+      (availabilityFilter === "Available" && c.visaAvailable) ||
+      (availabilityFilter === "Unavailable" && !c.visaAvailable);
+
+    const matchesContinent = continentFilter === "All" || c.continent === continentFilter;
+
+    return matchesSearch && matchesStatus && matchesAvailability && matchesContinent;
+  });
+
+  const activeCount = countries.filter((c) => c.status === "Active").length;
+  const inactiveCount = countries.filter((c) => c.status === "Inactive").length;
+
+  // Filter available visa types dynamically based on selectedCategories
+  const filteredVisaTypeObjects = visaTypeObjects.filter((vt) =>
+    formData.selectedCategories.includes(vt.categoryName)
+  );
+
   return (
-    <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
-      {/* TOAST NOTIFICATION */}
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
-          <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
-            <CheckCircle2 size={18} />
-          </div>
-          <span className="text-xs font-semibold">{toastMsg}</span>
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
+          <CheckCircle2 size={16} className="text-emerald-400" />
+          <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* HEADER SECTION */}
-      <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-6 rounded-3xl shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-700">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-3xl p-6 sm:p-8 shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
-            <Globe size={15} />
-            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Global Visa Destination Management
-            </span>
+          <div className="flex items-center gap-2 text-xs text-blue-200 font-mono tracking-wider uppercase mb-1">
+            <Globe size={14} />
+            <span>Destination Country Portfolio</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-            Countries
-          </h1>
-          <p className="text-xs text-blue-100 font-medium mt-1">
-            Manage destination countries, visa availability, processing details, and application status.
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-outfit">Countries</h1>
+          <p className="text-xs text-blue-100 mt-1 max-w-xl">
+            Manage destination countries, visa categories, visa types, and application status.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setEditingCountry(null);
-              setFormData({
-                countryName: "",
-                countryCode: "",
-                flag: "🌐",
-                continent: "Asia",
-                currency: "USD ($)",
-                timeZone: "GMT+0",
-                officialLanguage: "English",
-                visaAvailable: true,
-                processingTime: "15 Days",
-                minProcessingDays: 10,
-                maxProcessingDays: 20,
-                startingFee: "8,500",
-                serviceCharge: "1,500",
-                status: "Active",
-                selectedVisaTypes: ["Tourist Visa", "Business Visa", "Student Visa", "Work Visa"],
-                selectedRequiredDocs: ["Passport", "Passport Photograph", "Bank Statement", "Travel Insurance"]
-              });
-              setShowAddModal(true);
-            }}
-            className="px-4 py-2 bg-white text-[#2563EB] hover:bg-blue-50 text-xs font-black rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5"
-          >
-            <PlusCircle size={16} /> Add New Country
-          </button>
+        <button
+          onClick={handleOpenAdd}
+          className="bg-white text-[#2563EB] hover:bg-blue-50 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-md hover:shadow-lg transition cursor-pointer shrink-0"
+        >
+          <PlusCircle size={16} />
+          <span>Add New Country</span>
+        </button>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Total Countries</p>
+            <h3 className="text-2xl font-extrabold text-slate-900 font-outfit mt-1">{countries.length}</h3>
+            <span className="text-[10px] text-blue-600 font-bold">Global Destinations Portfolio</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
+            <Globe size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Active Countries</p>
+            <h3 className="text-2xl font-extrabold text-emerald-600 font-outfit mt-1">{activeCount}</h3>
+            <span className="text-[10px] text-emerald-600 font-bold">Open for Visa Applications</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <CheckCircle2 size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Inactive Countries</p>
+            <h3 className="text-2xl font-extrabold text-red-600 font-outfit mt-1">{inactiveCount}</h3>
+            <span className="text-[10px] text-red-600 font-bold">Temporarily Paused Processing</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
+            <XCircle size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">New Countries Added</p>
+            <h3 className="text-2xl font-extrabold text-amber-600 font-outfit mt-1">{countries.length > 5 ? 5 : countries.length}</h3>
+            <span className="text-[10px] text-amber-600 font-bold">Added This Quarter</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <Sparkles size={20} />
+          </div>
         </div>
       </div>
 
-      {/* TOP STATISTICS CARDS (4 CARDS AS IN WIREFRAME) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider font-outfit">
-              Total Countries
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
-              <Globe size={18} />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">65</div>
-          <span className="text-[11px] text-[#2563EB] font-semibold mt-1 inline-block">
-            Global Destinations Portfolio
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider font-outfit">
-              Active Countries
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <CheckCircle2 size={18} />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">58</div>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
-            Open for Visa Applications
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider font-outfit">
-              Inactive Countries
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
-              <XCircle size={18} />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">7</div>
-          <span className="text-[11px] text-red-600 font-semibold mt-1 inline-block">
-            Temporarily Paused Processing
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider font-outfit">
-              New Countries Added
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Sparkles size={18} />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">5</div>
-          <span className="text-[11px] text-amber-600 font-semibold mt-1 inline-block">
-            Added This Quarter
-          </span>
-        </div>
-      </div>
-
-      {/* SEARCH & FILTERS SECTION */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-            <Filter size={16} className="text-[#2563EB]" /> Search & Multi-Criteria Filters
+      {/* Filter & Search Bar */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col space-y-3 text-xs">
+        <div className="flex items-center justify-between">
+          <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
+            <Search size={14} className="text-[#2563EB]" /> Search & Multi-Criteria Filters
           </h3>
-          <span className="text-xs text-slate-500 font-mono font-bold">
-            Showing {filteredCountries.length} of {countries.length} Countries
-          </span>
+          <span className="text-slate-400 text-[11px] font-mono">Showing {filtered.length} of {countries.length} Countries</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
-          {/* SEARCH BY KEYWORD */}
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Search By (Name, Code, Continent)
-            </label>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Canada, CAN, Europe..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition"
-              />
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by (Name, Code, Continent)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+            />
           </div>
 
-          {/* STATUS FILTER */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Status
-            </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
             >
               <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive Only</option>
             </select>
           </div>
 
-          {/* VISA AVAILABILITY FILTER */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Visa Availability
-            </label>
             <select
-              value={visaAvailabilityFilter}
-              onChange={(e) => setVisaAvailabilityFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition font-semibold"
+              value={availabilityFilter}
+              onChange={(e) => setAvailabilityFilter(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
             >
               <option value="All">All Availability</option>
-              <option value="Available">Available</option>
-              <option value="Unavailable">Unavailable</option>
+              <option value="Available">Yes (Available)</option>
+              <option value="Unavailable">No (Unavailable)</option>
             </select>
           </div>
 
-          {/* CONTINENT FILTER */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Continent
-            </label>
             <select
               value={continentFilter}
               onChange={(e) => setContinentFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
             >
               <option value="All">All Continents</option>
               <option value="Asia">Asia</option>
@@ -702,410 +547,147 @@ export default function CountriesManagement() {
         </div>
       </div>
 
-      {/* CONTEXTUAL BULK ACTIONS TOOLBAR */}
-      {selectedIds.length > 0 && (
-        <div className="bg-[#0E1A2C] border border-[#2563EB]/40 text-white p-3.5 rounded-2xl shadow-xl mb-4 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="w-6 h-6 rounded-lg bg-[#2563EB] text-white flex items-center justify-center font-mono font-bold text-xs">
-              {selectedIds.length}
-            </span>
-            <span>Countries Selected</span>
+      {/* Countries Data Table */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 space-y-2">
+            <RefreshCw size={24} className="animate-spin mx-auto text-[#2563EB]" />
+            <p className="text-xs font-semibold">Loading Destination Countries from MongoDB...</p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleBulkActivate}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <CheckCircle2 size={14} /> Activate Selected
-            </button>
-            <button
-              onClick={handleBulkDeactivate}
-              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <XCircle size={14} /> Deactivate Selected
-            </button>
-            <button
-              onClick={() => triggerToast(`Exporting data for ${selectedIds.length} countries.`)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <Download size={14} /> Export Countries
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <Trash2 size={14} /> Delete Selected
-            </button>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 space-y-2">
+            <AlertCircle size={28} className="mx-auto text-slate-300" />
+            <p className="text-sm font-bold text-slate-700">No Countries Found</p>
+            <p className="text-xs text-slate-500">Try adjusting your filters or click "+ Add New Country".</p>
           </div>
-        </div>
-      )}
-
-      {/* COUNTRIES TABLE */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden mb-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold font-outfit uppercase tracking-wider">
-                <th className="py-3.5 px-4 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length === filteredCountries.length && filteredCountries.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
-                  />
-                </th>
-                <th className="py-3.5 px-4">Country ID</th>
-                <th className="py-3.5 px-4 text-center">Flag</th>
-                <th className="py-3.5 px-4">Country Name</th>
-                <th className="py-3.5 px-4">Country Code</th>
-                <th className="py-3.5 px-4 text-center">Visa Types</th>
-                <th className="py-3.5 px-4">Processing Time</th>
-                <th className="py-3.5 px-4 font-mono">Starting Fee</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-              {filteredCountries.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
-                    <Globe size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                    <p className="font-bold text-slate-600">No countries found matching your criteria.</p>
-                  </td>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                  <th className="py-3.5 px-4">Country ID</th>
+                  <th className="py-3.5 px-4">Flag / Image</th>
+                  <th className="py-3.5 px-4">Country Name</th>
+                  <th className="py-3.5 px-4">Country Code</th>
+                  <th className="py-3.5 px-4">Visa Categories</th>
+                  <th className="py-3.5 px-4">Visa Types</th>
+                  <th className="py-3.5 px-4">Processing Time</th>
+                  <th className="py-3.5 px-4">Starting Fee</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
-              ) : (
-                filteredCountries.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(c.id)}
-                        onChange={() => handleToggleSelect(c.id)}
-                        className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
-                      />
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filtered.map((c) => (
+                  <tr key={c._id} className="hover:bg-slate-50/50 transition">
                     <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">
                       {c.countryId}
                     </td>
-                    <td className="py-3.5 px-4 text-center text-xl">
-                      {c.flag}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {c.countryName}
-                      <span className="block text-[10px] text-slate-400 font-normal">{c.continent}</span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
-                      {c.countryCode}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-800">
-                      {c.visaTypesCount} Types
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-700">
-                      {c.processingTime}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                      ₹{c.startingFee}
-                    </td>
                     <td className="py-3.5 px-4">
-                      {c.status === "Active" ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
-                        </span>
+                      {c.flag && (c.flag.startsWith("http://") || c.flag.startsWith("https://")) ? (
+                        <img
+                          src={c.flag}
+                          alt={c.name}
+                          className="w-8 h-6 object-cover rounded shadow-xs border border-slate-200"
+                        />
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Inactive
-                        </span>
+                        <span className="text-lg">{c.flag || "🌐"}</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="py-3.5 px-4">
+                      <div>
+                        <p className="font-extrabold text-slate-900">{c.name}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">{c.continent}</p>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                      {c.code}
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-700">
+                      <span className="px-2 py-1 bg-[#2563EB]/10 text-[#2563EB] rounded-lg font-mono text-[11px] font-extrabold">
+                        {c.availableCategories ? c.availableCategories.length : 0} Categories
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-700">
+                      <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-mono text-[11px] font-bold">
+                        {c.availableVisaTypes ? c.availableVisaTypes.length : 0} Types
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-slate-700 font-semibold">
+                      {c.processingTime || "15 Days"}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
+                      ₹{(c.startingFee || 8500).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          c.status === "Active"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-slate-100 text-slate-600 border border-slate-200"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${c.status === "Active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => {
-                            setActiveModalCountry(c);
-                            setModalTab("general");
-                          }}
-                          className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                          onClick={() => setViewCountry(c)}
+                          className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition"
                           title="View Details"
                         >
-                          <Eye size={15} />
+                          <Eye size={14} />
                         </button>
                         <button
-                          onClick={() => openEditForm(c)}
-                          className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition cursor-pointer"
+                          onClick={() => handleOpenEdit(c)}
+                          className="p-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg transition"
                           title="Edit Country"
                         >
-                          <Edit3 size={15} />
+                          <Edit3 size={14} />
                         </button>
                         <button
-                          onClick={() => handleToggleStatus(c)}
-                          className={`p-1.5 rounded-lg transition cursor-pointer ${
-                            c.status === "Active"
-                              ? "text-emerald-600 hover:bg-emerald-50"
-                              : "text-amber-600 hover:bg-amber-50"
-                          }`}
-                          title={c.status === "Active" ? "Deactivate" : "Activate"}
-                        >
-                          <CheckCircle2 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCountry(c)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                          onClick={() => setDeleteConfirmId(c._id)}
+                          className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition"
                           title="Delete Country"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* PAGINATION FOOTER */}
-        <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 65 Countries</div>
-          <div className="flex items-center gap-1 font-mono font-bold">
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
-              Previous
-            </button>
-            <button className="px-3 py-1 bg-[#2563EB] text-white rounded-lg">1</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">2</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">3</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">4</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">
-              Next
-            </button>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* CENTERED POPUP VIEW MODAL: COUNTRY DETAILS (3 TABS) */}
-      {activeModalCountry && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            {/* MODAL HEADER */}
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">{activeModalCountry.flag}</div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black font-outfit text-white">
-                      {activeModalCountry.countryName}
-                    </h3>
-                    <span className="font-mono text-xs font-bold text-blue-300 bg-blue-900/50 px-2 py-0.5 rounded border border-blue-700">
-                      {activeModalCountry.countryCode}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">{activeModalCountry.continent} &bull; Capital: {activeModalCountry.capital}</p>
-                </div>
+      {/* Add / Edit Country Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            {/* Header Banner */}
+            <div className="bg-[#2563EB] text-white -mx-6 -mt-6 p-5 rounded-t-3xl flex items-center justify-between">
+              <div className="flex items-center gap-2 font-outfit">
+                <Globe size={20} />
+                <h3 className="text-base font-extrabold">
+                  {editingCountry ? `Edit Country: ${editingCountry.name}` : "Add New Country"}
+                </h3>
               </div>
-
               <button
-                onClick={() => setActiveModalCountry(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition cursor-pointer"
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* TAB BAR WITH LIGHT-BLUE SLIM SCROLLBAR */}
-            <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {[
-                { id: "general", label: "General Information", icon: Globe },
-                { id: "summary", label: "Visa Summary", icon: FileText },
-                { id: "stats", label: "Statistics", icon: TrendingUp }
-              ].map((tab) => {
-                const IconComp = tab.icon;
-                const active = modalTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setModalTab(tab.id as any)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
-                  >
-                    <IconComp size={14} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* MODAL BODY */}
-            <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {/* TAB 1: GENERAL INFORMATION */}
-              {modalTab === "general" && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                    Country Metadata & Locale
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Country Name</span>
-                      <strong className="text-slate-900 font-bold">{activeModalCountry.countryName}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Country Code (ISO)</span>
-                      <strong className="text-[#2563EB] font-mono font-bold">{activeModalCountry.countryCode}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Continent</span>
-                      <strong className="text-slate-900 font-bold">{activeModalCountry.continent}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Capital City</span>
-                      <strong className="text-slate-900 font-bold">{activeModalCountry.capital}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Currency</span>
-                      <strong className="text-slate-900 font-mono font-bold">{activeModalCountry.currency}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Time Zone</span>
-                      <strong className="text-slate-900 font-mono">{activeModalCountry.timeZone}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: VISA SUMMARY */}
-              {modalTab === "summary" && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                    Visa Availability & Requirements Summary
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">Available Visa Types</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activeModalCountry.availableVisaTypes.map((vt, idx) => (
-                          <span key={idx} className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-800 text-[11px]">
-                            {vt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">Required Documents</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activeModalCountry.requiredDocuments.map((doc, idx) => (
-                          <span key={idx} className="px-2.5 py-1 bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg font-bold text-[11px]">
-                            {doc}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Avg Processing</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">{activeModalCountry.processingTime}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Starting Fee</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalCountry.startingFee}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Service Charge</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalCountry.serviceCharge}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: STATISTICS */}
-              {modalTab === "stats" && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                    Application Metrics & Revenue
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Received</span>
-                      <strong className="text-slate-900 text-lg font-mono font-black">{activeModalCountry.stats.received}</strong>
-                    </div>
-                    <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-200">
-                      <span className="text-[10px] text-emerald-700 font-extrabold uppercase block">Approved</span>
-                      <strong className="text-emerald-800 text-lg font-mono font-black">{activeModalCountry.stats.approved}</strong>
-                    </div>
-                    <div className="bg-red-50 p-3 rounded-2xl border border-red-200">
-                      <span className="text-[10px] text-red-700 font-extrabold uppercase block">Rejected</span>
-                      <strong className="text-red-800 text-lg font-mono font-black">{activeModalCountry.stats.rejected}</strong>
-                    </div>
-                    <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200">
-                      <span className="text-[10px] text-amber-700 font-extrabold uppercase block">Pending</span>
-                      <strong className="text-amber-800 text-lg font-mono font-black">{activeModalCountry.stats.pending}</strong>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-2xl border border-blue-200 sm:col-span-1 col-span-2">
-                      <span className="text-[10px] text-[#2563EB] font-extrabold uppercase block">Revenue</span>
-                      <strong className="text-[#2563EB] text-sm font-mono font-black">{activeModalCountry.stats.revenue}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* MODAL FOOTER */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
-              <button
-                onClick={() => handleToggleStatus(activeModalCountry)}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                  activeModalCountry.status === "Active"
-                    ? "bg-amber-600 hover:bg-amber-700 text-white"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                }`}
-              >
-                {activeModalCountry.status === "Active" ? "Deactivate Country" : "Activate Country"}
-              </button>
-
-              <button
-                onClick={() => openEditForm(activeModalCountry)}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Edit3 size={14} /> Edit Country Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADD / EDIT NEW COUNTRY MODAL (EXACT FORM FROM WIREFRAME) */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
-            {/* MODAL HEADER */}
-            <div className="bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white p-5 flex items-center justify-between">
-              <h3 className="text-base font-black font-outfit flex items-center gap-2">
-                <Globe size={18} />
-                <span>{editingCountry ? `Edit Country: ${editingCountry.countryName}` : "Add New Country"}</span>
-              </h3>
-
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingCountry(null);
-                }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* MODAL FORM BODY */}
-            <form onSubmit={handleSaveCountry} className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE]">
+            <form onSubmit={handleSubmit} className="space-y-6 text-xs">
               {/* SECTION 1: BASIC INFORMATION */}
               <div className="space-y-3">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                <h4 className="font-extrabold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider text-[10px]">
                   Basic Information
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1116,46 +698,95 @@ export default function CountriesManagement() {
                     <input
                       type="text"
                       placeholder="e.g. Canada"
-                      value={formData.countryName}
-                      onChange={(e) => setFormData({ ...formData, countryName: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                      className={`w-full bg-slate-50 border text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none ${
+                        formErrors.name ? "border-red-500 bg-red-50/20" : "border-slate-200 focus:border-[#2563EB]"
+                      }`}
                     />
+                    {formErrors.name && <p className="text-[10px] text-red-600 font-bold mt-1">{formErrors.name}</p>}
                   </div>
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Country Code (ISO) <span className="text-red-500">*</span>
+                      Country Code <span className="text-red-500">*</span> (e.g. CAN)
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. CAN"
-                      value={formData.countryCode}
-                      onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-mono uppercase"
+                      maxLength={3}
+                      value={formData.code}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                      className={`w-full bg-slate-50 border text-slate-800 font-mono font-bold px-3 py-2.5 rounded-xl focus:outline-none ${
+                        formErrors.code ? "border-red-500 bg-red-50/20" : "border-slate-200 focus:border-[#2563EB]"
+                      }`}
                     />
+                    {formErrors.code && <p className="text-[10px] text-red-600 font-bold mt-1">{formErrors.code}</p>}
                   </div>
 
+                  {/* ImageKit Upload Field */}
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Country Flag (Emoji / Symbol)
+                      Flag / Image (ImageKit)
                     </label>
-                    <input
-                      type="text"
-                      placeholder="🇨🇦"
-                      value={formData.flag}
-                      onChange={(e) => setFormData({ ...formData, flag: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
-                    />
+                    <div className="flex items-center gap-2">
+                      {formData.flag && (formData.flag.startsWith("http://") || formData.flag.startsWith("https://")) ? (
+                        <div className="relative shrink-0 group">
+                          <img
+                            src={formData.flag}
+                            alt="Flag Preview"
+                            className="w-10 h-8 object-cover rounded-lg border border-slate-300 shadow-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, flag: "🌐" }))}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 text-[9px] hover:bg-red-600"
+                            title="Remove image"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="🇨🇦 or Emoji"
+                          value={formData.flag}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, flag: e.target.value }))}
+                          className="w-16 bg-slate-50 border border-slate-200 text-slate-800 text-center text-sm py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                        />
+                      )}
+
+                      <label className="flex-1 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#2563EB] font-bold text-xs px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition">
+                        {isUploadingImage ? (
+                          <>
+                            <RefreshCw size={14} className="animate-spin text-[#2563EB]" />
+                            <span className="text-[11px]">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={14} />
+                            <span className="text-[11px]">Upload ImageKit</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingImage}
+                          onChange={handleImageFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Continent
+                      Continent <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.continent}
-                      onChange={(e) => setFormData({ ...formData, continent: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, continent: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-semibold"
                     >
                       <option value="Asia">Asia</option>
                       <option value="Europe">Europe</option>
@@ -1163,6 +794,7 @@ export default function CountriesManagement() {
                       <option value="South America">South America</option>
                       <option value="Africa">Africa</option>
                       <option value="Oceania">Oceania</option>
+                      <option value="Antarctica">Antarctica</option>
                     </select>
                   </div>
 
@@ -1172,10 +804,10 @@ export default function CountriesManagement() {
                     </label>
                     <input
                       type="text"
-                      placeholder="CAD ($)"
+                      placeholder="USD ($)"
                       value={formData.currency}
-                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
                     />
                   </div>
 
@@ -1185,10 +817,10 @@ export default function CountriesManagement() {
                     </label>
                     <input
                       type="text"
-                      placeholder="GMT-5 (EST)"
+                      placeholder="GMT+0"
                       value={formData.timeZone}
-                      onChange={(e) => setFormData({ ...formData, timeZone: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, timeZone: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
                     />
                   </div>
                 </div>
@@ -1196,18 +828,18 @@ export default function CountriesManagement() {
 
               {/* SECTION 2: VISA INFORMATION */}
               <div className="space-y-3">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                <h4 className="font-extrabold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider text-[10px]">
                   Visa Information
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Visa Available
+                      Visa Available <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.visaAvailable ? "Yes" : "No"}
-                      onChange={(e) => setFormData({ ...formData, visaAvailable: e.target.value === "Yes" })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, visaAvailable: e.target.value === "Yes" }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-bold"
                     >
                       <option value="Yes">Yes (Available)</option>
                       <option value="No">No (Unavailable)</option>
@@ -1222,145 +854,318 @@ export default function CountriesManagement() {
                       type="text"
                       placeholder="15 Days"
                       value={formData.processingTime}
-                      onChange={(e) => setFormData({ ...formData, processingTime: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, processingTime: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB]"
                     />
                   </div>
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Starting Visa Fee (₹)
+                      Starting Visa Fee (₹) <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
-                      placeholder="8,500"
+                      type="number"
+                      placeholder="8500"
                       value={formData.startingFee}
-                      onChange={(e) => setFormData({ ...formData, startingFee: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-mono"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, startingFee: Number(e.target.value) }))}
+                      className={`w-full bg-slate-50 border text-slate-800 font-mono font-bold px-3 py-2.5 rounded-xl focus:outline-none ${
+                        formErrors.startingFee ? "border-red-500 bg-red-50/20" : "border-slate-200 focus:border-[#2563EB]"
+                      }`}
                     />
+                    {formErrors.startingFee && <p className="text-[10px] text-red-600 font-bold mt-1">{formErrors.startingFee}</p>}
                   </div>
                 </div>
               </div>
 
-              {/* SECTION 3: AVAILABLE VISA TYPES (CHECKBOXES) */}
+              {/* SECTION 3: AVAILABLE VISA CATEGORIES (DYNAMIC CHECKBOXES) */}
               <div className="space-y-3">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                  Available Visa Types
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    "Tourist Visa",
-                    "Business Visa",
-                    "Student Visa",
-                    "Work Visa",
-                    "Medical Visa",
-                    "Transit Visa",
-                    "Dependent Visa"
-                  ].map((vType) => {
-                    const checked = formData.selectedVisaTypes.includes(vType);
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                  <h4 className="font-extrabold text-[#2563EB] text-xs uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <Layers size={12} /> Step 1: Available Visa Categories
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-mono">Select categories supported for this country</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {defaultCategoryList.map((cat) => {
+                    const isChecked = formData.selectedCategories.includes(cat);
                     return (
-                      <label
-                        key={vType}
-                        className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition text-xs font-semibold ${
-                          checked
-                            ? "bg-blue-50/80 border-blue-300 text-[#2563EB]"
-                            : "bg-slate-50 border-slate-200 text-slate-700"
+                      <button
+                        type="button"
+                        key={cat}
+                        onClick={() => toggleCategory(cat)}
+                        className={`p-3 rounded-2xl border text-left flex items-center gap-2 transition cursor-pointer ${
+                          isChecked
+                            ? "bg-blue-50/80 border-[#2563EB] text-[#2563EB] font-extrabold ring-1 ring-[#2563EB]/20"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            if (checked) {
-                              setFormData({
-                                ...formData,
-                                selectedVisaTypes: formData.selectedVisaTypes.filter((t) => t !== vType)
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                selectedVisaTypes: [...formData.selectedVisaTypes, vType]
-                              });
-                            }
-                          }}
-                          className="rounded border-slate-300 text-[#2563EB]"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="w-4 h-4 text-[#2563EB] rounded accent-[#2563EB]"
                         />
-                        <span>{vType}</span>
-                      </label>
+                        <span className="truncate">{cat}</span>
+                      </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* SECTION 4: REQUIRED DOCUMENTS (CHECKBOXES) */}
+              {/* SECTION 4: AVAILABLE VISA TYPES (DEPENDENT ON SELECTED CATEGORIES) */}
               <div className="space-y-3">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                  Required Documents
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[
-                    "Passport",
-                    "Passport Photograph",
-                    "Bank Statement",
-                    "Travel Insurance",
-                    "Flight Booking",
-                    "Hotel Booking",
-                    "Invitation Letter",
-                    "Employment Letter",
-                    "Other Documents"
-                  ].map((doc) => {
-                    const checked = formData.selectedRequiredDocs.includes(doc);
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                  <h4 className="font-extrabold text-indigo-700 text-xs uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <FileText size={12} /> Step 2: Available Visa Types
+                  </h4>
+                  <span className="text-[10px] text-indigo-500 font-mono">
+                    {formData.selectedCategories.length > 0
+                      ? `Filtered by (${formData.selectedCategories.length}) selected category(ies)`
+                      : "Select a Category above first"}
+                  </span>
+                </div>
+
+                {formData.selectedCategories.length === 0 ? (
+                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-center gap-2.5 animate-in fade-in">
+                    <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                    <span>Please select at least one <strong>Visa Category</strong> above to reveal available Visa Types.</span>
+                  </div>
+                ) : filteredVisaTypeObjects.length === 0 ? (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs flex items-center gap-2.5 animate-in fade-in">
+                    <AlertCircle size={16} className="text-slate-400 shrink-0" />
+                    <span>No specific Visa Types configured under the selected category(ies). You can create new Visa Types in Visa Management menu.</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 animate-in fade-in">
+                    {filteredVisaTypeObjects.map((vt) => {
+                      const isChecked = formData.selectedVisaTypes.includes(vt.name);
+                      return (
+                        <button
+                          type="button"
+                          key={vt._id || vt.name}
+                          onClick={() => toggleVisaType(vt.name)}
+                          className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition cursor-pointer ${
+                            isChecked
+                              ? "bg-indigo-50/80 border-indigo-600 text-indigo-700 font-extrabold ring-1 ring-indigo-600/20"
+                              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {}}
+                              className="w-4 h-4 text-indigo-600 rounded accent-indigo-600 shrink-0"
+                            />
+                            <span className="truncate text-xs font-extrabold">{vt.name}</span>
+                          </div>
+                          {vt.categoryName && (
+                            <span className="text-[9px] font-mono text-indigo-500/80 pl-6 mt-0.5 truncate">
+                              {vt.categoryName}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 5: REQUIRED DOCUMENTS (DYNAMIC CHECKBOXES) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                  <h4 className="font-extrabold text-emerald-700 text-xs uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <CheckCircle2 size={12} /> Required Documents
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-mono">Select mandatory documentation</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {defaultDocList.map((doc) => {
+                    const isChecked = formData.selectedDocs.includes(doc);
                     return (
-                      <label
+                      <button
+                        type="button"
                         key={doc}
-                        className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition text-xs font-semibold ${
-                          checked
-                            ? "bg-emerald-50/80 border-emerald-300 text-emerald-800"
-                            : "bg-slate-50 border-slate-200 text-slate-700"
+                        onClick={() => toggleDoc(doc)}
+                        className={`p-3 rounded-2xl border text-left flex items-center gap-2 transition cursor-pointer ${
+                          isChecked
+                            ? "bg-emerald-50/80 border-emerald-500 text-emerald-700 font-extrabold ring-1 ring-emerald-500/20"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            if (checked) {
-                              setFormData({
-                                ...formData,
-                                selectedRequiredDocs: formData.selectedRequiredDocs.filter((d) => d !== doc)
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                selectedRequiredDocs: [...formData.selectedRequiredDocs, doc]
-                              });
-                            }
-                          }}
-                          className="rounded border-slate-300 text-emerald-600"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="w-4 h-4 text-emerald-600 rounded accent-emerald-600"
                         />
-                        <span>{doc}</span>
-                      </label>
+                        <span className="truncate">{doc}</span>
+                      </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* FOOTER ACTIONS */}
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+              {/* SECTION 6: STATUS */}
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as "Active" | "Inactive" }))}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-bold"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-lg shadow-[#2563EB]/25"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-2"
                 >
-                  {editingCountry ? "Save Country Changes" : "Create New Country"}
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <span>{editingCountry ? "Update Country" : "Create New Country"}</span>
+                  )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Country Details Modal */}
+      {viewCountry && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                {viewCountry.flag && (viewCountry.flag.startsWith("http://") || viewCountry.flag.startsWith("https://")) ? (
+                  <img src={viewCountry.flag} alt={viewCountry.name} className="w-9 h-7 object-cover rounded border border-slate-200" />
+                ) : (
+                  <span className="text-2xl">{viewCountry.flag}</span>
+                )}
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 font-outfit">{viewCountry.name}</h3>
+                  <span className="text-xs font-mono text-[#2563EB] font-bold">{viewCountry.code} | {viewCountry.continent}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewCountry(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-700">
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl">
+                <div><span className="text-slate-400">Processing Time:</span> <strong>{viewCountry.processingTime}</strong></div>
+                <div><span className="text-slate-400">Starting Fee:</span> <strong>₹{(viewCountry.startingFee || 8500).toLocaleString("en-IN")}</strong></div>
+                <div><span className="text-slate-400">Currency:</span> <strong>{viewCountry.currency || "USD ($)"}</strong></div>
+                <div><span className="text-slate-400">Time Zone:</span> <strong>{viewCountry.timeZone || "GMT+0"}</strong></div>
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-800 mb-1">Available Visa Categories:</p>
+                <div className="flex flex-wrap gap-1">
+                  {viewCountry.availableCategories && viewCountry.availableCategories.length > 0 ? (
+                    viewCountry.availableCategories.map((cat) => (
+                      <span key={cat} className="px-2.5 py-1 bg-[#2563EB]/10 text-[#2563EB] rounded-lg font-extrabold text-[11px]">
+                        {cat}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">None selected</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-800 mb-1">Available Visa Types:</p>
+                <div className="flex flex-wrap gap-1">
+                  {viewCountry.availableVisaTypes && viewCountry.availableVisaTypes.length > 0 ? (
+                    viewCountry.availableVisaTypes.map((t) => (
+                      <span key={t} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-semibold text-[11px]">
+                        {t}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">None selected</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-800 mb-1">Required Documents:</p>
+                <div className="flex flex-wrap gap-1">
+                  {viewCountry.requiredDocuments && viewCountry.requiredDocuments.length > 0 ? (
+                    viewCountry.requiredDocuments.map((d) => (
+                      <span key={d} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-semibold text-[11px]">
+                        ✓ {d}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">None selected</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                onClick={() => setViewCountry(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center">
+              <Trash2 size={24} />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 font-outfit">Delete Country?</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Are you sure you want to delete this destination country from MongoDB? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition"
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
