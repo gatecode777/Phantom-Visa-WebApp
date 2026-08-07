@@ -5,6 +5,17 @@ import { useVisa, Application, CustomerTab, formatINR } from "../context/VisaCon
 import Logo from "./Logo";
 import InteractiveWorldMap from "./InteractiveWorldMap";
 import CompleteKycModal from "./CompleteKycModal";
+import ApplicantAllApplications from "./ApplicantAllApplications";
+import ApplicantDraftApplications from "./ApplicantDraftApplications";
+import ApplicantSubmittedApplications from "./ApplicantSubmittedApplications";
+import ApplicantUnderReviewApplications from "./ApplicantUnderReviewApplications";
+import ApplicantApprovedApplications from "./ApplicantApprovedApplications";
+import ApplicantRejectedApplications from "./ApplicantRejectedApplications";
+import ApplicantCancelledApplications from "./ApplicantCancelledApplications";
+import ApplicantUploadDocuments from "./ApplicantUploadDocuments";
+import ApplicantMyDocuments from "./ApplicantMyDocuments";
+import ApplicantVerificationStatus from "./ApplicantVerificationStatus";
+import ApplicantMakePayment from "./ApplicantMakePayment";
 import {
   Search,
   MessageSquare,
@@ -68,6 +79,7 @@ export default function CustomerPortal() {
   const [selectedAppId, setSelectedAppId] = useState<string>("VO-2026-1025");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCompleteKycModal, setShowCompleteKycModal] = useState<boolean>(false);
+  const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">("vault");
 
   // Target app reference
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
@@ -1015,70 +1027,140 @@ export default function CustomerPortal() {
           )}
 
           {/* MY APPLICATIONS VIEW */}
-          {customerTab === "applications" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800">My Visa Applications</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-[#EEF2FF] text-slate-700 font-bold rounded-lg border-b border-slate-200">
-                      <th className="py-3 px-4">Application ID</th>
-                      <th className="py-3 px-4">Destination</th>
-                      <th className="py-3 px-4">Visa Type</th>
-                      <th className="py-3 px-4">Applied Date</th>
-                      <th className="py-3 px-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {applications.map((a) => (
-                      <tr key={a.id} className="hover:bg-slate-50">
-                        <td className="py-3 px-4 font-bold text-[#4848F7]">{a.id}</td>
-                        <td className="py-3 px-4 font-medium text-slate-800">{a.destination}</td>
-                        <td className="py-3 px-4 text-slate-600">{a.visaType}</td>
-                        <td className="py-3 px-4 text-slate-600">{a.submissionDate}</td>
-                        <td className="py-3 px-4 font-bold text-slate-700">{a.status}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          {customerTab === "applications" && appFilter === "Draft" && (
+            <ApplicantDraftApplications
+              applications={applications}
+              onResumeDraft={(draftId) => setCustomerTab("apply")}
+              onCreateNewDraft={() => setCustomerTab("apply")}
+              onUpdateDocs={updateApplicationDocs}
+            />
+          )}
+
+          {customerTab === "applications" && appFilter === "Submitted" && (
+            <ApplicantSubmittedApplications
+              applications={applications}
+              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
+              onNavigateSupport={() => setCustomerTab("support")}
+              onUpdateDocs={updateApplicationDocs}
+            />
+          )}
+
+          {customerTab === "applications" && appFilter === "Embassy Processing" && (
+            <ApplicantUnderReviewApplications
+              applications={applications}
+              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
+              onNavigateSupport={() => setCustomerTab("support")}
+              onUpdateDocs={updateApplicationDocs}
+            />
+          )}
+
+          {customerTab === "applications" && appFilter === "Approved" && (
+            <ApplicantApprovedApplications
+              applications={applications}
+              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
+          )}
+
+          {customerTab === "applications" && appFilter === "Rejected" && (
+            <ApplicantRejectedApplications
+              applications={applications}
+              onNavigateApply={() => setCustomerTab("apply")}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
+          )}
+
+          {customerTab === "applications" && (appFilter === "Docs Pending" || (appFilter as string) === "Cancelled") && (
+            <ApplicantCancelledApplications
+              applications={applications}
+              onNavigateApply={() => setCustomerTab("apply")}
+              onNavigatePayments={() => setCustomerTab("payments")}
+            />
+          )}
+
+          {customerTab === "applications" && appFilter !== "Draft" && appFilter !== "Submitted" && appFilter !== "Embassy Processing" && appFilter !== "Approved" && appFilter !== "Rejected" && appFilter !== "Docs Pending" && (appFilter as string) !== "Cancelled" && (
+            <ApplicantAllApplications
+              applications={applications}
+              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
+              onNavigateApply={() => setCustomerTab("apply")}
+              onNavigateSupport={() => setCustomerTab("support")}
+              onUpdateDocs={updateApplicationDocs}
+            />
           )}
 
           {/* DOCUMENTS VIEW */}
           {customerTab === "documents" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800">Document Verification & Upload</h2>
-              <p className="text-xs text-slate-500">Upload clean 300 DPI passport scans and financial proofs for instant verification.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="border border-dashed border-slate-300 p-6 rounded-xl text-center space-y-2 hover:border-[#4848F7] transition">
-                  <Upload size={24} className="mx-auto text-[#4848F7]" />
-                  <p className="font-bold text-slate-800">Upload Passport Copy</p>
-                  <p className="text-slate-400 text-[11px]">PDF or JPG up to 10MB</p>
-                </div>
-                <div className="border border-dashed border-slate-300 p-6 rounded-xl text-center space-y-2 hover:border-[#4848F7] transition">
-                  <Upload size={24} className="mx-auto text-[#4848F7]" />
-                  <p className="font-bold text-slate-800">Upload Bank Statement</p>
-                  <p className="text-slate-400 text-[11px]">PDF up to 10MB</p>
-                </div>
+            <div className="space-y-4">
+              {/* Document Section Subtab Switcher */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-2 flex flex-wrap items-center gap-2 text-xs font-bold w-fit shadow-xs">
+                <button
+                  onClick={() => setDocSubTab("vault")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                    docSubTab === "vault"
+                      ? "bg-[#4848F7] text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  My Documents Vault
+                </button>
+
+                <button
+                  onClick={() => setDocSubTab("upload")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                    docSubTab === "upload"
+                      ? "bg-[#4848F7] text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  Upload Documents
+                </button>
+
+                <button
+                  onClick={() => setDocSubTab("status")}
+                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+                    docSubTab === "status"
+                      ? "bg-[#4848F7] text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  Verification Status
+                </button>
               </div>
+
+              {docSubTab === "vault" && (
+                <ApplicantMyDocuments
+                  applications={applications}
+                  onNavigateUpload={() => setDocSubTab("upload")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
+
+              {docSubTab === "upload" && (
+                <ApplicantUploadDocuments
+                  applications={applications}
+                  onUpdateDocs={updateApplicationDocs}
+                  onNavigateApply={() => setCustomerTab("apply")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
+
+              {docSubTab === "status" && (
+                <ApplicantVerificationStatus
+                  applications={applications}
+                  onNavigateUpload={() => setDocSubTab("upload")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
             </div>
           )}
 
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800">Payment Gateway & Ledger</h2>
-              <div className="bg-[#EEF2FF] p-4 rounded-xl flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-slate-500 font-semibold">Available Ledger Balance</p>
-                  <p className="text-2xl font-bold text-[#4848F7]">₹{formatINR(walletBalance)}</p>
-                </div>
-                <button className="bg-[#4848F7] text-white text-xs font-bold px-4 py-2 rounded-lg">
-                  Top Up Wallet
-                </button>
-              </div>
-            </div>
+            <ApplicantMakePayment
+              applications={applications}
+              walletBalance={walletBalance}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
           )}
 
           {/* APPOINTMENTS VIEW */}
