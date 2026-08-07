@@ -16,6 +16,7 @@ import ApplicantUploadDocuments from "./ApplicantUploadDocuments";
 import ApplicantMyDocuments from "./ApplicantMyDocuments";
 import ApplicantVerificationStatus from "./ApplicantVerificationStatus";
 import ApplicantMakePayment from "./ApplicantMakePayment";
+import ApplicantApplyVisa from "./ApplicantApplyVisa";
 import {
   Search,
   MessageSquare,
@@ -911,119 +912,35 @@ export default function CustomerPortal() {
           
           {/* APPLY FOR VISA WIZARD */}
           {customerTab === "apply" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6 max-w-3xl mx-auto shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
-                Apply for New Visa &mdash; Step {applyStep} of 3
-              </h2>
-
-              {applyStep === 1 && (
-                <div className="space-y-4 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Full Name (as per Passport)</label>
-                      <input
-                        type="text"
-                        value={newAppForm.travelerName}
-                        onChange={(e) => setNewAppForm({ ...newAppForm, travelerName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-[#4848F7]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Destination Country</label>
-                      <select
-                        value={newAppForm.destination}
-                        onChange={(e) => setNewAppForm({ ...newAppForm, destination: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-[#4848F7]"
-                      >
-                        <option value="Canada">Canada</option>
-                        <option value="France">France</option>
-                        <option value="Germany">Germany</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="Australia">Australia</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Passport Number</label>
-                      <input
-                        type="text"
-                        value={newAppForm.passportNumber}
-                        onChange={(e) => setNewAppForm({ ...newAppForm, passportNumber: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-[#4848F7]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Visa Type</label>
-                      <select
-                        value={newAppForm.visaType}
-                        onChange={(e) => setNewAppForm({ ...newAppForm, visaType: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-[#4848F7]"
-                      >
-                        <option value="Tourist Visa">Tourist Visa</option>
-                        <option value="Business Visa">Business Visa</option>
-                        <option value="Student Visa">Student Visa</option>
-                        <option value="Transit Visa">Transit Visa</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setApplyStep(2)}
-                    className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg transition"
-                  >
-                    Proceed to Verification &rarr;
-                  </button>
-                </div>
-              )}
-
-              {applyStep === 2 && (
-                <div className="space-y-4 text-xs">
-                  <p className="text-slate-600">Confirm your application details before submitting to embassy pipeline:</p>
-                  <div className="bg-[#EEF2FF] p-4 rounded-xl space-y-2">
-                    <p><strong>Applicant:</strong> {newAppForm.travelerName}</p>
-                    <p><strong>Destination:</strong> {newAppForm.destination} ({newAppForm.visaType})</p>
-                    <p><strong>Consular Fee:</strong> ₹{formatINR(newAppForm.fees)}</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setApplyStep(1)}
-                      className="bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={handleApplyVisaSubmit}
-                      className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold px-6 py-2 rounded-lg"
-                    >
-                      Submit Application
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {applyStep === 3 && (
-                <div className="text-center space-y-4 py-6">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                    <Check size={28} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800">Application Submitted!</h3>
-                  <p className="text-xs text-slate-500">
-                    Application ID: <span className="font-bold text-[#4848F7]">{applySuccessId}</span>
-                  </p>
-                  <button
-                    onClick={() => {
-                      setApplyStep(1);
-                      setCustomerTab("dashboard");
-                    }}
-                    className="bg-[#4848F7] text-white font-bold text-xs px-6 py-2 rounded-lg"
-                  >
-                    Back to Dashboard
-                  </button>
-                </div>
-              )}
-            </div>
+            <ApplicantApplyVisa
+              onAddApplication={(appData) => {
+                addApplication({
+                  travelerName: appData.travelerName || "New Traveler",
+                  dob: appData.dob || "1995-06-12",
+                  passportNumber: appData.passportNumber || "Z9817264",
+                  passportExpiry: appData.passportExpiry || "2033-12-20",
+                  nationality: appData.nationality || "Indian",
+                  destination: appData.destination || "Australia",
+                  visaType: appData.visaType || "Tourist Visa",
+                  travelDates: appData.travelDates || "15 Oct 2026 to 15 Nov 2026",
+                  status: appData.status || "Submitted",
+                  fees: appData.fees || 16500,
+                  verifiedDocs: appData.verifiedDocs || {
+                    passport: "verified",
+                    photo: "verified"
+                  },
+                  documentsSubmitted: true,
+                  kycCompleted: true
+                });
+              }}
+              onNavigateDrafts={() => {
+                setCustomerTab("applications");
+                setAppFilter("Draft");
+              }}
+              onNavigatePayment={() => {
+                setCustomerTab("payments");
+              }}
+            />
           )}
 
           {/* MY APPLICATIONS VIEW */}
