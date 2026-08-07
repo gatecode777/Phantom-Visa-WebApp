@@ -105,26 +105,54 @@ export default function CustomerPortal() {
   const [openAppts, setOpenAppts] = useState(false);
   const [openExplore, setOpenExplore] = useState(false);
 
-  const handleTabChange = (tab: CustomerTab) => {
+  const handleTabChange = (tab: CustomerTab, subTab?: string) => {
     setCustomerTab(tab);
     if (typeof window !== "undefined") {
-      const newUrl = `${window.location.pathname}?tab=${encodeURIComponent(tab)}`;
+      const params = new URLSearchParams(window.location.search);
+      params.set("tab", tab);
+      if (subTab) {
+        params.set("subTab", subTab);
+        localStorage.setItem("customer_active_subtab", subTab);
+      } else {
+        params.delete("subTab");
+        localStorage.removeItem("customer_active_subtab");
+      }
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
       window.history.replaceState(null, "", newUrl);
       localStorage.setItem("customer_active_tab", tab);
     }
   };
 
+  // Restore active tab and subtab on mount/refresh
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlTab = params.get("tab") as CustomerTab | null;
+      const urlSubTab = params.get("subTab");
       const storedTab = localStorage.getItem("customer_active_tab") as CustomerTab | null;
+      const storedSubTab = localStorage.getItem("customer_active_subtab");
+
       const targetTab = urlTab || storedTab;
+      const targetSubTab = urlSubTab || storedSubTab;
+
       if (targetTab) {
         setCustomerTab(targetTab);
+        if (targetTab === "documents") setOpenDocs(true);
+        if (targetTab === "applications") setOpenMyApps(true);
+        if (targetTab === "payments") setOpenPayments(true);
+        if (targetTab === "appointments") setOpenAppts(true);
+        if (targetTab === "explore") setOpenExplore(true);
+
+        if (targetSubTab) {
+          if (targetTab === "documents") setDocsSubTab(targetSubTab as any);
+          if (targetTab === "applications") setAppFilter(targetSubTab as any);
+          if (targetTab === "payments") setPaymentsSubTab(targetSubTab as any);
+        }
       }
     }
   }, []);
+
+
 
   // SUB-TAB STATES
   const [appFilter, setAppFilter] = useState<
@@ -251,7 +279,7 @@ export default function CustomerPortal() {
           <Logo variant="header" />
 
           <button
-            onClick={() => setCustomerTab("payments")}
+            onClick={() => handleTabChange("payments")}
             className="bg-[#F1F5F9] hover:bg-[#EEF2FF] text-slate-700 font-medium px-4 py-1.5 rounded-full border border-slate-200 text-xs flex items-center gap-2 transition cursor-pointer"
           >
             <Wallet size={15} className="text-[#4848F7]" />
@@ -272,7 +300,7 @@ export default function CustomerPortal() {
           </div>
 
           <button
-            onClick={() => setCustomerTab("messages")}
+            onClick={() => handleTabChange("messages")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer"
             title="Messages"
           >
@@ -280,7 +308,7 @@ export default function CustomerPortal() {
           </button>
 
           <button
-            onClick={() => setCustomerTab("notifications")}
+            onClick={() => handleTabChange("notifications")}
             className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition cursor-pointer relative"
             title="Notifications"
           >
@@ -291,7 +319,7 @@ export default function CustomerPortal() {
           </button>
 
           <div
-            onClick={() => setCustomerTab("profile")}
+            onClick={() => handleTabChange("profile")}
             className="w-9 h-9 rounded-full overflow-hidden border border-slate-300 cursor-pointer shadow-xs hover:ring-2 hover:ring-[#4848F7]/40 transition"
           >
             <img
@@ -321,7 +349,7 @@ export default function CustomerPortal() {
         <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between overflow-y-auto shrink-0 py-4 px-3 space-y-1">
           <nav className="space-y-1">
             <button
-              onClick={() => setCustomerTab("dashboard")}
+              onClick={() => handleTabChange("dashboard")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                 customerTab === "dashboard"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -333,7 +361,7 @@ export default function CustomerPortal() {
             </button>
 
             <button
-              onClick={() => setCustomerTab("apply")}
+              onClick={() => handleTabChange("apply")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                 customerTab === "apply"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -347,7 +375,7 @@ export default function CustomerPortal() {
             <div>
               <button
                 onClick={() => {
-                  setCustomerTab("applications");
+                  handleTabChange("applications");
                   setOpenMyApps(!openMyApps);
                 }}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -377,7 +405,7 @@ export default function CustomerPortal() {
                     <button
                       key={sub.label}
                       onClick={() => {
-                        setCustomerTab("applications");
+                        handleTabChange("applications", sub.filter);
                         setAppFilter(sub.filter as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
@@ -396,7 +424,7 @@ export default function CustomerPortal() {
             <div>
               <button
                 onClick={() => {
-                  setCustomerTab("documents");
+                  handleTabChange("documents");
                   setOpenDocs(!openDocs);
                 }}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -422,7 +450,7 @@ export default function CustomerPortal() {
                     <button
                       key={sub.label}
                       onClick={() => {
-                        setCustomerTab("documents");
+                        handleTabChange("documents", sub.tab);
                         setDocsSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
@@ -441,7 +469,7 @@ export default function CustomerPortal() {
             <div>
               <button
                 onClick={() => {
-                  setCustomerTab("payments");
+                  handleTabChange("payments");
                   setOpenPayments(!openPayments);
                 }}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -467,7 +495,7 @@ export default function CustomerPortal() {
                     <button
                       key={sub.label}
                       onClick={() => {
-                        setCustomerTab("payments");
+                        handleTabChange("payments", sub.tab);
                         setPaymentsSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
@@ -484,7 +512,7 @@ export default function CustomerPortal() {
             </div>
 
             <button
-              onClick={() => setCustomerTab("appointments")}
+              onClick={() => handleTabChange("appointments")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
                 customerTab === "appointments"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -501,7 +529,7 @@ export default function CustomerPortal() {
             <div>
               <button
                 onClick={() => {
-                  setCustomerTab("explore");
+                  handleTabChange("explore");
                   setOpenExplore(!openExplore);
                 }}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -529,7 +557,7 @@ export default function CustomerPortal() {
                     <button
                       key={sub.label}
                       onClick={() => {
-                        setCustomerTab("explore");
+                        handleTabChange("explore", sub.tab);
                         setExploreSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
@@ -546,7 +574,7 @@ export default function CustomerPortal() {
             </div>
 
             <button
-              onClick={() => setCustomerTab("support")}
+              onClick={() => handleTabChange("support")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                 customerTab === "support"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -558,7 +586,7 @@ export default function CustomerPortal() {
             </button>
 
             <button
-              onClick={() => setCustomerTab("profile")}
+              onClick={() => handleTabChange("profile")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                 customerTab === "profile"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -570,7 +598,7 @@ export default function CustomerPortal() {
             </button>
 
             <button
-              onClick={() => setCustomerTab("settings")}
+              onClick={() => handleTabChange("settings")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                 customerTab === "settings"
                   ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -934,11 +962,12 @@ export default function CustomerPortal() {
                 });
               }}
               onNavigateDrafts={() => {
-                setCustomerTab("applications");
-                setAppFilter("Draft");
+                handleTabChange("applications", "Submitted");
+                setAppFilter("Submitted");
               }}
               onNavigatePayment={() => {
-                setCustomerTab("payments");
+                handleTabChange("payments", "make_payment");
+                setPaymentsSubTab("make_payment");
               }}
             />
           )}

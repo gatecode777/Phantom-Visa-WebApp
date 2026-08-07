@@ -49,10 +49,12 @@ export interface Application {
     nocLetter?: "verified" | "needs_review" | "pending" | "uploading";
     sponsorLetter?: "verified" | "needs_review" | "pending" | "uploading";
   };
-  checklist: {
+  checklist?: {
     employed: boolean;
     sponsored: boolean;
   };
+  documentsSubmitted?: boolean;
+  kycCompleted?: boolean;
 }
 
 export interface LedgerEntry {
@@ -361,7 +363,16 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   };
   const [agentTab, setAgentTab] = useState<AgentTab>("dashboard");
   const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
-  const [customerTab, setCustomerTab] = useState<CustomerTab>("dashboard");
+  const [customerTab, setCustomerTab] = useState<CustomerTab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as CustomerTab | null;
+      const storedTab = localStorage.getItem("customer_active_tab") as CustomerTab | null;
+      if (urlTab) return urlTab;
+      if (storedTab) return storedTab;
+    }
+    return "dashboard";
+  });
   
   const [applications, setApplications] = useState<Application[]>([
     {
@@ -464,6 +475,43 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
       reason: "Flight itinerary shows layover exceeds transit limits. Apply for full tourist entry."
     }
   ]);
+
+  useEffect(() => {
+    const fetchApplicationsFromBackend = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/applications`);
+        const json = await res.json();
+        if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const parsed = json.data.map((item: any) => ({
+            id: item.applicationId || item._id,
+            travelerName: item.personalDetails ? `${item.personalDetails.givenName} ${item.personalDetails.surname}` : item.travelerName || "Traveler",
+            dob: item.personalDetails?.dob || item.dob || "1995-06-12",
+            passportNumber: item.passportDetails?.passportNo || item.passportNumber || "Z9817264",
+            passportExpiry: item.passportDetails?.expiryDate || item.passportExpiry || "2033-12-20",
+            nationality: item.personalDetails?.nationality || item.nationality || "Indian",
+            destination: item.countryName || item.destination || "Australia",
+            visaType: item.visaTypeName || item.visaType || "Tourist Visa",
+            travelDates: item.travelDetails ? `${item.travelDetails.travelDate} to ${item.travelDetails.returnDate}` : item.travelDates || "Travel Dates",
+            status: item.status || "Submitted",
+            fees: item.pricing?.totalAmount || item.fees || 16500,
+            submissionDate: item.createdAt ? item.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
+            verifiedDocs: {
+              passport: "verified",
+              photo: "verified"
+            },
+            checklist: { employed: false, sponsored: false },
+            documentsSubmitted: true,
+            kycCompleted: true
+          }));
+          setApplications(parsed);
+        }
+      } catch (err) {
+        console.error("Failed to fetch applications from MongoDB:", err);
+      }
+    };
+
+    fetchApplicationsFromBackend();
+  }, []);
 
   const [walletBalance, setWalletBalance] = useState<number>(2037650);
 
