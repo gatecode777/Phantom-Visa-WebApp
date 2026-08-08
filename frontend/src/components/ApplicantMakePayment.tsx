@@ -23,7 +23,8 @@ import {
   ArrowRight,
   ShieldAlert,
   User,
-  Plane
+  Plane,
+  FileCheck
 } from "lucide-react";
 
 interface ApplicantMakePaymentProps {
@@ -60,6 +61,7 @@ export default function ApplicantMakePayment({
   const [cardHolder, setCardHolder] = useState("Geeta Sharma");
   const [expiry, setExpiry] = useState("08/29");
   const [cvv, setCvv] = useState("•••");
+  const [saveCard, setSaveCard] = useState(true);
 
   const [upiId, setUpiId] = useState("geeta@okaxis");
   const [selectedBank, setSelectedBank] = useState("HDFC Bank");
@@ -122,8 +124,6 @@ export default function ApplicantMakePayment({
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#4848F7] mb-1">
-            <span>Home</span>
-            <span>/</span>
             <span>Payments</span>
             <span>/</span>
             <span className="text-slate-500 font-normal">Make Payment</span>
@@ -241,6 +241,15 @@ export default function ApplicantMakePayment({
             <p className="font-bold">GST Tax Invoice Generated ✓</p>
           </div>
         </div>
+
+        <div className="bg-white/5 p-4 rounded-xl text-xs space-y-1 text-slate-300">
+          <p className="font-bold text-white">Professional Recommendation & Payment Rules:</p>
+          <ul className="list-disc pl-4 space-y-1 leading-relaxed text-[11px]">
+            <li>All payments are processed through PCI-DSS Level 1 compliant gateways.</li>
+            <li>Invoices include 18% GST breakdown for corporate tax filing compliance.</li>
+            <li>Instant email receipts are sent automatically upon transaction confirmation.</li>
+          </ul>
+        </div>
       </div>
 
       {/* ============================================================ */}
@@ -269,7 +278,7 @@ export default function ApplicantMakePayment({
                 }`}
               >
                 <CreditCard size={18} />
-                <span>Card</span>
+                <span>Credit / Debit Card</span>
               </button>
 
               <button
@@ -374,6 +383,16 @@ export default function ApplicantMakePayment({
                       />
                     </div>
                   </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 pt-1">
+                    <input
+                      type="checkbox"
+                      checked={saveCard}
+                      onChange={(e) => setSaveCard(e.target.checked)}
+                      className="rounded text-[#4848F7]"
+                    />
+                    <span>Save card securely for future 1-click payments</span>
+                  </label>
                 </div>
               )}
 
@@ -438,7 +457,7 @@ export default function ApplicantMakePayment({
 
               {/* Billing Address Subform */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
-                <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                <h4 className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-100 pb-2">
                   <User size={15} className="text-[#4848F7]" /> Billing Address & Tax Receipt Details
                 </h4>
 
@@ -460,6 +479,26 @@ export default function ApplicantMakePayment({
                       value={billingEmail}
                       onChange={(e) => setBillingEmail(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-500 block mb-1">Mobile Phone</label>
+                    <input
+                      type="text"
+                      value={billingPhone}
+                      onChange={(e) => setBillingPhone(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-500 block mb-1">Pincode</label>
+                    <input
+                      type="text"
+                      value={billingPincode}
+                      onChange={(e) => setBillingPincode(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono"
                     />
                   </div>
                 </div>
@@ -528,7 +567,7 @@ export default function ApplicantMakePayment({
             </div>
 
             <div className="border-t border-slate-200 pt-3 flex justify-between items-center text-sm font-black text-slate-900">
-              <span>Total Payable</span>
+              <span>Total Amount Payable</span>
               <span className="text-xl text-[#4848F7]">₹{formatINR(totalPayable)}</span>
             </div>
           </div>
@@ -585,6 +624,16 @@ export default function ApplicantMakePayment({
             </div>
           </div>
 
+          {/* Security & Trust Badges */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs text-slate-600">
+            <div className="flex items-center gap-2 text-emerald-700 font-bold">
+              <ShieldCheck size={16} /> 256-bit SSL Secure Checkout
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              PCI-DSS Level 1 Compliant. Your payment information is encrypted and never stored unencrypted.
+            </p>
+          </div>
+
         </div>
 
       </div>
@@ -596,7 +645,7 @@ export default function ApplicantMakePayment({
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <CreditCard size={16} className="text-[#4848F7]" />
-            <span>Recent Payment Ledger & Receipts</span>
+            <span>Recent Payment Transactions & Receipts</span>
           </h3>
         </div>
 

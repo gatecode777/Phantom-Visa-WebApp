@@ -173,8 +173,10 @@ export default function ApplicantApplyVisa({
           photo: "verified",
           nocLetter: "needs_review"
         },
-        documentsSubmitted: true,
-        kycCompleted: true
+        checklist: {
+          employed: employmentStatus === "Employed",
+          sponsored: stayType === "Company Sponsor"
+        }
       });
     }
     if (onNavigatePayment) onNavigatePayment();
