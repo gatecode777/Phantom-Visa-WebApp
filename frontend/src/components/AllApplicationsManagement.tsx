@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useVisa } from "../context/VisaContext";
 import {
   ClipboardList,
   Search,
@@ -6,7 +7,6 @@ import {
   RefreshCw,
   Eye,
   Edit3,
-  PlusCircle,
   Trash2,
   CheckCircle2,
   XCircle,
@@ -32,6 +32,8 @@ import {
   Tag,
   CheckSquare
 } from "lucide-react";
+
+const API_V1_URL = "http://localhost:5000/api/v1";
 
 export interface ApplicationRecord {
   id: string;
@@ -227,7 +229,37 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
   }
 ];
 
+const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
+  id: app._id || app.applicationId || String(Math.random()),
+  appId: app.applicationId || `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+  applicantName: app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : app.travelerName || "Applicant",
+  passportNumber: app.passportDetails?.passportNo || app.passportNumber || "N/A",
+  appliedBy: app.appliedBy || "User",
+  agentName: app.agentName || "",
+  country: app.countryName || app.destination || "Australia",
+  category: app.categoryName || "Tourist Visa",
+  visaType: app.visaTypeName || app.visaType || "Standard Visitor",
+  submissionDate: app.createdAt ? new Date(app.createdAt).toISOString().split("T")[0] : app.submissionDate || "2026-08-07",
+  paymentStatus: app.paymentStatus || "Paid",
+  status: (app.status as any) || "Submitted",
+  priority: app.processingSpeed === "vip" ? "Urgent" : app.processingSpeed === "express" ? "Express" : "Regular",
+  dob: app.personalDetails?.dob || app.dob || "",
+  gender: app.personalDetails?.gender || app.gender || "Male",
+  nationality: app.personalDetails?.nationality || app.nationality || "Indian",
+  email: app.personalDetails?.email || app.email || "",
+  phone: app.personalDetails?.phone || app.phone || "",
+  address: app.travelDetails?.hostAddress || app.address || "",
+  travelDate: app.travelDetails?.travelDate || app.travelDates || "",
+  durationOfStay: app.stayValidity || "60 Days",
+  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
+  documents: Array.isArray(app.uploadedDocuments)
+    ? app.uploadedDocuments.map((d: any) => ({ name: d.title, status: d.fileUrl ? "Verified" : "Pending" }))
+    : []
+});
+
 export default function AllApplicationsManagement() {
+  const { applications: contextApps } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -242,6 +274,29 @@ export default function AllApplicationsManagement() {
   // Records State
   const [applications, setApplications] = useState<ApplicationRecord[]>(MOCK_APPLICATIONS);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Fetch live MongoDB applications on mount & context updates
+  useEffect(() => {
+    const fetchLiveApps = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/applications`);
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.data) && json.data.length > 0) {
+          const mapped = json.data.map(mapMongoAppToRecord);
+          setApplications(mapped);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to fetch live applications from MongoDB:", err);
+      }
+
+      if (Array.isArray(contextApps) && contextApps.length > 0) {
+        setApplications(contextApps.map(mapMongoAppToRecord));
+      }
+    };
+
+    fetchLiveApps();
+  }, [contextApps]);
 
   // Centered Details Popup Modal State
   const [activeModalApp, setActiveModalApp] = useState<ApplicationRecord | null>(null);
@@ -560,38 +615,6 @@ export default function AllApplicationsManagement() {
             Track, filter, and manage all visa applications across every stage, country, and applicant category.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setEditingApp(null);
-              setFormData({
-                applicantName: "",
-                passportNumber: "",
-                appliedBy: "User",
-                agentName: "",
-                country: "Canada",
-                category: "Tourist",
-                visaType: "eVisa",
-                paymentStatus: "Paid",
-                status: "Under Review",
-                priority: "Regular",
-                dob: "",
-                gender: "Male",
-                nationality: "Indian",
-                email: "",
-                phone: "",
-                address: "",
-                travelDate: "",
-                durationOfStay: "15 Days"
-              });
-              setShowAddModal(true);
-            }}
-            className="px-4 py-2 bg-white text-[#2563EB] hover:bg-blue-50 text-xs font-black rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5"
-          >
-            <PlusCircle size={16} /> Create Visa Application
-          </button>
-        </div>
       </div>
 
       {/* TOP STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
@@ -600,43 +623,55 @@ export default function AllApplicationsManagement() {
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Applications</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">3,845</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{applications.length}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Global Submissions</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Review</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">312</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Submitted", "Pending Review", "Under Review", "Draft"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-amber-600 font-bold">Awaiting Audit</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Approved</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">2,850</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Approved", "Visa Issued", "Granted"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-emerald-600 font-bold">Visas Granted</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">284</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Rejected", "Refused", "Cancelled"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-red-600 font-bold">Refused Visas</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Processing</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">324</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Processing", "Embassy Processing", "Under Review"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-blue-600 font-bold">At Embassy / VFS</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Doc Pending</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">45</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Document Pending", "Docs Pending", "Draft"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-purple-600 font-bold">Missing Files</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition sm:col-span-2">
             <span className="text-[10px] font-extrabold uppercase text-emerald-700 block mb-1">Completed & Issued</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">30</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">
+              {applications.filter((a) => ["Completed", "Approved", "Passport Delivered", "Visa Issued"].includes(a.status)).length}
+            </div>
             <span className="text-[10px] text-emerald-700 font-bold">Passport Delivered</span>
           </div>
         </div>
