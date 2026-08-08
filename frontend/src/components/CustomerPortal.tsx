@@ -17,6 +17,12 @@ import ApplicantMyDocuments from "./ApplicantMyDocuments";
 import ApplicantVerificationStatus from "./ApplicantVerificationStatus";
 import ApplicantMakePayment from "./ApplicantMakePayment";
 import ApplicantApplyVisa from "./ApplicantApplyVisa";
+import ApplicantPaymentHistory from "./ApplicantPaymentHistory";
+import ApplicantInvoices from "./ApplicantInvoices";
+import ApplicantAppointments from "./ApplicantAppointments";
+import ApplicantExploreCountries from "./ApplicantExploreCountries";
+import ApplicantVisaTypes from "./ApplicantVisaTypes";
+import ApplicantVisaRequirements from "./ApplicantVisaRequirements";
 import {
   Search,
   MessageSquare,
@@ -81,6 +87,8 @@ export default function CustomerPortal() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCompleteKycModal, setShowCompleteKycModal] = useState<boolean>(false);
   const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">("vault");
+  const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">("checkout");
+  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements">("countries");
 
   // Target app reference
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
@@ -130,9 +138,6 @@ export default function CustomerPortal() {
   const [appFilter, setAppFilter] = useState<
     "all" | "Draft" | "Submitted" | "Embassy Processing" | "Approved" | "Rejected" | "Docs Pending"
   >("all");
-  const [docsSubTab, setDocsSubTab] = useState<"upload" | "my_docs" | "verification">("upload");
-  const [paymentsSubTab, setPaymentsSubTab] = useState<"make_payment" | "history" | "invoices">("make_payment");
-  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">("countries");
 
   // Modals
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -416,17 +421,17 @@ export default function CustomerPortal() {
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
                     { label: "Upload Documents", tab: "upload" },
-                    { label: "My Documents", tab: "my_docs" },
-                    { label: "Verification Status", tab: "verification" }
+                    { label: "My Documents", tab: "vault" },
+                    { label: "Verification Status", tab: "status" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
                       onClick={() => {
                         setCustomerTab("documents");
-                        setDocsSubTab(sub.tab as any);
+                        setDocSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
-                        customerTab === "documents" && docsSubTab === sub.tab
+                        customerTab === "documents" && docSubTab === sub.tab
                           ? "text-[#4848F7] font-bold bg-[#EEF2FF]/60"
                           : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                       }`}
@@ -460,7 +465,7 @@ export default function CustomerPortal() {
               {openPayments && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
-                    { label: "Make Payment", tab: "make_payment" },
+                    { label: "Make Payment", tab: "checkout" },
                     { label: "Payment History", tab: "history" },
                     { label: "Invoices", tab: "invoices" }
                   ].map((sub) => (
@@ -468,10 +473,10 @@ export default function CustomerPortal() {
                       key={sub.label}
                       onClick={() => {
                         setCustomerTab("payments");
-                        setPaymentsSubTab(sub.tab as any);
+                        setPaymentSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
-                        customerTab === "payments" && paymentsSubTab === sub.tab
+                        customerTab === "payments" && paymentSubTab === sub.tab
                           ? "text-[#4848F7] font-bold bg-[#EEF2FF]/60"
                           : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                       }`}
@@ -495,7 +500,6 @@ export default function CustomerPortal() {
                 <Calendar size={18} className={customerTab === "appointments" ? "text-[#4848F7]" : "text-slate-500"} />
                 <span>Appointments</span>
               </div>
-              <ChevronRight size={15} />
             </button>
 
             <div>
@@ -520,11 +524,9 @@ export default function CustomerPortal() {
               {openExplore && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
-                    { label: "Countries", tab: "countries" },
+                    { label: "Explore Countries", tab: "countries" },
                     { label: "Visa Types", tab: "types" },
-                    { label: "Visa Requirements", tab: "requirements" },
-                    { label: "Processing Time", tab: "processing" },
-                    { label: "Visa Fees", tab: "fees" }
+                    { label: "Visa Requirements", tab: "requirements" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -929,8 +931,10 @@ export default function CustomerPortal() {
                     passport: "verified",
                     photo: "verified"
                   },
-                  documentsSubmitted: true,
-                  kycCompleted: true
+                  checklist: appData.checklist || {
+                    employed: true,
+                    sponsored: false
+                  }
                 });
               }}
               onNavigateDrafts={() => {
@@ -1007,43 +1011,7 @@ export default function CustomerPortal() {
 
           {/* DOCUMENTS VIEW */}
           {customerTab === "documents" && (
-            <div className="space-y-4">
-              {/* Document Section Subtab Switcher */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-2 flex flex-wrap items-center gap-2 text-xs font-bold w-fit shadow-xs">
-                <button
-                  onClick={() => setDocSubTab("vault")}
-                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
-                    docSubTab === "vault"
-                      ? "bg-[#4848F7] text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  My Documents Vault
-                </button>
-
-                <button
-                  onClick={() => setDocSubTab("upload")}
-                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
-                    docSubTab === "upload"
-                      ? "bg-[#4848F7] text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  Upload Documents
-                </button>
-
-                <button
-                  onClick={() => setDocSubTab("status")}
-                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
-                    docSubTab === "status"
-                      ? "bg-[#4848F7] text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  Verification Status
-                </button>
-              </div>
-
+            <div>
               {docSubTab === "vault" && (
                 <ApplicantMyDocuments
                   applications={applications}
@@ -1073,23 +1041,36 @@ export default function CustomerPortal() {
 
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
-            <ApplicantMakePayment
-              applications={applications}
-              walletBalance={walletBalance}
-              onNavigateSupport={() => setCustomerTab("support")}
-            />
+            <div>
+              {paymentSubTab === "checkout" ? (
+                <ApplicantMakePayment
+                  applications={applications}
+                  walletBalance={walletBalance}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              ) : paymentSubTab === "invoices" ? (
+                <ApplicantInvoices
+                  applications={applications}
+                  onNavigateMakePayment={() => setPaymentSubTab("checkout")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              ) : (
+                <ApplicantPaymentHistory
+                  applications={applications}
+                  onNavigateMakePayment={() => setPaymentSubTab("checkout")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
+            </div>
           )}
 
           {/* APPOINTMENTS VIEW */}
           {customerTab === "appointments" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800">Biometrics & Consular Appointments</h2>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <p className="font-bold text-slate-800">Scheduled Interview</p>
-                <p className="text-slate-600">Location: Visa Application Center, New Delhi</p>
-                <p className="text-slate-600">Slot: 26 July 2026 at 11:00 AM</p>
-              </div>
-            </div>
+            <ApplicantAppointments
+              applications={applications}
+              onNavigateApply={() => setCustomerTab("apply")}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
           )}
 
           {/* MESSAGES VIEW */}
@@ -1138,18 +1119,31 @@ export default function CustomerPortal() {
 
           {/* EXPLORE VISAS VIEW */}
           {customerTab === "explore" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-800">Explore Visas Worldwide</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                {["Canada", "France", "Germany", "United Kingdom", "Australia", "United States"].map((country) => (
-                  <div key={country} className="p-4 border border-slate-200 rounded-xl text-center space-y-2 hover:border-[#4848F7] transition">
-                    <p className="font-bold text-slate-800">{country}</p>
-                    <button onClick={() => setCustomerTab("apply")} className="text-[#4848F7] font-bold hover:underline">
-                      View Visas &rarr;
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <div>
+              {exploreSubTab === "types" && (
+                <ApplicantVisaTypes
+                  onNavigateApply={() => setCustomerTab("apply")}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
+              {exploreSubTab === "requirements" && (
+                <ApplicantVisaRequirements
+                  onNavigateApply={() => setCustomerTab("apply")}
+                  onNavigateUpload={() => {
+                    setCustomerTab("documents");
+                    setDocSubTab("upload");
+                  }}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
+              {exploreSubTab === "countries" && (
+                <ApplicantExploreCountries
+                  onSelectCountryToApply={(country) => {
+                    setCustomerTab("apply");
+                  }}
+                  onNavigateSupport={() => setCustomerTab("support")}
+                />
+              )}
             </div>
           )}
 
