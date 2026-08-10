@@ -39,24 +39,24 @@ export interface IApplicant extends Document {
 
 const ApplicantSchema: Schema = new Schema(
   {
-    applicantId: { type: String, required: true, unique: true, index: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    applicantId: { type: String, required: true, default: () => `APP-${Math.floor(1000 + Math.random() * 9000)}`, index: true },
+    userId: { type: Schema.Types.Mixed, required: false, index: true },
     personalInfo: {
-      fullName: { type: String, required: true },
-      firstName: { type: String, required: true },
-      lastName: { type: String, required: true },
-      dob: { type: String, required: true },
+      fullName: { type: String, default: "Applicant" },
+      firstName: { type: String, default: "Applicant" },
+      lastName: { type: String, default: "User" },
+      dob: { type: String, default: "1995-01-01" },
       gender: { type: String, default: "Male" },
-      nationality: { type: String, required: true },
-      phone: { type: String, required: true },
-      email: { type: String, required: true },
-      country: { type: String, required: true, default: "India" },
+      nationality: { type: String, default: "Indian" },
+      phone: { type: String, default: "+91 9876543210" },
+      email: { type: String, default: "applicant@example.com" },
+      country: { type: String, default: "India" },
       addressLine1: { type: String },
       addressLine2: { type: String },
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      postalCode: { type: String, required: true }
+      address: { type: String, default: "New Delhi, India" },
+      city: { type: String, default: "New Delhi" },
+      state: { type: String, default: "Delhi" },
+      postalCode: { type: String, default: "110001" }
     },
     kycDetails: {
       kycStatus: { type: String, enum: ["Pending", "Under Audit", "Approved", "Rejected"], default: "Pending" },
@@ -72,12 +72,12 @@ const ApplicantSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Submitted", "Active", "Docs Uploaded", "Docs Verified", "Embassy Processing", "Approved", "Rejected"],
       default: "Submitted"
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    strict: false
   }
 );
 

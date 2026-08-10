@@ -137,6 +137,11 @@ export default function KycVerifications() {
         throw new Error(json.message || "Failed to update KYC verification status.");
       }
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("phantom_customer_kyc_status", status);
+        localStorage.setItem("phantom_customer_kyc_completed", status === "Approved" ? "true" : "false");
+      }
+
       showToast(`KYC status for ${record.name} updated to ${status}!`, "success");
       fetchKycRecords();
     } catch (err: any) {
