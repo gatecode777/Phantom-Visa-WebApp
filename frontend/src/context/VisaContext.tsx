@@ -258,13 +258,12 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
 
   const fetchApplicantDashboardData = async () => {
-    if (!authSession?.token) return;
     try {
-      const res = await fetch(`${API_V1_URL}/applicant/dashboard`, {
-        headers: {
-          Authorization: `Bearer ${authSession.token}`
-        }
-      });
+      const headers: Record<string, string> = {};
+      if (authSession?.token) {
+        headers.Authorization = `Bearer ${authSession.token}`;
+      }
+      const res = await fetch(`${API_V1_URL}/applicant/dashboard`, { headers });
       const json = await res.json();
       if (res.ok && json.success && json.data) {
         setApplicantDashboardData(json.data);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   ShieldCheck,
@@ -13,7 +13,10 @@ import {
   Info,
   ArrowRight,
   Globe,
-  Check
+  Check,
+  RefreshCw,
+  Sparkles,
+  Lock
 } from "lucide-react";
 
 export interface CompleteKycModalProps {
@@ -33,78 +36,280 @@ export interface CompleteKycModalProps {
   onSuccess: () => void;
 }
 
+export interface SlotVerificationState {
+  file: File | null;
+  fileName: string | null;
+  isVerifying: boolean;
+  isVerified: boolean;
+  verifiedType: string | null;
+  error: string | null;
+}
+
 export default function CompleteKycModal({ applicant, onClose, onSuccess }: CompleteKycModalProps) {
-  const isIndia = applicant.country === "India" || applicant.nationality === "Indian";
+  const isIndia = applicant.country === "India" || applicant.nationality === "Indian" || !applicant.country;
   const isUSA = applicant.country === "United States" || applicant.country === "USA";
   const isUK = applicant.country === "United Kingdom" || applicant.country === "UK";
   const isCanada = applicant.country === "Canada";
-  const isAustralia = applicant.country === "Australia";
 
-  // Form State
+  // Form Field State
   const [aadhaarNumber, setAadhaarNumber] = useState("");
   const [panCardNumber, setPanCardNumber] = useState("");
   const [ssnOrNationalId, setSsnOrNationalId] = useState("");
 
-  // File Upload State Mock
-  const [idDocFileName, setIdDocFileName] = useState<string | null>(null);
-  const [addressProofFileName, setAddressProofFileName] = useState<string | null>(null);
+  // File Upload Slot States
+  const [idDocState, setIdDocState] = useState<SlotVerificationState>({
+    file: null,
+    fileName: null,
+    isVerifying: false,
+    isVerified: false,
+    verifiedType: null,
+    error: null
+  });
+
+  const [addressProofState, setAddressProofState] = useState<SlotVerificationState>({
+    file: null,
+    fileName: null,
+    isVerifying: false,
+    isVerified: false,
+    verifiedType: null,
+    error: null
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Validation
-  const validateForm = (): boolean => {
+  // File Input Refs
+  const idFileInputRef = useRef<HTMLInputElement>(null);
+  const addressFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Format Validations for India
+  const cleanAadhaar = aadhaarNumber.replace(/\D/g, "");
+  const isAadhaarValid = cleanAadhaar.length === 12;
+  const cleanPan = panCardNumber.toUpperCase().trim();
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  const isPanValid = panRegex.test(cleanPan);
+
+  // Overall Form Validation Guard
+  const isFormValid = isIndia
+    ? isAadhaarValid && isPanValid && idDocState.isVerified && addressProofState.isVerified
+    : ssnOrNationalId.trim().length > 0 && idDocState.isVerified && addressProofState.isVerified;
+
+  // Handle ID Card File Selection & Gemini AI Verification
+  const handleIdDocFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setErrorMsg(null);
+
+    // Pre-check format validation for India before calling Gemini API
     if (isIndia) {
-      if (!aadhaarNumber.trim()) {
-        setErrorMsg("Aadhaar Card Number is required for India KYC verification.");
-        return false;
+      if (!isAadhaarValid) {
+        setIdDocState({
+          file: null,
+          fileName: null,
+          isVerifying: false,
+          isVerified: false,
+          verifiedType: null,
+          error: "Please enter a valid 12-digit Aadhaar Card Number before selecting document file."
+        });
+        return;
       }
-      const cleanAadhaar = aadhaarNumber.replace(/\D/g, "");
-      if (cleanAadhaar.length !== 12) {
-        setErrorMsg("Aadhaar Card Number must be exactly 12 digits (e.g. 1234-5678-9012).");
-        return false;
-      }
-
-      if (!panCardNumber.trim()) {
-        setErrorMsg("PAN Card Number is required for India KYC verification.");
-        return false;
-      }
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-      if (!panRegex.test(panCardNumber.trim().toUpperCase())) {
-        setErrorMsg("PAN Card Number format is invalid (e.g. ABCDE1234F).");
-        return false;
-      }
-    } else if (isUSA) {
-      if (!ssnOrNationalId.trim()) {
-        setErrorMsg("SSN or State Driver's License Number is required for US KYC verification.");
-        return false;
-      }
-    } else {
-      if (!ssnOrNationalId.trim()) {
-        setErrorMsg(`National Identification / Passport Number is required for ${applicant.country} KYC verification.`);
-        return false;
+      if (!isPanValid) {
+        setIdDocState({
+          file: null,
+          fileName: null,
+          isVerifying: false,
+          isVerified: false,
+          verifiedType: null,
+          error: "Please enter a valid 10-character PAN Card Number (e.g. ABCDE1234F) before selecting document file."
+        });
+        return;
       }
     }
 
-    if (!idDocFileName) {
-      setErrorMsg("Please upload your government-issued Identity Document scan.");
-      return false;
+    // Set Loading/Verifying State
+    setIdDocState({
+      file,
+      fileName: file.name,
+      isVerifying: true,
+      isVerified: false,
+      verifiedType: null,
+      error: null
+    });
+
+    let completed = false;
+    let clientAttempts = 0;
+
+    while (!completed && clientAttempts < 15) {
+      clientAttempts++;
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("slotType", "idCard");
+        formData.append("typedAadhaarNumber", cleanAadhaar);
+        formData.append("typedPanCardNumber", cleanPan);
+        formData.append("typedSsnOrNationalId", ssnOrNationalId.trim());
+        formData.append("country", applicant.country || "India");
+
+        const res = await fetch(`${API_V1_URL}/applicant/verify-kyc-document`, {
+          method: "POST",
+          body: formData
+        });
+
+        let json: any = null;
+        try {
+          json = await res.json();
+        } catch (e) {}
+
+        if (res.ok && json) {
+          if (json.success && json.verificationStatus === "verified") {
+            setIdDocState({
+              file,
+              fileName: file.name,
+              isVerifying: false,
+              isVerified: true,
+              verifiedType: json.documentType || "Government ID",
+              error: null
+            });
+            completed = true;
+            break;
+          } else if (json.verificationStatus === "error" || json.verificationStatus === "busy") {
+            // Service busy — keep loading and retrying silently in background!
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            continue;
+          } else {
+            // Real document rejection (unreadable, wrong_type, number_mismatch, format_error)
+            setIdDocState({
+              file: null,
+              fileName: null,
+              isVerifying: false,
+              isVerified: false,
+              verifiedType: null,
+              error: json.message || "Gemini AI could not confirm this document is a valid Aadhaar/PAN Card."
+            });
+            completed = true;
+            break;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (err) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
     }
 
-    if (!addressProofFileName) {
-      setErrorMsg("Please upload your Residential Address Proof document scan.");
-      return false;
+    if (!completed) {
+      setIdDocState({
+        file: null,
+        fileName: null,
+        isVerifying: false,
+        isVerified: false,
+        verifiedType: null,
+        error: "Verification scan timed out. Please select the file again to retry."
+      });
     }
 
-    return true;
+    if (idFileInputRef.current) idFileInputRef.current.value = "";
   };
 
+  // Handle Address Proof File Selection & Gemini AI Verification
+  const handleAddressProofFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setErrorMsg(null);
+
+    setAddressProofState({
+      file,
+      fileName: file.name,
+      isVerifying: true,
+      isVerified: false,
+      verifiedType: null,
+      error: null
+    });
+
+    let completed = false;
+    let clientAttempts = 0;
+
+    while (!completed && clientAttempts < 15) {
+      clientAttempts++;
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("slotType", "addressProof");
+        formData.append("country", applicant.country || "India");
+
+        const res = await fetch(`${API_V1_URL}/applicant/verify-kyc-document`, {
+          method: "POST",
+          body: formData
+        });
+
+        let json: any = null;
+        try {
+          json = await res.json();
+        } catch (e) {}
+
+        if (res.ok && json) {
+          if (json.success && json.verificationStatus === "verified") {
+            setAddressProofState({
+              file,
+              fileName: file.name,
+              isVerifying: false,
+              isVerified: true,
+              verifiedType: json.documentType || "Address Proof",
+              error: null
+            });
+            completed = true;
+            break;
+          } else if (json.verificationStatus === "error" || json.verificationStatus === "busy") {
+            // Service busy — keep loading and retrying silently in background!
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            continue;
+          } else {
+            // Real document rejection (unreadable, wrong_type)
+            setAddressProofState({
+              file: null,
+              fileName: null,
+              isVerifying: false,
+              isVerified: false,
+              verifiedType: null,
+              error: json.message || "Gemini AI could not confirm this is an accepted Residential Address Proof."
+            });
+            completed = true;
+            break;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (err) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!completed) {
+      setAddressProofState({
+        file: null,
+        fileName: null,
+        isVerifying: false,
+        isVerified: false,
+        verifiedType: null,
+        error: "Verification scan timed out. Please select the file again to retry."
+      });
+    }
+
+    if (addressFileInputRef.current) addressFileInputRef.current.value = "";
+  };
+
+  // Final Form Submission Handler
   const handleSubmitKyc = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!isFormValid) {
+      setErrorMsg("Please complete all format validations and verify both document scans with Gemini AI before submitting.");
+      return;
+    }
 
     setIsSubmitting(true);
+    setErrorMsg(null);
     try {
       let govtIdType = "National Identity & Address Proof";
       if (isIndia) govtIdType = "Aadhaar & PAN Card";
@@ -117,21 +322,31 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicantId: applicant.id,
-          userId: applicant.userId,
+          userId: applicant.userId || applicant.id,
+          name: applicant.name,
+          email: applicant.email,
+          country: applicant.country || "India",
           govtIdType,
-          aadhaarNumber: aadhaarNumber.replace(/\D/g, ""),
-          panCardNumber: panCardNumber.toUpperCase().trim(),
+          aadhaarNumber: cleanAadhaar,
+          panCardNumber: cleanPan,
           ssnOrNationalId: ssnOrNationalId.trim(),
-          idDocScan: idDocFileName,
-          addressProofScan: addressProofFileName
+          idDocScan: idDocState.fileName || "Verified_ID_Scan.pdf",
+          addressProofScan: addressProofState.fileName || "Verified_Address_Proof.pdf"
         })
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Failed to submit KYC verification documents.");
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch (e) {}
+
+      if (!res.ok || (json && json.success === false)) {
+        throw new Error(json?.message || json?.error?.message || "Failed to submit KYC verification documents.");
       }
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("phantom_customer_kyc_status", "Under Audit");
+      }
       onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message || "An error occurred while submitting KYC details.");
@@ -147,6 +362,22 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
       }}
       className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
+      {/* Hidden File Inputs */}
+      <input
+        type="file"
+        ref={idFileInputRef}
+        onChange={handleIdDocFileSelect}
+        accept="image/*,application/pdf"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={addressFileInputRef}
+        onChange={handleAddressProofFileSelect}
+        accept="image/*,application/pdf"
+        className="hidden"
+      />
+
       <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#4848F7] to-indigo-700 text-white p-6 relative">
@@ -175,8 +406,8 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
         {/* Form Body */}
         <form onSubmit={handleSubmitKyc} className="p-6 space-y-5">
           {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -214,6 +445,7 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
 
             {isIndia ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Aadhaar Number Field with Format Validation */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                     Aadhaar Card Number <span className="text-rose-500">*</span>
@@ -228,10 +460,27 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                       const formatted = clean.replace(/(\d{4})(?=\d)/g, "$1 ");
                       setAadhaarNumber(formatted);
                     }}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-900 focus:outline-none focus:border-[#4848F7]"
+                    className={`w-full text-xs px-3.5 py-2.5 rounded-xl border font-mono font-bold text-slate-900 focus:outline-none transition ${
+                      aadhaarNumber && !isAadhaarValid
+                        ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
+                        : isAadhaarValid
+                        ? "border-emerald-400 bg-emerald-50/20 focus:border-emerald-500"
+                        : "border-slate-200 bg-white focus:border-[#4848F7]"
+                    }`}
                   />
+                  {aadhaarNumber && !isAadhaarValid && (
+                    <p className="text-[10px] text-rose-600 font-bold mt-1 flex items-center gap-1">
+                      <AlertCircle size={10} /> Aadhaar must be exactly 12 digits (e.g. 1234 5678 9012).
+                    </p>
+                  )}
+                  {isAadhaarValid && (
+                    <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                      <CheckCircle2 size={10} /> Valid 12-digit Aadhaar Card format.
+                    </p>
+                  )}
                 </div>
 
+                {/* PAN Card Number Field with Format Validation */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
                     PAN Card Number <span className="text-rose-500">*</span>
@@ -242,8 +491,24 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                     maxLength={10}
                     value={panCardNumber}
                     onChange={(e) => setPanCardNumber(e.target.value.toUpperCase())}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-900 uppercase focus:outline-none focus:border-[#4848F7]"
+                    className={`w-full text-xs px-3.5 py-2.5 rounded-xl border font-mono font-bold text-slate-900 uppercase focus:outline-none transition ${
+                      panCardNumber && !isPanValid
+                        ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
+                        : isPanValid
+                        ? "border-emerald-400 bg-emerald-50/20 focus:border-emerald-500"
+                        : "border-slate-200 bg-white focus:border-[#4848F7]"
+                    }`}
                   />
+                  {panCardNumber && !isPanValid && (
+                    <p className="text-[10px] text-rose-600 font-bold mt-1 flex items-center gap-1">
+                      <AlertCircle size={10} /> PAN must be 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F).
+                    </p>
+                  )}
+                  {isPanValid && (
+                    <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                      <CheckCircle2 size={10} /> Valid 10-character PAN format.
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -276,14 +541,30 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
 
             {/* Document Scans Upload Section */}
             <div className="space-y-3 pt-2">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-100 flex items-center gap-1.5">
-                <Upload className="w-3.5 h-3.5 text-[#4848F7]" /> Upload Verification Document Scans
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-100 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5 text-[#4848F7]" /> Real-Time Gemini AI Verification Scans
+                </span>
+                <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200 font-bold flex items-center gap-1">
+                  <Sparkles size={11} /> Gemini 2.0 AI Guard
+                </span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* ID Scan Upload Box */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-center flex flex-col items-center justify-center gap-2 hover:bg-indigo-50/50 transition">
-                  <FileText className="w-7 h-7 text-[#4848F7]" />
+                <div
+                  className={`p-4 rounded-2xl border-2 border-dashed text-center flex flex-col items-center justify-center gap-2 transition relative ${
+                    idDocState.isVerifying
+                      ? "border-indigo-400 bg-indigo-50/40"
+                      : idDocState.isVerified
+                      ? "border-emerald-400 bg-emerald-50/30"
+                      : idDocState.error
+                      ? "border-rose-400 bg-rose-50/30"
+                      : "border-slate-300 bg-slate-50 hover:bg-indigo-50/40"
+                  }`}
+                >
+                  <FileText className={`w-7 h-7 ${idDocState.isVerified ? "text-emerald-600" : idDocState.error ? "text-rose-500" : "text-[#4848F7]"}`} />
+
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">
                       {isIndia ? "Aadhaar / PAN Card Scan" : "Government ID Scan"}
@@ -291,16 +572,55 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                     <span className="text-[10px] text-slate-400 font-medium">PNG, JPG, PDF (Max 5MB)</span>
                   </div>
 
-                  {idDocFileName ? (
-                    <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg border border-emerald-200 font-bold text-[11px]">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="truncate max-w-[140px]">{idDocFileName}</span>
+                  {/* Slot States */}
+                  {idDocState.isVerifying && (
+                    <div className="flex items-center gap-2 bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-xl font-bold text-[11px] animate-pulse">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                      <span>Gemini AI Verifying...</span>
                     </div>
-                  ) : (
+                  )}
+
+                  {idDocState.isVerified && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Verified: {idDocState.verifiedType}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">{idDocState.fileName}</p>
+                      <button
+                        type="button"
+                        onClick={() => idFileInputRef.current?.click()}
+                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer"
+                      >
+                        Change File
+                      </button>
+                    </div>
+                  )}
+
+                  {idDocState.error && (
+                    <div className="space-y-2">
+                      <div className="p-2 bg-rose-100/80 border border-rose-300 rounded-xl text-rose-800 text-[11px] font-bold text-left space-y-1">
+                        <div className="flex items-center gap-1 text-rose-700 font-extrabold">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Verification Rejected</span>
+                        </div>
+                        <p className="text-[10px] text-rose-700 leading-tight">{idDocState.error}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => idFileInputRef.current?.click()}
+                        className="px-3 py-1 bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 text-[11px] font-extrabold rounded-lg shadow-2xs transition cursor-pointer"
+                      >
+                        Try Different File
+                      </button>
+                    </div>
+                  )}
+
+                  {!idDocState.isVerifying && !idDocState.isVerified && !idDocState.error && (
                     <button
                       type="button"
-                      onClick={() => setIdDocFileName(`${applicant.name.replace(/\s+/g, "_")}_ID_Scan.pdf`)}
-                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg transition cursor-pointer shadow-2xs"
+                      onClick={() => idFileInputRef.current?.click()}
+                      className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 text-[11px] font-bold rounded-xl transition cursor-pointer shadow-2xs"
                     >
                       Browse & Select File
                     </button>
@@ -308,23 +628,73 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                 </div>
 
                 {/* Address Proof Upload Box */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-center flex flex-col items-center justify-center gap-2 hover:bg-indigo-50/50 transition">
-                  <Building className="w-7 h-7 text-[#4848F7]" />
+                <div
+                  className={`p-4 rounded-2xl border-2 border-dashed text-center flex flex-col items-center justify-center gap-2 transition relative ${
+                    addressProofState.isVerifying
+                      ? "border-indigo-400 bg-indigo-50/40"
+                      : addressProofState.isVerified
+                      ? "border-emerald-400 bg-emerald-50/30"
+                      : addressProofState.error
+                      ? "border-rose-400 bg-rose-50/30"
+                      : "border-slate-300 bg-slate-50 hover:bg-indigo-50/40"
+                  }`}
+                >
+                  <Building className={`w-7 h-7 ${addressProofState.isVerified ? "text-emerald-600" : addressProofState.error ? "text-rose-500" : "text-[#4848F7]"}`} />
+
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">Residential Address Proof</span>
                     <span className="text-[10px] text-slate-400 font-medium">Utility Bill, Passport, Rent Agreement</span>
                   </div>
 
-                  {addressProofFileName ? (
-                    <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg border border-emerald-200 font-bold text-[11px]">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="truncate max-w-[140px]">{addressProofFileName}</span>
+                  {/* Slot States */}
+                  {addressProofState.isVerifying && (
+                    <div className="flex items-center gap-2 bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-xl font-bold text-[11px] animate-pulse">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                      <span>Gemini AI Verifying...</span>
                     </div>
-                  ) : (
+                  )}
+
+                  {addressProofState.isVerified && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Verified: {addressProofState.verifiedType}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">{addressProofState.fileName}</p>
+                      <button
+                        type="button"
+                        onClick={() => addressFileInputRef.current?.click()}
+                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer"
+                      >
+                        Change File
+                      </button>
+                    </div>
+                  )}
+
+                  {addressProofState.error && (
+                    <div className="space-y-2">
+                      <div className="p-2 bg-rose-100/80 border border-rose-300 rounded-xl text-rose-800 text-[11px] font-bold text-left space-y-1">
+                        <div className="flex items-center gap-1 text-rose-700 font-extrabold">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Verification Rejected</span>
+                        </div>
+                        <p className="text-[10px] text-rose-700 leading-tight">{addressProofState.error}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addressFileInputRef.current?.click()}
+                        className="px-3 py-1 bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 text-[11px] font-extrabold rounded-lg shadow-2xs transition cursor-pointer"
+                      >
+                        Try Different File
+                      </button>
+                    </div>
+                  )}
+
+                  {!addressProofState.isVerifying && !addressProofState.isVerified && !addressProofState.error && (
                     <button
                       type="button"
-                      onClick={() => setAddressProofFileName(`${applicant.name.replace(/\s+/g, "_")}_AddressProof.pdf`)}
-                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg transition cursor-pointer shadow-2xs"
+                      onClick={() => addressFileInputRef.current?.click()}
+                      className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 text-[11px] font-bold rounded-xl transition cursor-pointer shadow-2xs"
                     >
                       Browse & Select File
                     </button>
@@ -345,16 +715,21 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 bg-[#4848F7] hover:bg-[#3737d6] text-white font-extrabold text-xs rounded-xl shadow-lg shadow-[#4848F7]/25 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              disabled={!isFormValid || isSubmitting}
+              className={`px-6 py-2.5 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer ${
+                isFormValid
+                  ? "bg-[#4848F7] hover:bg-[#3737d6] shadow-[#4848F7]/25"
+                  : "bg-slate-300 cursor-not-allowed opacity-60 shadow-none"
+              }`}
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Submitting Verification...</span>
                 </>
               ) : (
                 <>
+                  {!isFormValid && <Lock className="w-3.5 h-3.5 opacity-70" />}
                   <span>Submit KYC Verification</span>
                   <ArrowRight className="w-4 h-4" />
                 </>

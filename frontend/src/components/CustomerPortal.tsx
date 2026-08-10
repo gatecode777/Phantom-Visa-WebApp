@@ -86,9 +86,64 @@ export default function CustomerPortal() {
   const [selectedAppId, setSelectedAppId] = useState<string>("VO-2026-1025");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCompleteKycModal, setShowCompleteKycModal] = useState<boolean>(false);
+  const [kycCompletedState, setKycCompletedState] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("phantom_customer_kyc_completed") === "true";
+    }
+    return false;
+  });
   const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">("vault");
   const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">("checkout");
   const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements">("countries");
+
+  // Real-time dynamic KYC status state listener
+  const [localKycStatus, setLocalKycStatus] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("phantom_customer_kyc_status") || "Pending";
+    }
+    return "Pending";
+  });
+
+  useEffect(() => {
+    const syncStatus = () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("phantom_customer_kyc_status");
+        if (stored && stored !== localKycStatus) {
+          setLocalKycStatus(stored);
+        }
+      }
+    };
+    syncStatus();
+    const interval = setInterval(syncStatus, 1000);
+    return () => clearInterval(interval);
+  }, [localKycStatus]);
+
+  const liveKycStatusFromDb =
+    (applicantDashboardData as any)?.kycStatus ||
+    (applicantDashboardData as any)?.kycDetails?.kycStatus ||
+    (authSession?.user as any)?.kycStatus;
+
+  // Sync localStorage with live DB status whenever DB status updates
+  useEffect(() => {
+    if (liveKycStatusFromDb && typeof window !== "undefined") {
+      localStorage.setItem("phantom_customer_kyc_status", liveKycStatusFromDb);
+      setLocalKycStatus(liveKycStatusFromDb);
+    }
+  }, [liveKycStatusFromDb]);
+
+  const rawKycStatus = liveKycStatusFromDb || localKycStatus || "Pending";
+
+  const isKycVerified =
+    rawKycStatus === "Approved" ||
+    rawKycStatus === "Verified";
+
+  const isKycUnderAudit =
+    rawKycStatus === "Under Audit" ||
+    rawKycStatus === "Pending Approval" ||
+    rawKycStatus === "Under Review";
+
+  const isKycRejected = rawKycStatus === "Rejected";
+  const kycRejectionReason = (applicantDashboardData as any)?.kycDetails?.rejectionReason || "Document scan blurry or mismatched.";
 
   // Target app reference
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
@@ -131,7 +186,16 @@ export default function CustomerPortal() {
     }
   };
 
-  // Restore active tab and subtab on mount/refresh
+  // Auto-refresh applicant dashboard status every 3 seconds to capture Admin approvals live
+  useEffect(() => {
+    if (fetchApplicantDashboardData) {
+      fetchApplicantDashboardData();
+      const timer = setInterval(() => {
+        fetchApplicantDashboardData();
+      }, 3000);
+      return () => clearInterval(timer);
+    }
+  }, []);
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -152,9 +216,9 @@ export default function CustomerPortal() {
         if (targetTab === "explore") setOpenExplore(true);
 
         if (targetSubTab) {
-          if (targetTab === "documents") setDocsSubTab(targetSubTab as any);
+          if (targetTab === "documents") setDocSubTab(targetSubTab as any);
           if (targetTab === "applications") setAppFilter(targetSubTab as any);
-          if (targetTab === "payments") setPaymentsSubTab(targetSubTab as any);
+          if (targetTab === "payments") setPaymentSubTab(targetSubTab as any);
         }
       }
     }
@@ -456,7 +520,7 @@ export default function CustomerPortal() {
                       key={sub.label}
                       onClick={() => {
                         handleTabChange("documents", sub.tab);
-                        setDocsSubTab(sub.tab as any);
+                        setDocSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
                         customerTab === "documents" && docSubTab === sub.tab
@@ -501,7 +565,7 @@ export default function CustomerPortal() {
                       key={sub.label}
                       onClick={() => {
                         handleTabChange("payments", sub.tab);
-                        setPaymentsSubTab(sub.tab as any);
+                        setPaymentSubTab(sub.tab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
                         customerTab === "payments" && paymentSubTab === sub.tab
@@ -628,33 +692,107 @@ export default function CustomerPortal() {
           {customerTab === "dashboard" && (
             <div className="space-y-6">
 
-              {/* KYC Pending Notification Banner */}
-              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-400/50">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
-                    <ShieldCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full font-mono">
-                        Action Required • Identity Audit Pending
-                      </span>
+              {/* KYC Notification Banner (Pending vs Under Audit vs Approved vs Rejected) */}
+              {isKycVerified ? (
+                <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-2xl p-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-500/50 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+                      <CheckCircle2 className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-base font-extrabold text-white tracking-tight mt-0.5">Your KYC Verification is Pending</h3>
-                    <p className="text-xs text-amber-100 font-medium">
-                      Complete your country-specific identity documents verification to activate full visa processing privileges.
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-emerald-100 px-2.5 py-0.5 rounded-full font-mono">
+                          Identity Verified • Consular Audit Approved
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-extrabold text-white tracking-tight mt-0.5">KYC Verification Complete & Approved</h3>
+                      <p className="text-[11px] text-emerald-100 font-medium">
+                        Your identity documents have been approved by Admin for full international visa processing privileges.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="px-3.5 py-1.5 bg-white/15 text-white font-mono font-bold text-xs rounded-xl border border-white/20 shrink-0">
+                    Status: Approved ✓
                   </div>
                 </div>
+              ) : isKycUnderAudit ? (
+                <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white rounded-2xl p-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 border border-indigo-500/50 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+                      <Clock className="w-5 h-5 text-white animate-spin-slow" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-indigo-100 px-2.5 py-0.5 rounded-full font-mono">
+                          Consular Identity Audit • Pending Admin Approval
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-extrabold text-white tracking-tight mt-0.5">KYC Submitted — Under Admin Review</h3>
+                      <p className="text-[11px] text-indigo-100 font-medium">
+                        Your AI-verified document scans have been submitted and are currently under review by the Consular Admin. You will be notified once approved.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="px-3.5 py-1.5 bg-white/15 text-white font-mono font-bold text-xs rounded-xl border border-white/20 shrink-0 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    Status: Under Audit ⏳
+                  </div>
+                </div>
+              ) : isKycRejected ? (
+                <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-rose-400/50">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+                      <AlertCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full font-mono">
+                          Identity Audit Failure
+                        </span>
+                      </div>
+                      <h3 className="text-base font-extrabold text-white tracking-tight mt-0.5">KYC Verification Rejected by Admin</h3>
+                      <p className="text-xs text-rose-100 font-medium">
+                        Reason: {kycRejectionReason}. Please re-submit your identity documents.
+                      </p>
+                    </div>
+                  </div>
 
-                <button
-                  onClick={() => setShowCompleteKycModal(true)}
-                  className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-900 font-black text-xs rounded-xl shadow-md transition shrink-0 flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Complete KYC Now</span>
-                  <ArrowRight className="w-4 h-4 text-[#4848F7]" />
-                </button>
-              </div>
+                  <button
+                    onClick={() => setShowCompleteKycModal(true)}
+                    className="px-5 py-2.5 bg-white hover:bg-slate-50 text-rose-700 font-black text-xs rounded-xl shadow-md transition shrink-0 flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>Re-Submit KYC Verification</span>
+                    <ArrowRight className="w-4 h-4 text-rose-600" />
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-400/50">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+                      <ShieldCheck className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full font-mono">
+                          Action Required • Identity Audit Pending
+                        </span>
+                      </div>
+                      <h3 className="text-base font-extrabold text-white tracking-tight mt-0.5">Your KYC Verification is Pending</h3>
+                      <p className="text-xs text-amber-100 font-medium">
+                        Complete your country-specific identity documents verification to activate full visa processing privileges.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowCompleteKycModal(true)}
+                    className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-900 font-black text-xs rounded-xl shadow-md transition shrink-0 flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>Complete KYC Now</span>
+                    <ArrowRight className="w-4 h-4 text-[#4848F7]" />
+                  </button>
+                </div>
+              )}
 
               {/* TOP ROW: Good Morning Card & Upcoming Appointment */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -940,40 +1078,160 @@ export default function CustomerPortal() {
           {/* OTHER SUBTAB VIEWS (Apply, Applications, Documents, Payments, Appointments, Messages, Notifications, Explore, Support, Profile, Settings) */}
           {/* ============================================================ */}
           
-          {/* APPLY FOR VISA WIZARD */}
+          {/* APPLY FOR VISA WIZARD (LOCKED UNTIL KYC COMPLETED) */}
           {customerTab === "apply" && (
-            <ApplicantApplyVisa
-              onAddApplication={(appData) => {
-                addApplication({
-                  travelerName: appData.travelerName || "New Traveler",
-                  dob: appData.dob || "1995-06-12",
-                  passportNumber: appData.passportNumber || "Z9817264",
-                  passportExpiry: appData.passportExpiry || "2033-12-20",
-                  nationality: appData.nationality || "Indian",
-                  destination: appData.destination || "Australia",
-                  visaType: appData.visaType || "Tourist Visa",
-                  travelDates: appData.travelDates || "15 Oct 2026 to 15 Nov 2026",
-                  status: appData.status || "Submitted",
-                  fees: appData.fees || 16500,
-                  verifiedDocs: appData.verifiedDocs || {
-                    passport: "verified",
-                    photo: "verified"
-                  },
-                  checklist: appData.checklist || {
-                    employed: true,
-                    sponsored: false
-                  }
-                });
-              }}
-              onNavigateDrafts={() => {
-                handleTabChange("applications", "Submitted");
-                setAppFilter("Submitted");
-              }}
-              onNavigatePayment={() => {
-                handleTabChange("payments", "make_payment");
-                setPaymentsSubTab("make_payment");
-              }}
-            />
+            !isKycVerified ? (
+              isKycUnderAudit ? (
+                <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-indigo-200 p-8 sm:p-12 text-center space-y-6 shadow-md animate-in fade-in zoom-in duration-200 my-4">
+                  <div className="w-20 h-20 bg-indigo-50 border border-indigo-200 rounded-full flex items-center justify-center mx-auto text-indigo-600 shadow-inner">
+                    <Clock size={40} className="animate-spin-slow" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="bg-indigo-100 text-indigo-800 font-extrabold px-3.5 py-1 rounded-full text-xs uppercase tracking-wider inline-flex items-center gap-1.5 font-mono">
+                      <Clock size={14} className="text-indigo-600" />
+                      Consular Audit In Progress
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 font-outfit">
+                      KYC Submission Under Admin Audit ⏳
+                    </h2>
+                    <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                      Your identity & document scans (Aadhaar / PAN & Address Proof) have been submitted and are currently under review by the Consular Admin team.
+                    </p>
+                  </div>
+
+                  <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-5 max-w-md mx-auto text-left space-y-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">1</div>
+                      <div>
+                        <p className="font-bold text-slate-900">AI Document Scan Passed</p>
+                        <p className="text-slate-500 text-[11px]">Real-time Gemini AI classification verified</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-2 border-t border-indigo-200/60">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">2</div>
+                      <div>
+                        <p className="font-bold text-slate-900">Pending Consular Admin Sign-off</p>
+                        <p className="text-slate-500 text-[11px]">Admin review queued in Consular Panel</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-6 py-3 rounded-2xl text-xs">
+                      <span>Status: Awaiting Admin Approval ⏳</span>
+                    </div>
+                  </div>
+                </div>
+              ) : isKycRejected ? (
+                <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-rose-200 p-8 sm:p-12 text-center space-y-6 shadow-md animate-in fade-in zoom-in duration-200 my-4">
+                  <div className="w-20 h-20 bg-rose-100 border border-rose-200 rounded-full flex items-center justify-center mx-auto text-rose-600 shadow-inner">
+                    <AlertCircle size={40} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="bg-rose-100 text-rose-800 font-extrabold px-3.5 py-1 rounded-full text-xs uppercase tracking-wider inline-flex items-center gap-1.5 font-mono">
+                      Identity Audit Failed
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 font-outfit">
+                      KYC Verification Audit Rejected ❌
+                    </h2>
+                    <p className="text-sm text-rose-700 max-w-xl mx-auto leading-relaxed font-semibold">
+                      Reason: {kycRejectionReason}
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowCompleteKycModal(true)}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs transition shadow-lg shadow-rose-500/20 cursor-pointer flex items-center gap-2 mx-auto"
+                    >
+                      <ShieldCheck size={18} />
+                      <span>Re-Submit KYC Verification</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center space-y-6 shadow-sm animate-in fade-in zoom-in duration-200 my-4">
+                  <div className="w-20 h-20 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-inner">
+                    <Lock size={40} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="bg-amber-100 text-amber-800 font-extrabold px-3.5 py-1 rounded-full text-xs uppercase tracking-wider inline-flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-amber-600" />
+                      Identity Audit & KYC Required
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 font-outfit">
+                      Complete KYC Verification to Apply for Visa 🔒
+                    </h2>
+                    <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                      Consular regulations require all primary applicants to complete government identity & address verification (Aadhaar / PAN Audit) before submitting an international visa application.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left space-y-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#4848F7] flex items-center justify-center font-bold shrink-0">1</div>
+                      <div>
+                        <p className="font-bold text-slate-900">Government Identity Numbers</p>
+                        <p className="text-slate-500 text-[11px]">Valid Aadhaar Card (12 Digits) & PAN Card Number</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-2 border-t border-slate-200">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#4848F7] flex items-center justify-center font-bold shrink-0">2</div>
+                      <div>
+                        <p className="font-bold text-slate-900">Document Scan Proofs</p>
+                        <p className="text-slate-500 text-[11px]">Front/Back Govt ID Scan & Utility Bill Address Proof</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowCompleteKycModal(true)}
+                      className="bg-[#4848F7] hover:bg-[#3838E6] text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs transition shadow-lg shadow-blue-500/20 cursor-pointer flex items-center gap-2 mx-auto"
+                    >
+                      <ShieldCheck size={18} />
+                      <span>Complete KYC Verification Now</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <ApplicantApplyVisa
+                onAddApplication={(appData) => {
+                  addApplication({
+                    travelerName: appData.travelerName || "New Traveler",
+                    dob: appData.dob || "1995-06-12",
+                    passportNumber: appData.passportNumber || "Z9817264",
+                    passportExpiry: appData.passportExpiry || "2033-12-20",
+                    nationality: appData.nationality || "Indian",
+                    destination: appData.destination || "Australia",
+                    visaType: appData.visaType || "Tourist Visa",
+                    travelDates: appData.travelDates || "15 Oct 2026 to 15 Nov 2026",
+                    status: appData.status || "Submitted",
+                    fees: appData.fees || 16500,
+                    verifiedDocs: appData.verifiedDocs || {
+                      passport: "verified",
+                      photo: "verified"
+                    },
+                    documentsSubmitted: true,
+                    kycCompleted: true
+                  });
+                }}
+                onNavigateDrafts={() => {
+                  handleTabChange("applications", "Submitted");
+                  setAppFilter("Submitted");
+                }}
+                onNavigatePayment={() => {
+                  handleTabChange("payments", "make_payment");
+                  setPaymentSubTab("checkout");
+                }}
+              />
+            )
           )}
 
           {/* MY APPLICATIONS VIEW */}
@@ -1325,6 +1583,10 @@ export default function CustomerPortal() {
           onClose={() => setShowCompleteKycModal(false)}
           onSuccess={() => {
             setShowCompleteKycModal(false);
+            setKycCompletedState(true);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("phantom_customer_kyc_completed", "true");
+            }
             if (fetchApplicantDashboardData) fetchApplicantDashboardData();
           }}
         />
