@@ -23,6 +23,11 @@ import ApplicantAppointments from "./ApplicantAppointments";
 import ApplicantExploreCountries from "./ApplicantExploreCountries";
 import ApplicantVisaTypes from "./ApplicantVisaTypes";
 import ApplicantVisaRequirements from "./ApplicantVisaRequirements";
+import ApplicantVisaProcessingTime from "./ApplicantVisaProcessingTime";
+import ApplicantVisaFees from "./ApplicantVisaFees";
+import ApplicantSupport from "./ApplicantSupport";
+import ApplicantProfile from "./ApplicantProfile";
+import ApplicantSettings from "./ApplicantSettings";
 import {
   Search,
   MessageSquare,
@@ -94,7 +99,7 @@ export default function CustomerPortal() {
   });
   const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">("vault");
   const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">("checkout");
-  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements">("countries");
+  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">("countries");
 
   // Real-time dynamic KYC status state listener
   const [localKycStatus, setLocalKycStatus] = useState<string>(() => {
@@ -618,7 +623,9 @@ export default function CustomerPortal() {
                   {[
                     { label: "Explore Countries", tab: "countries" },
                     { label: "Visa Types", tab: "types" },
-                    { label: "Visa Requirements", tab: "requirements" }
+                    { label: "Visa Requirements", tab: "requirements" },
+                    { label: "Processing Time", tab: "processing" },
+                    { label: "Visa Fees", tab: "fees" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -1409,26 +1416,42 @@ export default function CustomerPortal() {
             <div>
               {exploreSubTab === "types" && (
                 <ApplicantVisaTypes
-                  onNavigateApply={() => setCustomerTab("apply")}
-                  onNavigateSupport={() => setCustomerTab("support")}
+                  onNavigateApply={() => handleTabChange("apply")}
+                  onNavigateSupport={() => handleTabChange("support")}
                 />
               )}
               {exploreSubTab === "requirements" && (
                 <ApplicantVisaRequirements
-                  onNavigateApply={() => setCustomerTab("apply")}
+                  onNavigateApply={() => handleTabChange("apply")}
                   onNavigateUpload={() => {
-                    setCustomerTab("documents");
+                    handleTabChange("documents");
                     setDocSubTab("upload");
                   }}
-                  onNavigateSupport={() => setCustomerTab("support")}
+                  onNavigateSupport={() => handleTabChange("support")}
+                />
+              )}
+              {exploreSubTab === "processing" && (
+                <ApplicantVisaProcessingTime
+                  onNavigateApply={() => handleTabChange("apply")}
+                  onNavigateSupport={() => handleTabChange("support")}
+                />
+              )}
+              {exploreSubTab === "fees" && (
+                <ApplicantVisaFees
+                  onNavigateApply={() => handleTabChange("apply")}
+                  onNavigateCheckout={() => {
+                    handleTabChange("payments");
+                    setPaymentSubTab("checkout");
+                  }}
+                  onNavigateSupport={() => handleTabChange("support")}
                 />
               )}
               {exploreSubTab === "countries" && (
                 <ApplicantExploreCountries
                   onSelectCountryToApply={(country) => {
-                    setCustomerTab("apply");
+                    handleTabChange("apply");
                   }}
-                  onNavigateSupport={() => setCustomerTab("support")}
+                  onNavigateSupport={() => handleTabChange("support")}
                 />
               )}
             </div>
@@ -1436,107 +1459,33 @@ export default function CustomerPortal() {
 
           {/* SUPPORT VIEW */}
           {customerTab === "support" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs max-w-xl mx-auto">
-              <h2 className="text-lg font-bold text-slate-800">Contact Support</h2>
-              <form onSubmit={(e) => { e.preventDefault(); setTicketSubmitted(true); }} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Subject</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Document query"
-                    value={ticketForm.subject}
-                    onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Description</label>
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="Describe your issue..."
-                    value={ticketForm.description}
-                    onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg"
-                  />
-                </div>
-                <button type="submit" className="bg-[#4848F7] text-white font-bold text-xs px-6 py-2.5 rounded-lg">
-                  Submit Ticket
-                </button>
-                {ticketSubmitted && <p className="text-emerald-600 font-bold">Ticket created successfully!</p>}
-              </form>
-            </div>
+            <ApplicantSupport
+              applications={applications}
+              onNavigateAppointments={() => handleTabChange("appointments")}
+            />
           )}
 
           {/* PROFILE VIEW */}
           {customerTab === "profile" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs max-w-xl mx-auto">
-              <h2 className="text-lg font-bold text-slate-800">My Applicant Profile</h2>
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    value={profileData.fullName}
-                    onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Passport Number</label>
-                  <input
-                    type="text"
-                    value={profileData.passportNumber}
-                    onChange={(e) => setProfileData({ ...profileData, passportNumber: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg"
-                  />
-                </div>
-                <button
-                  onClick={() => setProfileSaveSuccess(true)}
-                  className="bg-[#4848F7] text-white font-bold text-xs px-6 py-2.5 rounded-lg"
-                >
-                  Save Profile
-                </button>
-                {profileSaveSuccess && <p className="text-emerald-600 font-bold">Profile updated successfully!</p>}
-              </div>
-            </div>
+            <ApplicantProfile
+              userSession={authSession}
+              onNavigateDocuments={() => {
+                handleTabChange("documents");
+                setDocSubTab("upload");
+              }}
+              onNavigateApply={() => handleTabChange("apply")}
+            />
           )}
 
           {/* SETTINGS VIEW */}
           {customerTab === "settings" && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs max-w-xl mx-auto">
-              <h2 className="text-lg font-bold text-slate-800">Account Settings</h2>
-              <div className="space-y-3 text-xs">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settingsData.emailAlerts}
-                    onChange={(e) => setSettingsData({ ...settingsData, emailAlerts: e.target.checked })}
-                    className="w-4 h-4 text-[#4848F7] rounded"
-                  />
-                  <span>Receive Email Status Alerts</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settingsData.whatsAppUpdates}
-                    onChange={(e) => setSettingsData({ ...settingsData, whatsAppUpdates: e.target.checked })}
-                    className="w-4 h-4 text-[#4848F7] rounded"
-                  />
-                  <span>Receive WhatsApp Status Updates</span>
-                </label>
-              </div>
-            </div>
+            <ApplicantSettings
+              onNavigatePayments={() => {
+                handleTabChange("payments");
+                setPaymentSubTab("checkout");
+              }}
+              onNavigateSupport={() => handleTabChange("support")}
+            />
           )}
 
         </main>
