@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   UserCheck,
@@ -88,7 +88,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "Global Visa Services",
     agencyType: "Travel Agency",
     country: "Canada",
-    flag: "🇨🇦",
+    flag: "ðŸ‡¨ðŸ‡¦",
     assignedApps: 52,
     completedApps: 45,
     pendingApps: 7,
@@ -131,7 +131,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "Visa Experts Ltd",
     agencyType: "Immigration Consultant",
     country: "Australia",
-    flag: "🇦🇺",
+    flag: "ðŸ‡¦ðŸ‡º",
     assignedApps: 38,
     completedApps: 34,
     pendingApps: 4,
@@ -172,7 +172,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "World Travel Agency",
     agencyType: "Individual Agent",
     country: "UK",
-    flag: "🇬🇧",
+    flag: "ðŸ‡¬ðŸ‡§",
     assignedApps: 24,
     completedApps: 21,
     pendingApps: 3,
@@ -255,7 +255,7 @@ export default function ActiveAgents() {
               agencyName: item.agencyName || "Visa Agency",
               agencyType: "Travel Agency",
               country: item.country || "India",
-              flag: "🇮🇳",
+              flag: "ðŸ‡®ðŸ‡³",
               assignedApps: 0,
               completedApps: 0,
               activeCases: 0,
@@ -375,7 +375,7 @@ export default function ActiveAgents() {
     <div className="space-y-6 animate-in fade-in duration-200 text-slate-800">
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -522,11 +522,11 @@ export default function ActiveAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Countries</option>
-              <option value="Canada">🇨🇦 Canada</option>
-              <option value="Australia">🇦🇺 Australia</option>
-              <option value="UK">🇬🇧 UK</option>
-              <option value="India">🇮🇳 India</option>
-              <option value="USA">🇺🇸 USA</option>
+              <option value="Canada">ðŸ‡¨ðŸ‡¦ Canada</option>
+              <option value="Australia">ðŸ‡¦ðŸ‡º Australia</option>
+              <option value="UK">ðŸ‡¬ðŸ‡§ UK</option>
+              <option value="India">ðŸ‡®ðŸ‡³ India</option>
+              <option value="USA">ðŸ‡ºðŸ‡¸ USA</option>
             </select>
           </div>
 
@@ -541,10 +541,10 @@ export default function ActiveAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">⭐ Excellent (4.8+)</option>
-              <option value="Good">⭐ Good (4.5 - 4.7)</option>
-              <option value="Average">⭐ Average (4.0 - 4.4)</option>
-              <option value="Low">⭐ Low (&lt; 4.0)</option>
+              <option value="Excellent">â­ Excellent (4.8+)</option>
+              <option value="Good">â­ Good (4.5 - 4.7)</option>
+              <option value="Average">â­ Average (4.0 - 4.4)</option>
+              <option value="Low">â­ Low (&lt; 4.0)</option>
             </select>
           </div>
         </div>
@@ -736,7 +736,7 @@ export default function ActiveAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Active Agents</strong>
           </div>
           <div className="flex items-center gap-1">
@@ -799,9 +799,9 @@ export default function ActiveAgents() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewAgent.id}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span>{viewAgent.agencyName}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewAgent.flag}</span> {viewAgent.country}
                     </span>

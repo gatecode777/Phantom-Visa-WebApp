@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   CreditCard,
   Search,
@@ -76,17 +76,17 @@ export const PAYMENT_REPORT_FEATURES = [
 ];
 
 const MOCK_PAYMENT_SUMMARY: PaymentSummaryRow[] = [
-  { status: "Successful", count: 21840, amount: "₹2.84 Cr" },
-  { status: "Pending", count: 560, amount: "₹98.87 L" },
-  { status: "Failed", count: 240, amount: "₹21.50 L" },
-  { status: "Refunded", count: 200, amount: "₹18.65 L" }
+  { status: "Successful", count: 21840, amount: "â‚¹2.84 Cr" },
+  { status: "Pending", count: 560, amount: "â‚¹98.87 L" },
+  { status: "Failed", count: 240, amount: "â‚¹21.50 L" },
+  { status: "Refunded", count: 200, amount: "â‚¹18.65 L" }
 ];
 
 const MOCK_REVENUE_SOURCES: RevenueSourceRow[] = [
-  { source: "Visa Fees", amount: "₹2.10 Cr" },
-  { source: "Service Charges", amount: "₹54.20 L" },
-  { source: "Express Processing Fee", amount: "₹12.50 L" },
-  { source: "Agent Commissions", amount: "₹7.30 L" }
+  { source: "Visa Fees", amount: "â‚¹2.10 Cr" },
+  { source: "Service Charges", amount: "â‚¹54.20 L" },
+  { source: "Express Processing Fee", amount: "â‚¹12.50 L" },
+  { source: "Agent Commissions", amount: "â‚¹7.30 L" }
 ];
 
 export default function PaymentReportsManagement() {
@@ -118,7 +118,7 @@ export default function PaymentReportsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -177,7 +177,7 @@ export default function PaymentReportsManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Total Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹2.84 Cr</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹2.84 Cr</div>
             <span className="text-[10px] text-blue-600 font-bold">Gross Earnings</span>
           </div>
 
@@ -207,7 +207,7 @@ export default function PaymentReportsManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-indigo-600 block mb-1">Avg Transaction Value</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹12,450</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹12,450</div>
             <span className="text-[10px] text-indigo-600 font-bold">Average Ticket Size</span>
           </div>
         </div>
@@ -351,10 +351,10 @@ export default function PaymentReportsManagement() {
               <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono font-bold">Line Chart</span>
             </div>
             <div className="space-y-2 text-xs font-semibold text-slate-700">
-              <div className="flex justify-between"><span>Daily Revenue:</span><strong className="font-mono text-slate-900">₹8.45 L</strong></div>
-              <div className="flex justify-between"><span>Weekly Revenue:</span><strong className="font-mono text-slate-900">₹62.40 L</strong></div>
-              <div className="flex justify-between"><span>Monthly Revenue:</span><strong className="font-mono text-slate-900">₹2.84 Cr</strong></div>
-              <div className="flex justify-between"><span>Yearly Revenue:</span><strong className="font-mono text-slate-900">₹28.40 Cr</strong></div>
+              <div className="flex justify-between"><span>Daily Revenue:</span><strong className="font-mono text-slate-900">â‚¹8.45 L</strong></div>
+              <div className="flex justify-between"><span>Weekly Revenue:</span><strong className="font-mono text-slate-900">â‚¹62.40 L</strong></div>
+              <div className="flex justify-between"><span>Monthly Revenue:</span><strong className="font-mono text-slate-900">â‚¹2.84 Cr</strong></div>
+              <div className="flex justify-between"><span>Yearly Revenue:</span><strong className="font-mono text-slate-900">â‚¹28.40 Cr</strong></div>
             </div>
           </div>
         </div>
@@ -458,7 +458,7 @@ export default function PaymentReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {PAYMENT_REPORT_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
                   <span>{wf}</span>
                 </div>
               ))}

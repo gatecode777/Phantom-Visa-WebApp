@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   Briefcase,
@@ -104,7 +104,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.9,
     status: "Active",
     country: "India",
-    flag: "🇮🇳",
+    flag: "ðŸ‡®ðŸ‡³",
     dob: "14 May 1990",
     gender: "Female",
     address: "B-402, Connaught Place, New Delhi, India",
@@ -156,7 +156,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.8,
     status: "Active",
     country: "India",
-    flag: "🇮🇳",
+    flag: "ðŸ‡®ðŸ‡³",
     dob: "22 Aug 1988",
     gender: "Male",
     address: "A-12, Sector 62, Noida, UP, India",
@@ -206,7 +206,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.6,
     status: "Pending Approval",
     country: "India",
-    flag: "🇮🇳",
+    flag: "ðŸ‡®ðŸ‡³",
     dob: "10 Apr 1985",
     gender: "Male",
     address: "C-88, Malviya Nagar, Jaipur, Rajasthan",
@@ -255,7 +255,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.95,
     status: "Active",
     country: "USA",
-    flag: "🇺🇸",
+    flag: "ðŸ‡ºðŸ‡¸",
     dob: "18 Mar 1991",
     gender: "Female",
     address: "500 Market St, San Francisco, CA, USA",
@@ -304,7 +304,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.2,
     status: "Inactive",
     country: "Canada",
-    flag: "🇨🇦",
+    flag: "ðŸ‡¨ðŸ‡¦",
     dob: "05 Nov 1986",
     gender: "Male",
     address: "700 W Georgia St, Vancouver, BC, Canada",
@@ -687,7 +687,7 @@ export default function AllAgents() {
     <div className="space-y-6 animate-in fade-in duration-200 text-slate-800">
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -712,7 +712,12 @@ export default function AllAgents() {
       {/* TOP STATISTICS CARDS (4 CARDS GRID) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Agents */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        <div
+          onClick={() => setStatusFilter("All")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Total Agents</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -720,14 +725,19 @@ export default function AllAgents() {
             </div>
           </div>
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.length}</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#2563EB] font-semibold mt-2">
             <ArrowUpRight size={13} />
-            <span>Live Database Registry</span>
+            <span>{statusFilter === "All" ? "Showing all agents âœ“" : "Click for all agents"}</span>
           </div>
         </div>
 
-        {/* Card 2: Active Agents */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 2: Active Agents â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Active" ? "All" : "Active")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Active Agents</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -737,14 +747,19 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Active").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <ShieldCheck size={13} />
-            <span>Active Operational</span>
+            <span>{statusFilter === "Active" ? "Showing active only âœ“" : "Click to filter active"}</span>
           </div>
         </div>
 
-        {/* Card 3: Inactive / Blocked Agents */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 3: Inactive / Blocked Agents â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Inactive" ? "All" : "Inactive")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Inactive" ? "border-slate-500 ring-2 ring-slate-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Inactive / Blocked</span>
+            <span className="text-xs font-bold text-slate-500">Inactive Agents</span>
             <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
               <UserX size={18} />
             </div>
@@ -752,12 +767,17 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Inactive" || a.status === "Blocked").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold mt-2">
             <Clock size={13} />
-            <span>Blocked / Suspended</span>
+            <span>{statusFilter === "Inactive" ? "Showing inactive only âœ“" : "Click to filter inactive"}</span>
           </div>
         </div>
 
-        {/* Card 4: Pending Approval */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 4: Pending Approval â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Pending Approval" ? "All" : "Pending Approval")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Pending Approval" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Pending Approval</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -767,7 +787,7 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Pending Approval").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-            <span>Awaiting Review</span>
+            <span>{statusFilter === "Pending Approval" ? "Showing pending only âœ“" : "Click to filter pending"}</span>
           </div>
         </div>
       </div>
@@ -816,10 +836,10 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Statuses</option>
-              <option value="Active">🟢 Active</option>
-              <option value="Inactive">⚪ Inactive</option>
-              <option value="Pending Approval">🟡 Pending Approval</option>
-              <option value="Blocked">🔴 Blocked</option>
+              <option value="Active">ðŸŸ¢ Active</option>
+              <option value="Inactive">âšª Inactive</option>
+              <option value="Pending Approval">ðŸŸ¡ Pending Approval</option>
+              <option value="Blocked">ðŸ”´ Blocked</option>
             </select>
           </div>
 
@@ -834,10 +854,10 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Countries</option>
-              <option value="India">🇮🇳 India</option>
-              <option value="USA">🇺🇸 USA</option>
-              <option value="Canada">🇨🇦 Canada</option>
-              <option value="Australia">🇦🇺 Australia</option>
+              <option value="India">ðŸ‡®ðŸ‡³ India</option>
+              <option value="USA">ðŸ‡ºðŸ‡¸ USA</option>
+              <option value="Canada">ðŸ‡¨ðŸ‡¦ Canada</option>
+              <option value="Australia">ðŸ‡¦ðŸ‡º Australia</option>
             </select>
           </div>
 
@@ -852,10 +872,10 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">⭐ Excellent (4.8+)</option>
-              <option value="Good">⭐ Good (4.5 - 4.7)</option>
-              <option value="Average">⭐ Average (4.0 - 4.4)</option>
-              <option value="Low">⭐ Low (&lt; 4.0)</option>
+              <option value="Excellent">â­ Excellent (4.8+)</option>
+              <option value="Good">â­ Good (4.5 - 4.7)</option>
+              <option value="Average">â­ Average (4.0 - 4.4)</option>
+              <option value="Low">â­ Low (&lt; 4.0)</option>
             </select>
           </div>
 
@@ -1102,7 +1122,7 @@ export default function AllAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Registered Agents</strong>
           </div>
           <div className="flex items-center gap-1">
@@ -1173,9 +1193,9 @@ export default function AllAgents() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewAgent.id}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span>{viewAgent.agencyName}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewAgent.flag}</span> {viewAgent.country}
                     </span>

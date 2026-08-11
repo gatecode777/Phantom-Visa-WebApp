@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   UserX,
@@ -348,7 +348,7 @@ export default function InactiveAgents() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -708,7 +708,7 @@ export default function InactiveAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Inactive Agents</strong>
           </div>
           <div className="flex items-center gap-1 font-mono font-bold">
@@ -939,7 +939,7 @@ export default function InactiveAgents() {
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Rating</span>
-                      <strong className="text-amber-500 text-lg font-mono font-black">⭐ {activeModalAgent.rating}</strong>
+                      <strong className="text-amber-500 text-lg font-mono font-black">â­ {activeModalAgent.rating}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Avg Speed</span>
@@ -963,7 +963,7 @@ export default function InactiveAgents() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-blue-100 text-[#2563EB] flex items-center justify-center font-bold text-[10px]">
-                            ✓
+                            âœ“
                           </div>
                           <span className="font-bold text-slate-900">{act.action}</span>
                         </div>

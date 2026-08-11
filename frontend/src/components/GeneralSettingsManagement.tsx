@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Settings,
   Building,
@@ -74,7 +74,7 @@ export default function GeneralSettingsManagement() {
   const [defaultLanguage, setDefaultLanguage] = useState("English");
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
   const [timeFormat, setTimeFormat] = useState("12-Hour (09:00 AM)");
-  const [currencySymbol, setCurrencySymbol] = useState("INR (₹)");
+  const [currencySymbol, setCurrencySymbol] = useState("INR (â‚¹)");
 
   // Performance & Security Toggles
   const [enableCache, setEnableCache] = useState(true);
@@ -111,7 +111,7 @@ export default function GeneralSettingsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -327,10 +327,10 @@ export default function GeneralSettingsManagement() {
                   onChange={(e) => setCurrencySymbol(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold"
                 >
-                  <option value="INR (₹)">Indian Rupee (INR ₹)</option>
+                  <option value="INR (â‚¹)">Indian Rupee (INR â‚¹)</option>
                   <option value="USD ($)">US Dollar (USD $)</option>
-                  <option value="EUR (€)">Euro (EUR €)</option>
-                  <option value="GBP (£)">British Pound (GBP £)</option>
+                  <option value="EUR (â‚¬)">Euro (EUR â‚¬)</option>
+                  <option value="GBP (Â£)">British Pound (GBP Â£)</option>
                 </select>
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function GeneralSettingsManagement() {
             <div className="space-y-2 text-xs font-semibold">
               <div className="flex justify-between items-center bg-emerald-50/70 p-2 rounded-xl border border-emerald-100">
                 <span>Server Status:</span>
-                <span className="font-bold text-emerald-800 flex items-center gap-1">🟢 Online & Healthy</span>
+                <span className="font-bold text-emerald-800 flex items-center gap-1">ðŸŸ¢ Online & Healthy</span>
               </div>
               <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl">
                 <span>Platform Version:</span>

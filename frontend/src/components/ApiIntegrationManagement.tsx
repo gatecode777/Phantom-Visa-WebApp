@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Globe,
   Key,
@@ -166,7 +166,7 @@ export default function ApiIntegrationManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -241,7 +241,7 @@ export default function ApiIntegrationManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">System Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Connected 🟢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Connected ðŸŸ¢</div>
           <span className="text-[10px] text-emerald-600 font-bold">All APIs Online</span>
         </div>
       </div>
@@ -264,7 +264,7 @@ export default function ApiIntegrationManagement() {
                   {c.category}
                 </span>
                 <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
-                  🟢 {c.status}
+                  ðŸŸ¢ {c.status}
                 </span>
               </div>
               <h4 className="text-xs font-bold text-slate-900 font-outfit">{c.name}</h4>
@@ -405,7 +405,7 @@ export default function ApiIntegrationManagement() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           k.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                         }`}>
-                          {k.status === "Active" ? "🟢 Active" : "🟡 Sandbox"}
+                          {k.status === "Active" ? "ðŸŸ¢ Active" : "ðŸŸ¡ Sandbox"}
                         </span>
                       </td>
                       <td className="py-2.5 text-center font-mono text-[11px] text-slate-600">{k.environment}</td>

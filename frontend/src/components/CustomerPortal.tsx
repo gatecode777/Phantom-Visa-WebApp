@@ -97,9 +97,27 @@ export default function CustomerPortal() {
     }
     return false;
   });
-  const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">("vault");
-  const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">("checkout");
-  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">("countries");
+  const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">(() => {
+    try {
+      const saved = localStorage.getItem("customer_active_subtab");
+      if (localStorage.getItem("customer_active_tab") === "documents" && saved) return saved as any;
+    } catch { }
+    return "vault";
+  });
+  const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">(() => {
+    try {
+      const saved = localStorage.getItem("customer_active_subtab");
+      if (localStorage.getItem("customer_active_tab") === "payments" && saved) return saved as any;
+    } catch { }
+    return "checkout";
+  });
+  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">(() => {
+    try {
+      const saved = localStorage.getItem("customer_active_subtab");
+      if (localStorage.getItem("customer_active_tab") === "explore" && saved) return saved as any;
+    } catch { }
+    return "countries";
+  });
 
   // Real-time dynamic KYC status state listener
   const [localKycStatus, setLocalKycStatus] = useState<string>(() => {
@@ -109,29 +127,18 @@ export default function CustomerPortal() {
     return "Pending";
   });
 
-  useEffect(() => {
-    const syncStatus = () => {
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("phantom_customer_kyc_status");
-        if (stored && stored !== localKycStatus) {
-          setLocalKycStatus(stored);
-        }
-      }
-    };
-    syncStatus();
-    const interval = setInterval(syncStatus, 1000);
-    return () => clearInterval(interval);
-  }, [localKycStatus]);
-
   const liveKycStatusFromDb =
     (applicantDashboardData as any)?.kycStatus ||
     (applicantDashboardData as any)?.kycDetails?.kycStatus ||
     (authSession?.user as any)?.kycStatus;
 
   // Sync localStorage with live DB status whenever DB status updates
+  // Guard with strict equality to avoid unnecessary re-renders that reset scroll position
   useEffect(() => {
-    if (liveKycStatusFromDb && typeof window !== "undefined") {
-      localStorage.setItem("phantom_customer_kyc_status", liveKycStatusFromDb);
+    if (liveKycStatusFromDb && liveKycStatusFromDb !== localKycStatus && typeof window !== "undefined") {
+      try {
+        localStorage.setItem("phantom_customer_kyc_status", liveKycStatusFromDb);
+      } catch (e) {}
       setLocalKycStatus(liveKycStatusFromDb);
     }
   }, [liveKycStatusFromDb]);
@@ -166,75 +173,61 @@ export default function CustomerPortal() {
     notifications: 3
   };
 
-  // Collapsible Sidebar Sections State
-  const [openMyApps, setOpenMyApps] = useState(true);
-  const [openDocs, setOpenDocs] = useState(false);
-  const [openPayments, setOpenPayments] = useState(false);
-  const [openAppts, setOpenAppts] = useState(false);
-  const [openExplore, setOpenExplore] = useState(false);
+  // Collapsible Sidebar Sections State — initialized from localStorage to avoid blink on reload
+  const [openMyApps, setOpenMyApps] = useState<boolean>(() => {
+    try { return localStorage.getItem("customer_active_tab") === "applications"; } catch { return false; }
+  });
+  const [openDocs, setOpenDocs] = useState<boolean>(() => {
+    try { return localStorage.getItem("customer_active_tab") === "documents"; } catch { return false; }
+  });
+  const [openPayments, setOpenPayments] = useState<boolean>(() => {
+    try { return localStorage.getItem("customer_active_tab") === "payments"; } catch { return false; }
+  });
+  const [openAppts, setOpenAppts] = useState<boolean>(() => {
+    try { return localStorage.getItem("customer_active_tab") === "appointments"; } catch { return false; }
+  });
+  const [openExplore, setOpenExplore] = useState<boolean>(() => {
+    try { return localStorage.getItem("customer_active_tab") === "explore"; } catch { return false; }
+  });
 
   const handleTabChange = (tab: CustomerTab, subTab?: string) => {
     setCustomerTab(tab);
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      params.set("tab", tab);
+    // Persist active tab to localStorage so page reload restores position
+    try {
+      localStorage.setItem("customer_active_tab", tab);
       if (subTab) {
-        params.set("subTab", subTab);
         localStorage.setItem("customer_active_subtab", subTab);
       } else {
-        params.delete("subTab");
         localStorage.removeItem("customer_active_subtab");
       }
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
-      window.history.replaceState(null, "", newUrl);
-      localStorage.setItem("customer_active_tab", tab);
-    }
+    } catch (e) {}
+    // Close all dropdowns when switching to a top-level tab that isn't the one being opened
+    if (tab !== "applications") setOpenMyApps(false);
+    if (tab !== "documents") setOpenDocs(false);
+    if (tab !== "payments") setOpenPayments(false);
+    if (tab !== "appointments") setOpenAppts(false);
+    if (tab !== "explore") setOpenExplore(false);
   };
 
-  // Auto-refresh applicant dashboard status every 3 seconds to capture Admin approvals live
+  // Fetch dashboard data on mount
   useEffect(() => {
     if (fetchApplicantDashboardData) {
       fetchApplicantDashboardData();
-      const timer = setInterval(() => {
-        fetchApplicantDashboardData();
-      }, 3000);
-      return () => clearInterval(timer);
-    }
-  }, []);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get("tab") as CustomerTab | null;
-      const urlSubTab = params.get("subTab");
-      const storedTab = localStorage.getItem("customer_active_tab") as CustomerTab | null;
-      const storedSubTab = localStorage.getItem("customer_active_subtab");
-
-      const targetTab = urlTab || storedTab;
-      const targetSubTab = urlSubTab || storedSubTab;
-
-      if (targetTab) {
-        setCustomerTab(targetTab);
-        if (targetTab === "documents") setOpenDocs(true);
-        if (targetTab === "applications") setOpenMyApps(true);
-        if (targetTab === "payments") setOpenPayments(true);
-        if (targetTab === "appointments") setOpenAppts(true);
-        if (targetTab === "explore") setOpenExplore(true);
-
-        if (targetSubTab) {
-          if (targetTab === "documents") setDocSubTab(targetSubTab as any);
-          if (targetTab === "applications") setAppFilter(targetSubTab as any);
-          if (targetTab === "payments") setPaymentSubTab(targetSubTab as any);
-        }
-      }
     }
   }, []);
 
-
-
-  // SUB-TAB STATES
+  // SUB-TAB STATES — initialized from localStorage to avoid blink on reload
   const [appFilter, setAppFilter] = useState<
-    "all" | "Draft" | "Submitted" | "Embassy Processing" | "Approved" | "Rejected" | "Docs Pending"
-  >("all");
+    "all" | "Draft" | "Submitted" | "Under Review" | "Approved" | "Rejected" | "Cancelled"
+  >(() => {
+    try {
+      const saved = localStorage.getItem("customer_active_subtab");
+      if (localStorage.getItem("customer_active_tab") === "applications" && saved) {
+        return saved as any;
+      }
+    } catch { }
+    return "all";
+  });
 
   // Modals
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -417,11 +410,11 @@ export default function CustomerPortal() {
       </header>
 
       {/* BODY LAYOUT: SIDEBAR + MAIN CONTENT */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT SIDEBAR NAVIGATION */}
-        <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between overflow-y-auto shrink-0 py-4 px-3 space-y-1">
-          <nav className="space-y-1">
+        <aside className="w-64 h-full bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 py-4 px-3">
+          <nav className="space-y-1 flex-1">
             <button
               onClick={() => handleTabChange("dashboard")}
               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
@@ -469,12 +462,7 @@ export default function CustomerPortal() {
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
                     { label: "All Applications", filter: "all" },
-                    { label: "Draft", filter: "Draft" },
-                    { label: "Submitted", filter: "Submitted" },
-                    { label: "Under Review", filter: "Embassy Processing" },
-                    { label: "Approved", filter: "Approved" },
-                    { label: "Rejected", filter: "Rejected" },
-                    { label: "Cancelled", filter: "Docs Pending" }
+                    { label: "Submitted", filter: "Submitted" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -562,9 +550,9 @@ export default function CustomerPortal() {
               {openPayments && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
-                    { label: "Make Payment", tab: "checkout" },
+                    { label: "Visa Fee Checkout", tab: "checkout" },
                     { label: "Payment History", tab: "history" },
-                    { label: "Invoices", tab: "invoices" }
+                    { label: "Invoices & Receipts", tab: "invoices" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -585,19 +573,39 @@ export default function CustomerPortal() {
               )}
             </div>
 
-            <button
-              onClick={() => handleTabChange("appointments")}
-              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
-                customerTab === "appointments"
-                  ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Calendar size={18} className={customerTab === "appointments" ? "text-[#4848F7]" : "text-slate-500"} />
-                <span>Appointments</span>
-              </div>
-            </button>
+            <div>
+              <button
+                onClick={() => {
+                  handleTabChange("appointments");
+                  setOpenAppts(!openAppts);
+                }}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                  customerTab === "appointments"
+                    ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar size={18} className={customerTab === "appointments" ? "text-[#4848F7]" : "text-slate-500"} />
+                  <span>Appointments</span>
+                </div>
+                {openAppts ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+              </button>
+
+              {openAppts && (
+                <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
+                  {["Book Appointment", "My Appointments", "Reschedule / Cancel"].map((sub) => (
+                    <button
+                      key={sub}
+                      onClick={() => handleTabChange("appointments")}
+                      className="w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-50 block transition"
+                    >
+                      {sub}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div>
               <button
@@ -621,20 +629,18 @@ export default function CustomerPortal() {
               {openExplore && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
-                    { label: "Explore Countries", tab: "countries" },
-                    { label: "Visa Types", tab: "types" },
-                    { label: "Visa Requirements", tab: "requirements" },
-                    { label: "Processing Time", tab: "processing" },
-                    { label: "Visa Fees", tab: "fees" }
+                    { label: "Countries & Fees", subTab: "countries" },
+                    { label: "Visa Types & Validity", subTab: "types" },
+                    { label: "Document Checklist", subTab: "requirements" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
                       onClick={() => {
-                        handleTabChange("explore", sub.tab);
-                        setExploreSubTab(sub.tab as any);
+                        handleTabChange("explore", sub.subTab);
+                        setExploreSubTab(sub.subTab as any);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
-                        customerTab === "explore" && exploreSubTab === sub.tab
+                        customerTab === "explore" && exploreSubTab === sub.subTab
                           ? "text-[#4848F7] font-bold bg-[#EEF2FF]/60"
                           : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                       }`}
@@ -693,7 +699,7 @@ export default function CustomerPortal() {
         </aside>
 
         {/* MAIN DASHBOARD CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F8FAFC]">
+        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto p-6 space-y-6 bg-[#F8FAFC]">
           
           {/* SECTION 1: MAIN DASHBOARD OVERVIEW */}
           {customerTab === "dashboard" && (
@@ -1209,21 +1215,40 @@ export default function CustomerPortal() {
               )
             ) : (
               <ApplicantApplyVisa
-                onAddApplication={(appData) => {
+                onAddApplication={(appData: any) => {
+                  const givenName = appData.personalDetails?.givenName || appData.givenName || "";
+                  const surname = appData.personalDetails?.surname || appData.surname || "";
+                  const travelerName = (givenName || surname)
+                    ? `${givenName} ${surname}`.trim()
+                    : appData.travelerName || "New Traveler";
+
+                  const destination = appData.countryName || appData.destination || "Canada";
+                  const visaType = appData.visaTypeName || appData.visaType || "Tourist Visa";
+                  const passportNumber = appData.passportDetails?.passportNo || appData.passportNumber || "Z9817264";
+                  const passportExpiry = appData.passportDetails?.expiryDate || appData.passportExpiry || "2033-12-20";
+                  const dob = appData.personalDetails?.dob || appData.dob || "1995-06-12";
+                  const nationality = appData.personalDetails?.nationality || appData.nationality || "Indian";
+                  
+                  const travelDates = (appData.travelDetails?.travelDate && appData.travelDetails?.returnDate)
+                    ? `${appData.travelDetails.travelDate} to ${appData.travelDetails.returnDate}`
+                    : appData.travelDates || "15 Oct 2026 to 15 Nov 2026";
+                  
+                  const fees = appData.pricing?.totalAmount || appData.fees || 11000;
+
                   addApplication({
-                    travelerName: appData.travelerName || "New Traveler",
-                    dob: appData.dob || "1995-06-12",
-                    passportNumber: appData.passportNumber || "Z9817264",
-                    passportExpiry: appData.passportExpiry || "2033-12-20",
-                    nationality: appData.nationality || "Indian",
-                    destination: appData.destination || "Australia",
-                    visaType: appData.visaType || "Tourist Visa",
-                    travelDates: appData.travelDates || "15 Oct 2026 to 15 Nov 2026",
+                    travelerName,
+                    dob,
+                    passportNumber,
+                    passportExpiry,
+                    nationality,
+                    destination,
+                    visaType,
+                    travelDates,
                     status: appData.status || "Submitted",
-                    fees: appData.fees || 16500,
+                    fees,
                     verifiedDocs: appData.verifiedDocs || {
-                      passport: "verified",
-                      photo: "verified"
+                      passport: "pending",
+                      photo: "pending"
                     },
                     documentsSubmitted: true,
                     kycCompleted: true
@@ -1242,6 +1267,16 @@ export default function CustomerPortal() {
           )}
 
           {/* MY APPLICATIONS VIEW */}
+          {customerTab === "applications" && (appFilter === "all" || !appFilter || (appFilter as string) === "all") && (
+            <ApplicantAllApplications
+              applications={applications}
+              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
+              onNavigateApply={() => setCustomerTab("apply")}
+              onNavigateSupport={() => setCustomerTab("support")}
+              onUpdateDocs={updateApplicationDocs}
+            />
+          )}
+
           {customerTab === "applications" && appFilter === "Draft" && (
             <ApplicantDraftApplications
               applications={applications}
@@ -1260,7 +1295,7 @@ export default function CustomerPortal() {
             />
           )}
 
-          {customerTab === "applications" && appFilter === "Embassy Processing" && (
+          {customerTab === "applications" && appFilter === "Under Review" && (
             <ApplicantUnderReviewApplications
               applications={applications}
               onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
@@ -1285,21 +1320,11 @@ export default function CustomerPortal() {
             />
           )}
 
-          {customerTab === "applications" && (appFilter === "Docs Pending" || (appFilter as string) === "Cancelled") && (
+          {customerTab === "applications" && appFilter === "Cancelled" && (
             <ApplicantCancelledApplications
               applications={applications}
               onNavigateApply={() => setCustomerTab("apply")}
               onNavigatePayments={() => setCustomerTab("payments")}
-            />
-          )}
-
-          {customerTab === "applications" && appFilter !== "Draft" && appFilter !== "Submitted" && appFilter !== "Embassy Processing" && appFilter !== "Approved" && appFilter !== "Rejected" && appFilter !== "Docs Pending" && (appFilter as string) !== "Cancelled" && (
-            <ApplicantAllApplications
-              applications={applications}
-              onSelectAppForTracking={(appId) => setSelectedAppId(appId)}
-              onNavigateApply={() => setCustomerTab("apply")}
-              onNavigateSupport={() => setCustomerTab("support")}
-              onUpdateDocs={updateApplicationDocs}
             />
           )}
 

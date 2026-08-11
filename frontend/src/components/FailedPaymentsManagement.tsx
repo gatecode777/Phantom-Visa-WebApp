@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   XCircle,
   Search,
@@ -273,7 +273,7 @@ export default function FailedPaymentsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -352,7 +352,7 @@ export default function FailedPaymentsManagement() {
               {FAILED_PAYMENT_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    ▼
+                    â–¼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -584,7 +584,7 @@ export default function FailedPaymentsManagement() {
                       {p.agentName && <span className="block text-[10px] text-slate-400 font-normal">({p.agentName})</span>}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-red-600">
-                      ₹{p.amount.toLocaleString()}
+                      â‚¹{p.amount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">
                       {p.paymentMethod}
@@ -598,11 +598,11 @@ export default function FailedPaymentsManagement() {
                     <td className="py-3.5 px-4">
                       {p.status === "Retry Pending" ? (
                         <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-purple-200">
-                          🔄 Retry Pending
+                          ðŸ”„ Retry Pending
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          🔴 Failed
+                          ðŸ”´ Failed
                         </span>
                       )}
                     </td>
@@ -650,7 +650,7 @@ export default function FailedPaymentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 580 Failed Payments</div>
+          <div>Showing 1â€“10 of 580 Failed Payments</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -691,7 +691,7 @@ export default function FailedPaymentsManagement() {
                       Transaction {activeModalPayment.txnId}
                     </h3>
                     <span className="font-mono text-xs font-bold text-red-300 bg-red-900/50 px-2 py-0.5 rounded border border-red-700">
-                      ₹{activeModalPayment.amount.toLocaleString()} (FAILED)
+                      â‚¹{activeModalPayment.amount.toLocaleString()} (FAILED)
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">App ID: <strong className="text-blue-300">{activeModalPayment.appId}</strong> &bull; Failure: {activeModalPayment.failureReason}</p>

@@ -1,12 +1,28 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IApplicationDocument {
+  _id?: string;
   requirementId?: string;
   title: string;
   documentType: string;
   isMandatory: boolean;
   fileUrl: string;
-  status: "uploaded" | "verified" | "needs_review" | "pending";
+  fileName?: string;
+  fileSize?: string;
+  format?: string;
+  status: "uploaded" | "verified" | "needs_review" | "rejected" | "pending" | "not_uploaded";
+  rejectionReason?: string;
+  uploadedAt?: Date | string;
+  verifiedBy?: string;
+  verificationDate?: string;
+  aiMatchScore?: number;
+  ocrData?: {
+    passportNo?: string;
+    dob?: string;
+    nameMatch?: boolean;
+    issueDate?: string;
+    expiryDate?: string;
+  };
 }
 
 export interface ICoTraveler {
@@ -71,6 +87,7 @@ export interface IApplication extends Document {
     totalAmount: number;
   };
   status: "Draft" | "Submitted" | "Docs Pending" | "Embassy Processing" | "Approved" | "Rejected" | "Cancelled";
+  rejectionReason?: string;
   workflowStage: number; // 1 = Applicant Fills & Submits, 2 = Agent AI & OCR, 3 = Embassy Consular Submission, 4 = Visa Decision Granted
   createdAt: Date;
   updatedAt: Date;
@@ -127,7 +144,26 @@ const ApplicationSchema: Schema = new Schema(
         documentType: { type: String, default: "PDF Document" },
         isMandatory: { type: Boolean, default: true },
         fileUrl: { type: String, default: "" },
-        status: { type: String, enum: ["uploaded", "verified", "needs_review", "pending"], default: "uploaded" }
+        fileName: { type: String, default: "" },
+        fileSize: { type: String, default: "" },
+        format: { type: String, default: "" },
+        status: {
+          type: String,
+          enum: ["uploaded", "verified", "needs_review", "rejected", "pending", "not_uploaded"],
+          default: "not_uploaded"
+        },
+        rejectionReason: { type: String, default: "" },
+        uploadedAt: { type: Date },
+        verifiedBy: { type: String, default: "" },
+        verificationDate: { type: String, default: "" },
+        aiMatchScore: { type: Number, default: 0 },
+        ocrData: {
+          passportNo: String,
+          dob: String,
+          nameMatch: Boolean,
+          issueDate: String,
+          expiryDate: String
+        }
       }
     ],
     coTravelers: [
@@ -152,6 +188,7 @@ const ApplicationSchema: Schema = new Schema(
       enum: ["Draft", "Submitted", "Docs Pending", "Embassy Processing", "Approved", "Rejected", "Cancelled"],
       default: "Submitted"
     },
+    rejectionReason: { type: String, default: "" },
     workflowStage: { type: Number, default: 1 }
   },
   { timestamps: true }

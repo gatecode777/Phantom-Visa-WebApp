@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import mongoose from "mongoose";
 import multer from "multer";
 import ApplicationModel from "../models/Application.js";
 import CountryModel from "../models/Country.js";
@@ -63,13 +64,13 @@ router.get("/", async (req: Request, res: Response) => {
       const defaultApps = [
         {
           applicationId: "VO-2026-9841",
-          countryName: "Australia",
-          countryCode: "AUS",
+          countryName: "Canada",
+          countryCode: "CAN",
           categoryName: "Tourist / Visitor",
-          visaTypeName: "Subclass 600 Tourist Visa",
+          visaTypeName: "Canada Express Visitor Visa",
           processingSpeed: "express",
-          entryType: "Single Entry",
-          stayValidity: "60 Days",
+          entryType: "Multiple Entry",
+          stayValidity: "180 Days",
           personalDetails: {
             givenName: "Geeta",
             surname: "Sharma",
@@ -84,8 +85,8 @@ router.get("/", async (req: Request, res: Response) => {
             travelDate: "2026-10-15",
             returnDate: "2026-11-15",
             stayType: "Hotel Booking",
-            hostName: "Shangri-La Sydney",
-            hostAddress: "176 Cumberland St, Sydney"
+            hostName: "Fairmont Royal York Toronto",
+            hostAddress: "100 Front St W, Toronto, ON"
           },
           passportDetails: {
             passportType: "Ordinary / Regular",
@@ -98,16 +99,68 @@ router.get("/", async (req: Request, res: Response) => {
             employmentStatus: "Employed",
             employerName: "TechCorp Solutions Pvt Ltd",
             jobTitle: "Senior Product Designer",
-            bankBalance: "₹4,50,000"
+            bankBalance: "₹6,50,000"
           },
           uploadedDocuments: [
-            { title: "Passport Bio Page", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/sample_passport.png", status: "verified" },
-            { title: "Recent Photo (35x45mm)", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/sample_photo.png", status: "verified" },
-            { title: "6-Month Bank Statement", documentType: "PDF Document", isMandatory: true, fileUrl: "https://ik.imagekit.io/zp0tch54w/PHANTOM-VISA/sample_bank.pdf", status: "verified" }
+            { title: "Passport Bio Page", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png", status: "verified" },
+            { title: "Recent Photo (35x45mm)", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_photo.png", status: "verified" },
+            { title: "6-Month Bank Statement", documentType: "PDF Document", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf", status: "verified" }
           ],
           coTravelers: [
             { id: "ct-1", name: "Rohan Sharma", relation: "Spouse", passportNo: "Z9817265", age: 32 }
           ],
+          pricing: {
+            consularFee: 8500,
+            platformFee: 2500,
+            expressSurcharge: 2000,
+            promoDiscount: 0,
+            promoCode: "",
+            totalAmount: 13000
+          },
+          status: "Submitted",
+          workflowStage: 1
+        },
+        {
+          applicationId: "VO-2026-1229",
+          countryName: "Australia",
+          countryCode: "AUS",
+          categoryName: "Tourist / Visitor",
+          visaTypeName: "Subclass 600 Tourist Visa",
+          processingSpeed: "express",
+          entryType: "Single Entry",
+          stayValidity: "60 Days",
+          personalDetails: {
+            givenName: "Vikram",
+            surname: "Mehta",
+            dob: "1988-03-24",
+            gender: "Male",
+            nationality: "Indian",
+            maritalStatus: "Married",
+            phone: "+91 98112 33445",
+            email: "vikram.mehta@outlook.com"
+          },
+          travelDetails: {
+            travelDate: "2026-09-10",
+            returnDate: "2026-09-28",
+            stayType: "Hotel Booking",
+            hostName: "Shangri-La Sydney",
+            hostAddress: "176 Cumberland St, Sydney"
+          },
+          passportDetails: {
+            passportType: "Ordinary / Regular",
+            passportNo: "Z4481920",
+            issuePlace: "Mumbai",
+            issueDate: "2022-05-10",
+            expiryDate: "2032-05-09"
+          },
+          employmentDetails: {
+            employmentStatus: "Employed",
+            employerName: "Infosys Technologies",
+            jobTitle: "Project Lead",
+            bankBalance: "₹8,20,000"
+          },
+          uploadedDocuments: [],
+          coTravelers: [],
           pricing: {
             consularFee: 12500,
             platformFee: 2500,
@@ -141,10 +194,13 @@ router.get("/", async (req: Request, res: Response) => {
  */
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const application = await ApplicationModel.findOne({
-      $or: [{ _id: id }, { applicationId: id }]
-    });
+    const targetId = String(req.params.id);
+    const queryConditions: any[] = [{ applicationId: targetId }];
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      queryConditions.push({ _id: targetId });
+    }
+
+    const application = await ApplicationModel.findOne({ $or: queryConditions });
 
     if (!application) {
       return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Application record not found."));
@@ -336,6 +392,192 @@ router.post("/submit", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Submit Application Error:", error);
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to submit visa application."));
+  }
+});
+
+/**
+ * PUT /api/v1/applications/:id/status
+ * Update visa application status (Approved, Rejected, Under Review, Submitted) in MongoDB
+ */
+router.put("/:id/status", async (req: Request, res: Response) => {
+  try {
+    const targetId = String(req.params.id);
+    const { status, rejectionReason } = req.body;
+
+    if (!status) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Status parameter is required."));
+    }
+
+    const queryConditions: any[] = [{ applicationId: targetId }];
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      queryConditions.push({ _id: targetId });
+    }
+
+    const application = await ApplicationModel.findOne({ $or: queryConditions });
+
+    if (!application) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", `Application with ID ${targetId} not found.`));
+    }
+
+    application.status = status;
+
+    // Save rejection reason when rejecting
+    if (status === "Rejected" && rejectionReason) {
+      (application as any).rejectionReason = String(rejectionReason).trim();
+    }
+
+    // Auto-verify docs when approving
+    if (status === "Approved" && Array.isArray(application.uploadedDocuments)) {
+      application.uploadedDocuments.forEach((doc: any) => {
+        doc.status = "verified";
+      });
+    }
+
+    await application.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Application ${targetId} status updated to ${status} successfully.`,
+      data: application
+    });
+  } catch (error: any) {
+    console.error("Update Application Status Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to update application status."));
+  }
+});
+
+/**
+ * GET /api/v1/applications/admin/all-documents
+ * Flatten and return all uploaded documents across all applications for Admin All Documents screen
+ * Includes computed summary metrics (Total, Verified, Pending, Rejected, Expired)
+ */
+router.get("/admin/all-documents", async (req: Request, res: Response) => {
+  try {
+    const applications = await ApplicationModel.find().sort({ createdAt: -1 });
+
+    const allDocs: any[] = [];
+    let totalVerified = 0;
+    let totalPending = 0;
+    let totalRejected = 0;
+    let totalExpired = 0;
+
+    for (const app of applications) {
+      const docs = Array.isArray(app.uploadedDocuments) ? app.uploadedDocuments : [];
+      for (const doc of docs) {
+        const statusNormalized = (doc.status || "uploaded").toLowerCase();
+        let displayStatus = "Pending";
+        if (statusNormalized === "verified") displayStatus = "Verified";
+        else if (statusNormalized === "rejected") displayStatus = "Rejected";
+        else if (statusNormalized === "needs_review") displayStatus = "Re-upload Requested";
+        else if (statusNormalized === "expired") displayStatus = "Expired";
+
+        if (displayStatus === "Verified") totalVerified++;
+        else if (displayStatus === "Rejected") totalRejected++;
+        else if (displayStatus === "Expired") totalExpired++;
+        else totalPending++;
+
+        const applicantName = `${app.personalDetails?.givenName || ""} ${app.personalDetails?.surname || ""}`.trim() || "Applicant";
+
+        allDocs.push({
+          id: (doc as any)._id ? String((doc as any)._id) : doc.requirementId || `doc_${allDocs.length + 1}`,
+          docId: (doc as any)._id ? `DOC-${String((doc as any)._id).slice(-6).toUpperCase()}` : `DOC-${1000 + allDocs.length}`,
+          appId: app.applicationId,
+          applicantName,
+          passportNumber: app.passportDetails?.passportNo || "N/A",
+          documentType: doc.documentType || "PDF Document",
+          documentName: doc.title,
+          fileFormat: doc.format || "PDF",
+          fileSize: doc.fileSize || "2.5 MB",
+          fileUrl: doc.fileUrl || "",
+          uploadedBy: "Applicant",
+          uploadDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : new Date(app.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+          uploadDateTime: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString("en-GB") : new Date(app.createdAt).toLocaleString("en-GB"),
+          verificationStatus: displayStatus,
+          verifiedBy: doc.verifiedBy || (displayStatus === "Verified" ? "AI System" : undefined),
+          verificationDate: doc.verificationDate || (doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-GB") : undefined),
+          rejectionReason: doc.rejectionReason || "",
+          remarks: doc.rejectionReason || "",
+          country: app.countryName,
+          aiMatchScore: doc.aiMatchScore || (displayStatus === "Verified" ? 95 : 75)
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        totalDocuments: allDocs.length,
+        verified: totalVerified,
+        pending: totalPending,
+        rejected: totalRejected,
+        expired: totalExpired,
+        centralArchive: allDocs.length
+      },
+      data: allDocs
+    });
+  } catch (error: any) {
+    console.error("Fetch Admin All Documents Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to fetch all documents."));
+  }
+});
+
+/**
+ * PUT /api/v1/applications/:id/documents/:docId/status
+ * Update a specific document's status (Verified / Rejected / Pending) inside an application
+ */
+router.put("/:id/documents/:docId/status", async (req: Request, res: Response) => {
+  try {
+    const idStr = String(req.params.id);
+    const docIdStr = String(req.params.docId);
+    const { status, rejectionReason, verifiedBy } = req.body;
+
+    if (!status) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Document status parameter is required."));
+    }
+
+    const application = await ApplicationModel.findOne({
+      $or: [{ applicationId: idStr }, { _id: mongoose.Types.ObjectId.isValid(idStr) ? idStr : null }]
+    });
+
+    if (!application) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", `Application ${idStr} not found.`));
+    }
+
+    const docs = application.uploadedDocuments || [];
+    const docIndex = docs.findIndex(
+      (d: any) => String(d._id) === docIdStr || d.requirementId === docIdStr || (d.title && d.title.toLowerCase() === docIdStr.toLowerCase())
+    );
+
+    if (docIndex === -1) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", `Document ${docIdStr} not found on application ${idStr}.`));
+    }
+
+    const doc = docs[docIndex];
+    doc.status = status.toLowerCase() === "verified" ? "verified" : status.toLowerCase() === "rejected" ? "rejected" : status.toLowerCase();
+    if (rejectionReason) doc.rejectionReason = String(rejectionReason).trim();
+    if (verifiedBy) doc.verifiedBy = String(verifiedBy).trim();
+    doc.verificationDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    // Check overall docs to update application docs workflow stage
+    const hasRejected = docs.some((d: any) => d.status === "rejected");
+    const allMandatoryVerified = docs.filter((d: any) => d.isMandatory).every((d: any) => d.status === "verified");
+
+    if (hasRejected) {
+      application.status = "Docs Pending";
+    } else if (allMandatoryVerified) {
+      application.workflowStage = Math.max(application.workflowStage, 3);
+    }
+
+    await application.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Document status updated to ${doc.status} successfully.`,
+      data: doc
+    });
+  } catch (error: any) {
+    console.error("Update Document Status Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to update document status."));
   }
 });
 

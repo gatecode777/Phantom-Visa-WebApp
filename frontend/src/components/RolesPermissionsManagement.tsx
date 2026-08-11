@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   ShieldCheck,
   Shield,
@@ -119,7 +119,7 @@ export default function RolesPermissionsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -241,7 +241,7 @@ export default function RolesPermissionsManagement() {
                     <td className="py-2.5 text-center font-mono font-bold text-slate-900">{r.usersAssigned.toLocaleString()}</td>
                     <td className="py-2.5 text-center font-mono font-bold text-blue-700">{r.permissionsCount} Rights</td>
                     <td className="py-2.5 text-center">
-                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">🟢 {r.status}</span>
+                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">ðŸŸ¢ {r.status}</span>
                     </td>
                     <td className="py-2.5 text-center font-mono text-[11px] text-slate-500">{r.lastUpdated}</td>
                     <td className="py-2.5 text-right space-x-1">
@@ -284,9 +284,9 @@ export default function RolesPermissionsManagement() {
                 {MOCK_MATRIX.map((m, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-2 font-bold text-slate-800">{m.module}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.view ? "✓" : "✗"}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.edit ? "✓" : "✗"}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.approve ? "✓" : "✗"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.view ? "âœ“" : "âœ—"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.edit ? "âœ“" : "âœ—"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.approve ? "âœ“" : "âœ—"}</td>
                   </tr>
                 ))}
               </tbody>

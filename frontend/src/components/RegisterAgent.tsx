@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { API_V1_URL } from "../config/api";
 import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
 import {
@@ -382,7 +382,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
       
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -675,7 +675,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                       </label>
                       <input
                         type="password"
-                        placeholder="••••••••"
+                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
                         className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:bg-white transition ${
@@ -691,7 +691,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                       </label>
                       <input
                         type="password"
-                        placeholder="••••••••"
+                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         value={formData.confirmPassword}
                         onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                         className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:bg-white transition ${
@@ -913,7 +913,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                         </span>
                         <div className={`flex items-center justify-between bg-white border p-2.5 rounded-xl ${errors[doc.key] ? "border-red-400 ring-2 ring-red-500/10" : "border-slate-200"}`}>
                           <span className={`text-[11px] truncate max-w-[180px] ${uploadedFiles[doc.key] ? "text-emerald-700 font-bold" : "text-slate-500"}`}>
-                            {uploadedFiles[doc.key] ? `✓ ${uploadedFiles[doc.key]}` : "No file uploaded"}
+                            {uploadedFiles[doc.key] ? `âœ“ ${uploadedFiles[doc.key]}` : "No file uploaded"}
                           </span>
                           <label className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] text-[11px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1">
                             <Upload size={12} />
@@ -989,7 +989,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
 
                     <div>
                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                        Bank Account Number <span className="text-red-500">*</span> (9–18 Digits)
+                        Bank Account Number <span className="text-red-500">*</span> (9â€“18 Digits)
                       </label>
                       <input
                         type="text"
