@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import VisaCategory from "../models/VisaCategory.js";
 import VisaType from "../models/VisaType.js";
 import VisaRequirement from "../models/VisaRequirement.js";
+import DocumentTemplate from "../models/DocumentTemplate.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
 
 const router = Router();
@@ -417,7 +418,7 @@ router.get("/requirements", async (req: Request, res: Response) => {
           visaTypeName: defaultTypeName,
           documentType: "Bank Statement",
           isMandatory: true,
-          description: "Attested bank statement showing minimum closing balance of ₹2.5 Lakhs per applicant.",
+          description: "Attested bank statement showing minimum closing balance of â‚¹2.5 Lakhs per applicant.",
           status: "Active"
         },
         {
@@ -431,7 +432,7 @@ router.get("/requirements", async (req: Request, res: Response) => {
           status: "Active"
         },
         {
-          title: "Schengen Approved Travel Health Insurance (€30,000 Cover)",
+          title: "Schengen Approved Travel Health Insurance (â‚¬30,000 Cover)",
           code: "VR-REQ-INSURANCE",
           visaTypeId: defaultTypeId,
           visaTypeName: defaultTypeName,
@@ -582,6 +583,182 @@ router.delete("/requirements/:id", async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Visa Requirement deleted successfully."
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+// ============================================================================
+// 4. DOCUMENT TEMPLATES API ROUTES
+// ============================================================================
+
+/**
+ * GET /api/v1/visa/templates
+ * Retrieve all document templates from MongoDB (Auto-seeds default templates if empty)
+ */
+router.get("/templates", async (_req: Request, res: Response) => {
+  try {
+    let templates = await DocumentTemplate.find().sort({ createdAt: -1 });
+
+    if (templates.length === 0) {
+      const defaultTemplates = [
+        {
+          templateId: "TMP-101",
+          title: "Canada Tourist Visa Personal Cover Letter",
+          category: "Cover Letter",
+          country: "Canada",
+          fileFormat: "DOCX",
+          fileSize: "120 KB",
+          downloadsCount: 1420,
+          status: "Active",
+          description: "Standard personal cover letter format required for Canadian tourist visa applications.",
+          templateBody: `To,\nThe High Commission of Canada / Visa Officer,\n\nSubject: Application for Visitor Visa for {APPLICANT_NAME} (Passport No: {PASSPORT_NUMBER})\n\nRespected Sir/Madam,\n\nI am writing to formally submit my application for a Canadian Tourist Visa. I plan to visit Canada from {TRAVEL_START_DATE} to {TRAVEL_END_DATE} for sightseeing and holiday purposes.\n\nMy travel itinerary and funds are enclosed herein. I assure you that I will comply with all visa regulations and return to my home country before the expiry of my authorized stay.\n\nThanking you,\n{APPLICANT_NAME}\nContact: {APPLICANT_PHONE}`,
+          placeholderFields: ["{APPLICANT_NAME}", "{PASSPORT_NUMBER}", "{TRAVEL_START_DATE}", "{TRAVEL_END_DATE}", "{APPLICANT_PHONE}"]
+        },
+        {
+          templateId: "TMP-102",
+          title: "Schengen Visa Employer NOC & Leave Sanction Letter",
+          category: "NOC / Leave Letter",
+          country: "Schengen / Europe",
+          fileFormat: "DOCX",
+          fileSize: "95 KB",
+          downloadsCount: 2150,
+          status: "Active",
+          description: "No Objection Certificate (NOC) format on official employer letterhead for Schengen short-stay visas.",
+          templateBody: `TO WHOM IT MAY CONCERN\n\nDate: {CURRENT_DATE}\n\nThis is to certify that Mr./Ms. {APPLICANT_NAME}, holding Passport No: {PASSPORT_NUMBER}, is employed with {EMPLOYER_NAME} as a {JOB_TITLE} since {EMPLOYMENT_START_DATE}.\n\nWe have no objection to {APPLICANT_NAME} traveling to Schengen countries from {TRAVEL_START_DATE} to {TRAVEL_END_DATE} for personal vacation. Approved leave has been sanctioned for this period.\n\nSincerely,\n{HR_MANAGER_NAME}\n{EMPLOYER_NAME}`,
+          placeholderFields: ["{CURRENT_DATE}", "{APPLICANT_NAME}", "{PASSPORT_NUMBER}", "{EMPLOYER_NAME}", "{JOB_TITLE}", "{EMPLOYMENT_START_DATE}", "{TRAVEL_START_DATE}", "{TRAVEL_END_DATE}", "{HR_MANAGER_NAME}"]
+        },
+        {
+          templateId: "TMP-103",
+          title: "UK Visitor Visa Sponsorship & Financial Support Affidavit",
+          category: "Sponsorship Letter",
+          country: "United Kingdom",
+          fileFormat: "PDF",
+          fileSize: "180 KB",
+          downloadsCount: 980,
+          status: "Active",
+          description: "Formal declaration of financial support & accommodation guarantee for UK visitor visas.",
+          templateBody: `SPONSORSHIP DECLARATION\n\nI, {SPONSOR_NAME}, residing at {SPONSOR_ADDRESS}, UK, hereby declare that I am sponsoring the UK visit of my {RELATIONSHIP}, {APPLICANT_NAME} (Passport No: {PASSPORT_NUMBER}).\n\nI undertake full financial responsibility for accommodation, travel, medical and living expenses during their visit from {TRAVEL_START_DATE} to {TRAVEL_END_DATE}.\n\nSignature: ____________________\n{SPONSOR_NAME}`,
+          placeholderFields: ["{SPONSOR_NAME}", "{SPONSOR_ADDRESS}", "{RELATIONSHIP}", "{APPLICANT_NAME}", "{PASSPORT_NUMBER}", "{TRAVEL_START_DATE}", "{TRAVEL_END_DATE}"]
+        },
+        {
+          templateId: "TMP-104",
+          title: "US B1/B2 Self-Funding Financial Affidavit",
+          category: "Financial Affidavit",
+          country: "USA",
+          fileFormat: "DOCX",
+          fileSize: "110 KB",
+          downloadsCount: 1640,
+          status: "Active",
+          description: "Self-declaration affidavit confirming liquid assets and personal funding for US B1/B2 visas.",
+          templateBody: `AFFIDAVIT OF FINANCIAL SUPPORT\n\nI, {APPLICANT_NAME}, holder of Passport No {PASSPORT_NUMBER}, do hereby solemnly affirm that I possess sufficient liquid funds in my bank account ({BANK_NAME}, A/C No: {ACCOUNT_NUMBER}) to cover all expenses for my US trip.\n\nSworn on {CURRENT_DATE} at {CITY_NAME}.\n\nDeponent: {APPLICANT_NAME}`,
+          placeholderFields: ["{APPLICANT_NAME}", "{PASSPORT_NUMBER}", "{BANK_NAME}", "{ACCOUNT_NUMBER}", "{CURRENT_DATE}", "{CITY_NAME}"]
+        }
+      ];
+
+      templates = await DocumentTemplate.insertMany(defaultTemplates);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: templates
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * POST /api/v1/visa/templates
+ * Create a new Document Template in MongoDB
+ */
+router.post("/templates", async (req: Request, res: Response) => {
+  try {
+    const { title, category, country, fileFormat, fileSize, description, templateBody, placeholderFields, status } = req.body;
+
+    if (!title || !category || !templateBody) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Title, category, and templateBody are required."));
+    }
+
+    const templateId = `TMP-${Math.floor(100 + Math.random() * 900)}`;
+
+    const template = new DocumentTemplate({
+      templateId,
+      title: String(title).trim(),
+      category: String(category).trim(),
+      country: country ? String(country).trim() : "Global / All",
+      fileFormat: fileFormat || "DOCX",
+      fileSize: fileSize || "120 KB",
+      downloadsCount: 0,
+      status: status || "Active",
+      description: description ? String(description).trim() : "",
+      templateBody: String(templateBody).trim(),
+      placeholderFields: Array.isArray(placeholderFields) ? placeholderFields : []
+    });
+
+    await template.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Document template created successfully.",
+      data: template
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * PUT /api/v1/visa/templates/:id
+ * Update an existing Document Template
+ */
+router.put("/templates/:id", async (req: Request, res: Response) => {
+  try {
+    const { title, category, country, fileFormat, fileSize, description, templateBody, placeholderFields, status, downloadsCount } = req.body;
+
+    const template = await DocumentTemplate.findById(req.params.id);
+    if (!template) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Document Template not found."));
+    }
+
+    if (title) template.title = String(title).trim();
+    if (category) template.category = String(category).trim();
+    if (country) template.country = String(country).trim();
+    if (fileFormat) template.fileFormat = fileFormat;
+    if (fileSize) template.fileSize = fileSize;
+    if (description !== undefined) template.description = String(description).trim();
+    if (templateBody) template.templateBody = String(templateBody).trim();
+    if (Array.isArray(placeholderFields)) template.placeholderFields = placeholderFields;
+    if (status) template.status = status;
+    if (typeof downloadsCount === "number") template.downloadsCount = downloadsCount;
+
+    await template.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Document template updated successfully.",
+      data: template
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * DELETE /api/v1/visa/templates/:id
+ * Delete a Document Template
+ */
+router.delete("/templates/:id", async (req: Request, res: Response) => {
+  try {
+    const template = await DocumentTemplate.findByIdAndDelete(req.params.id);
+    if (!template) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Document Template not found."));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Document template deleted successfully."
     });
   } catch (error: any) {
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));

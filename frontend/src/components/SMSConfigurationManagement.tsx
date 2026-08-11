@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Smartphone,
   Server,
@@ -68,7 +68,7 @@ export default function SMSConfigurationManagement() {
   // Config States
   const [smsProvider, setSmsProvider] = useState("Twilio");
   const [accountSid, setAccountSid] = useState("AC9876543210fedcba");
-  const [authToken, setAuthToken] = useState("••••••••••••••••");
+  const [authToken, setAuthToken] = useState("â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢");
   const [senderId, setSenderId] = useState("PHTMVS");
   const [entityId, setEntityId] = useState("1201159876543210");
   const [headerId, setHeaderId] = useState("1302159876543210");
@@ -90,14 +90,14 @@ export default function SMSConfigurationManagement() {
   };
 
   const handleCheckBalance = () => {
-    triggerToast("SMS Credit Balance: ₹18,450.00 (Sufficient).");
+    triggerToast("SMS Credit Balance: â‚¹18,450.00 (Sufficient).");
   };
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -166,13 +166,13 @@ export default function SMSConfigurationManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Credit Balance</span>
-          <div className="text-xl font-black text-slate-900 font-mono">₹18,450</div>
+          <div className="text-xl font-black text-slate-900 font-mono">â‚¹18,450</div>
           <span className="text-[10px] text-blue-600 font-bold">Sufficient Credit</span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">SMS Gateway</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Connected 🟢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Connected ðŸŸ¢</div>
           <span className="text-[10px] text-emerald-600 font-bold">Twilio Active</span>
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function SMSConfigurationManagement() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           log.status === "Delivered" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                         }`}>
-                          {log.status === "Delivered" ? "🟢 Delivered" : "🔴 Failed"}
+                          {log.status === "Delivered" ? "ðŸŸ¢ Delivered" : "ðŸ”´ Failed"}
                         </span>
                       </td>
                       <td className="py-2 text-right font-mono text-[11px] text-slate-500">{log.sentTime}</td>
@@ -303,15 +303,15 @@ export default function SMSConfigurationManagement() {
             <div className="space-y-2 text-xs font-semibold">
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DLT Entity Reg:</span>
-                <span className="font-bold text-emerald-800">Verified 🟢</span>
+                <span className="font-bold text-emerald-800">Verified ðŸŸ¢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>Sender ID Status:</span>
-                <span className="font-bold text-emerald-800">Active 🟢</span>
+                <span className="font-bold text-emerald-800">Active ðŸŸ¢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DLT Templates:</span>
-                <span className="font-bold text-emerald-800">12 Approved 🟢</span>
+                <span className="font-bold text-emerald-800">12 Approved ðŸŸ¢</span>
               </div>
             </div>
           </div>

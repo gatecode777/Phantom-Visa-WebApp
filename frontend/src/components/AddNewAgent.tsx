@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { API_V1_URL } from "../config/api";
 import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
 import {
@@ -459,7 +459,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
     <div className="space-y-6 animate-in fade-in duration-200 text-slate-800 pb-12">
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -677,7 +677,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                 </label>
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition font-mono ${
@@ -693,7 +693,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                 </label>
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:bg-white transition font-mono ${
@@ -1117,7 +1117,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                       onChange={(e) => handleInputChange("commissionType", e.target.value)}
                       className="text-[#2563EB] focus:ring-0 cursor-pointer"
                     />
-                    <span>Fixed Amount (₹)</span>
+                    <span>Fixed Amount (â‚¹)</span>
                   </label>
                 </div>
               </div>
@@ -1248,25 +1248,25 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
 
             <ul className="space-y-2.5 text-xs text-slate-600 font-medium">
               <li className="flex items-start gap-2">
-                <span className="text-[#2563EB] font-bold">•</span>
+                <span className="text-[#2563EB] font-bold">â€¢</span>
                 <span>
                   First and Last Name are <strong>mandatory *</strong>.
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#2563EB] font-bold">•</span>
+                <span className="text-[#2563EB] font-bold">â€¢</span>
                 <span>Email address must follow valid format.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#2563EB] font-bold">•</span>
+                <span className="text-[#2563EB] font-bold">â€¢</span>
                 <span>Mobile number must be at least 10 digits.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#2563EB] font-bold">•</span>
+                <span className="text-[#2563EB] font-bold">â€¢</span>
                 <span>Password requires 8+ characters & symbols.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#2563EB] font-bold">•</span>
+                <span className="text-[#2563EB] font-bold">â€¢</span>
                 <span>Agency Registration Number checked for duplicates.</span>
               </li>
             </ul>
@@ -1293,7 +1293,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                 </div>
               </div>
               <p className="text-[11px] text-emerald-700 font-medium">
-                ✉ A welcome email with credentials has been sent to {formData.email || "agent@agency.com"}.
+                âœ‰ A welcome email with credentials has been sent to {formData.email || "agent@agency.com"}.
               </p>
             </div>
           ) : null}

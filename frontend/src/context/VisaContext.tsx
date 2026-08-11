@@ -266,12 +266,26 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_V1_URL}/applicant/dashboard`, { headers });
       const json = await res.json();
       if (res.ok && json.success && json.data) {
-        setApplicantDashboardData(json.data);
+        // Only update dashboard data state if key values actually changed
+        setApplicantDashboardData((prev) => {
+          if (
+            prev &&
+            prev.greetingName === json.data.greetingName &&
+            (prev as any).kycStatus === json.data.kycStatus &&
+            JSON.stringify((prev as any).metrics) === JSON.stringify(json.data.metrics)
+          ) {
+            return prev; // no state update, no re-render
+          }
+          return json.data;
+        });
         if (json.data.application) {
           const appData = json.data.application;
           setApplications((prev) => {
-            const exists = prev.some((a) => a.id === appData.id);
-            if (exists) {
+            const existing = prev.find((a) => a.id === appData.id);
+            if (existing && existing.status === appData.status) {
+              return prev; // same status — no new array, no re-render
+            }
+            if (existing) {
               return prev.map((a) => (a.id === appData.id ? { ...a, ...appData } : a));
             }
             return [appData, ...prev];
@@ -287,6 +301,8 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     setAuthSession(session);
     try {
       localStorage.setItem("phantom_auth_session", JSON.stringify(session));
+      localStorage.removeItem("customer_active_tab");
+      localStorage.removeItem("customer_active_subtab");
     } catch (e) {}
     const roleMap: Record<string, "Agent" | "Staff" | "Customer" | "Super Admin"> = {
       Admin: "Super Admin",
@@ -296,6 +312,19 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     };
     const mappedRole = roleMap[session.user?.role] || "Customer";
     setCurrentRole(mappedRole);
+    setCustomerTab("dashboard");
+  };
+
+  // Silent token refresh — does NOT call loginSession to avoid tab/role reset cascade
+  const refreshSessionSilently = (token: string) => {
+    setAuthSession((prev) => {
+      if (!prev) return prev;
+      const updated: AuthSession = { ...prev, token };
+      try {
+        localStorage.setItem("phantom_auth_session", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   // Restore & verify refresh token on application mount
@@ -308,12 +337,12 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
           credentials: "include"
         });
         const json = await res.json();
-        if (res.ok && json.success && json.data) {
-          const newSession: AuthSession = {
-            user: json.data.user,
-            token: json.data.accessToken
-          };
-          loginSession(newSession);
+        // Use silent refresh — only update the access token, never reset tab or trigger cascades
+        if (res.ok && json.success) {
+          const newToken = json.accessToken || json.data?.accessToken;
+          if (newToken) {
+            refreshSessionSilently(newToken);
+          }
         }
       } catch (err) {
         // Silently preserve local session if offline or backend unavailable
@@ -323,11 +352,14 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     checkAndRefreshToken();
   }, []);
 
+  // Fetch applicant dashboard data once on initial mount only
+  // Do NOT depend on authSession.token — the silent refresh updates the token
+  // but should not trigger a full dashboard re-fetch causing re-renders
   useEffect(() => {
-    if (authSession?.token && currentRole === "Customer") {
+    if (currentRole === "Customer") {
       fetchApplicantDashboardData();
     }
-  }, [authSession, currentRole]);
+  }, [currentRole]);
 
   const logoutSession = async () => {
     try {
@@ -340,9 +372,12 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       localStorage.removeItem("phantom_auth_session");
+      localStorage.removeItem("customer_active_tab");
+      localStorage.removeItem("customer_active_subtab");
     } catch (e) {}
     setAuthSession(null);
     setApplicantDashboardData(null);
+    setCustomerTab("dashboard");
   };
 
   const logoutAllSessions = async () => {
@@ -359,16 +394,15 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
     setAuthSession(null);
     setApplicantDashboardData(null);
+    setCustomerTab("dashboard");
   };
   const [agentTab, setAgentTab] = useState<AgentTab>("dashboard");
   const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
   const [customerTab, setCustomerTab] = useState<CustomerTab>(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get("tab") as CustomerTab | null;
-      const storedTab = localStorage.getItem("customer_active_tab") as CustomerTab | null;
-      if (urlTab) return urlTab;
-      if (storedTab) return storedTab;
+      // Restore last active tab from localStorage on page reload
+      const saved = localStorage.getItem("customer_active_tab") as CustomerTab | null;
+      if (saved) return saved;
     }
     return "dashboard";
   });
@@ -481,27 +515,52 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${API_V1_URL}/applications`);
         const json = await res.json();
         if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const parsed = json.data.map((item: any) => ({
-            id: item.applicationId || item._id,
-            travelerName: item.personalDetails ? `${item.personalDetails.givenName} ${item.personalDetails.surname}` : item.travelerName || "Traveler",
-            dob: item.personalDetails?.dob || item.dob || "1995-06-12",
-            passportNumber: item.passportDetails?.passportNo || item.passportNumber || "Z9817264",
-            passportExpiry: item.passportDetails?.expiryDate || item.passportExpiry || "2033-12-20",
-            nationality: item.personalDetails?.nationality || item.nationality || "Indian",
-            destination: item.countryName || item.destination || "Australia",
-            visaType: item.visaTypeName || item.visaType || "Tourist Visa",
-            travelDates: item.travelDetails ? `${item.travelDetails.travelDate} to ${item.travelDetails.returnDate}` : item.travelDates || "Travel Dates",
-            status: item.status || "Submitted",
-            fees: item.pricing?.totalAmount || item.fees || 16500,
-            submissionDate: item.createdAt ? item.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
-            verifiedDocs: {
-              passport: "verified",
-              photo: "verified"
-            },
-            checklist: { employed: false, sponsored: false },
-            documentsSubmitted: true,
-            kycCompleted: true
-          }));
+          const parsed = json.data.map((item: any) => {
+            const givenName = item.personalDetails?.givenName || item.givenName || "";
+            const surname = item.personalDetails?.surname || item.surname || "";
+            const travelerName = (givenName || surname)
+              ? `${givenName} ${surname}`.trim()
+              : item.travelerName || "Applicant";
+
+            const destination = item.countryName || item.destination || "Canada";
+            const visaType = item.visaTypeName || item.visaType || "Visitor / Tourist Visa";
+            const passportNumber = item.passportDetails?.passportNo || item.passportNumber || "Z9817264";
+            const passportExpiry = item.passportDetails?.expiryDate || item.passportExpiry || "2033-12-20";
+            const dob = item.personalDetails?.dob || item.dob || "1995-06-12";
+            const nationality = item.personalDetails?.nationality || item.nationality || "Indian";
+            
+            const travelDates = (item.travelDetails?.travelDate && item.travelDetails?.returnDate)
+              ? `${item.travelDetails.travelDate} to ${item.travelDetails.returnDate}`
+              : item.travelDates || "Upcoming Travel";
+            
+            const fees = item.pricing?.totalAmount || item.fees || 11000;
+            const isApproved = (item.status || "Submitted") === "Approved";
+            const docStatus = isApproved ? "verified" : "pending";
+
+            return {
+              id: item.applicationId || item.id || item._id,
+              travelerName,
+              dob,
+              passportNumber,
+              passportExpiry,
+              nationality,
+              destination,
+              visaType,
+              travelDates,
+              status: item.status || "Submitted",
+              fees,
+              submissionDate: item.createdAt ? item.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
+              reason: item.rejectionReason || item.reason || "",
+              verifiedDocs: {
+                passport: docStatus,
+                photo: docStatus
+              },
+              checklist: { employed: true, sponsored: false },
+              documentsSubmitted: true,
+              kycCompleted: true
+            };
+          });
+
           setApplications(parsed);
         }
       } catch (err) {

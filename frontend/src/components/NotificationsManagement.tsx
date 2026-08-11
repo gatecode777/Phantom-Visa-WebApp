@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Bell,
   Search,
@@ -149,7 +149,7 @@ const MOCK_NOTIFICATIONS: NotificationRecord[] = [
     notificationType: "Payment Successful",
     channel: "SMS",
     title: "Payment Receipt Confirmed",
-    body: "Payment of ₹18,500 received for Australia visa processing fee.",
+    body: "Payment of â‚¹18,500 received for Australia visa processing fee.",
     sentDate: "04 Aug 2026",
     sentDateTime: "04 Aug 2026 09:45 AM",
     deliveryStatus: "Delivered",
@@ -251,7 +251,7 @@ export default function NotificationsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -330,7 +330,7 @@ export default function NotificationsManagement() {
               {NOTIFICATION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    ▼
+                    â–¼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -530,23 +530,23 @@ export default function NotificationsManagement() {
                     <td className="py-3.5 px-4">
                       {ntf.deliveryStatus === "Delivered" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          🟢 Delivered
+                          ðŸŸ¢ Delivered
                         </span>
                       ) : ntf.deliveryStatus === "Failed" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          🔴 Failed
+                          ðŸ”´ Failed
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          🟡 Pending
+                          ðŸŸ¡ Pending
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       {ntf.readStatus === "Read" ? (
-                        <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-extrabold text-[10px]">🔵 Read</span>
+                        <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-extrabold text-[10px]">ðŸ”µ Read</span>
                       ) : (
-                        <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-extrabold text-[10px]">🟡 Unread</span>
+                        <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-extrabold text-[10px]">ðŸŸ¡ Unread</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -586,7 +586,7 @@ export default function NotificationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 48,920 Notifications</div>
+          <div>Showing 1â€“10 of 48,920 Notifications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -607,7 +607,7 @@ export default function NotificationsManagement() {
           <ShieldCheck size={16} className="text-[#2563EB]" /> Multi-Channel Dispatch Strategy
         </h3>
         <p className="text-[11px] text-slate-600 leading-relaxed">
-          Features active: Multi-channel fallback rules (Email ➔ SMS ➔ Push), automated delivery retry queue, engagement tracking (Open/Click rates), template variable hydration, and compliance audit trail.
+          Features active: Multi-channel fallback rules (Email âž” SMS âž” Push), automated delivery retry queue, engagement tracking (Open/Click rates), template variable hydration, and compliance audit trail.
         </p>
       </div>
 

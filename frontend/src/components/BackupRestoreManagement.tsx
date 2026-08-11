@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   HardDrive,
   Database,
@@ -124,7 +124,7 @@ export default function BackupRestoreManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -187,7 +187,7 @@ export default function BackupRestoreManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Backup Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Successful 🟢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Successful ðŸŸ¢</div>
           <span className="text-[10px] text-emerald-600 font-bold">0 Errors</span>
         </div>
 
@@ -221,7 +221,7 @@ export default function BackupRestoreManagement() {
           <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-1">
             <div className="flex justify-between items-center">
               <strong className="text-slate-900 font-bold">AWS S3 Bucket</strong>
-              <span className="text-[10px] text-emerald-700 font-bold">Active 🟢</span>
+              <span className="text-[10px] text-emerald-700 font-bold">Active ðŸŸ¢</span>
             </div>
             <span className="text-[11px] font-mono text-slate-500 block truncate">s3://phantom-visa-backups/prod/</span>
           </div>
@@ -229,7 +229,7 @@ export default function BackupRestoreManagement() {
           <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-1">
             <div className="flex justify-between items-center">
               <strong className="text-slate-900 font-bold">Google Cloud Storage</strong>
-              <span className="text-[10px] text-emerald-700 font-bold">Active 🟢</span>
+              <span className="text-[10px] text-emerald-700 font-bold">Active ðŸŸ¢</span>
             </div>
             <span className="text-[11px] font-mono text-slate-500 block truncate">gs://phantom-visa-archive/</span>
           </div>
@@ -237,7 +237,7 @@ export default function BackupRestoreManagement() {
           <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-1">
             <div className="flex justify-between items-center">
               <strong className="text-slate-900 font-bold">Local Storage</strong>
-              <span className="text-[10px] text-emerald-700 font-bold">Active 🟢</span>
+              <span className="text-[10px] text-emerald-700 font-bold">Active ðŸŸ¢</span>
             </div>
             <span className="text-[11px] font-mono text-slate-500 block truncate">/var/backups/phantomvisa/</span>
           </div>
@@ -245,7 +245,7 @@ export default function BackupRestoreManagement() {
           <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-1">
             <div className="flex justify-between items-center">
               <strong className="text-slate-900 font-bold">Azure Blob Storage</strong>
-              <span className="text-[10px] text-amber-700 font-bold">Standby 🟡</span>
+              <span className="text-[10px] text-amber-700 font-bold">Standby ðŸŸ¡</span>
             </div>
             <span className="text-[11px] font-mono text-slate-500 block truncate">https://phantomvisa.blob.core/</span>
           </div>
@@ -353,7 +353,7 @@ export default function BackupRestoreManagement() {
                       <td className="py-2.5 text-center font-mono font-bold text-slate-900">{b.size}</td>
                       <td className="py-2.5 text-center font-mono text-[11px] text-slate-500">{b.createdTime}</td>
                       <td className="py-2.5 text-center">
-                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">🟢 {b.status}</span>
+                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">ðŸŸ¢ {b.status}</span>
                       </td>
                       <td className="py-2.5 text-center font-mono text-[11px] text-blue-700">{b.location}</td>
                       <td className="py-2.5 text-right space-x-1">
@@ -489,7 +489,7 @@ export default function BackupRestoreManagement() {
 
             <form onSubmit={handleInitiateRestoreSubmit} className="space-y-3 text-xs">
               <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-amber-800 text-[11px] font-semibold">
-                ⚠️ Warning: Initiating a restore will roll back system database state to the selected snapshot. Current active sessions will be temporarily suspended.
+                âš ï¸ Warning: Initiating a restore will roll back system database state to the selected snapshot. Current active sessions will be temporarily suspended.
               </div>
 
               <div>

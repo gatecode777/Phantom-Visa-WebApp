@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -284,7 +284,7 @@ export default function AgentPortal() {
     <div className="flex-1 flex flex-col h-full bg-brand-midnight text-brand-paper overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-brand-gold text-brand-midnight font-bold text-xs px-4 py-2.5 rounded shadow-xl border border-white/20 animate-fade-in flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-[9999] bg-brand-gold text-brand-midnight font-bold text-xs px-4 py-2.5 rounded shadow-xl border border-white/20 animate-fade-in flex items-center gap-2">
           <Sparkles size={16} />
           <span>{toastMessage}</span>
         </div>
@@ -399,7 +399,7 @@ export default function AgentPortal() {
                       <Wallet size={18} className="text-brand-gold" />
                     </div>
                     <p className="font-outfit text-2xl font-bold text-brand-gold font-mono" suppressHydrationWarning>
-                      ₹{formatINR(walletBalance)}
+                      â‚¹{formatINR(walletBalance)}
                     </p>
                     <p className="text-[10px] text-brand-teal">Cleared for immediate liquidation</p>
                   </div>
@@ -432,7 +432,7 @@ export default function AgentPortal() {
                       <Coins size={18} className="text-brand-gold" />
                     </div>
                     <p className="font-outfit text-2xl font-bold text-brand-paper font-mono" suppressHydrationWarning>
-                      ₹{formatINR(commissions.reduce((acc, c) => acc + (c.status === "pending" ? c.amount : 0), 0))}
+                      â‚¹{formatINR(commissions.reduce((acc, c) => acc + (c.status === "pending" ? c.amount : 0), 0))}
                     </p>
                     <p className="text-[10px] text-brand-teal">Pending payout</p>
                   </div>
@@ -508,7 +508,7 @@ export default function AgentPortal() {
                           <td className="p-3 font-bold text-brand-paper">{a.travelerName}</td>
                           <td className="p-3 text-brand-paper/80">{a.destination}</td>
                           <td className="p-3 font-mono text-brand-paper/70">{a.passportNumber}</td>
-                          <td className="p-3 font-mono font-bold text-brand-paper">₹{formatINR(a.fees)}</td>
+                          <td className="p-3 font-mono font-bold text-brand-paper">â‚¹{formatINR(a.fees)}</td>
                           <td className="p-3">
                             <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] uppercase ${
                               a.status === "Approved"
@@ -543,7 +543,7 @@ export default function AgentPortal() {
                         </div>
                         <p className="font-bold text-brand-paper text-sm mt-1">{app.travelerName} &bull; {app.destination}</p>
                       </div>
-                      <span className="font-mono font-bold text-brand-gold">₹{formatINR(app.fees)}</span>
+                      <span className="font-mono font-bold text-brand-gold">â‚¹{formatINR(app.fees)}</span>
                     </div>
                   ))}
                 </div>
@@ -654,7 +654,7 @@ export default function AgentPortal() {
                   <div className="text-xs text-brand-paper/70 space-y-1 border-t border-brand-gold/10 pt-3">
                     <div className="flex justify-between"><span>Passport:</span><span className="font-mono text-brand-paper">{a.passportNumber}</span></div>
                     <div className="flex justify-between"><span>Submission Date:</span><span>{a.submissionDate}</span></div>
-                    <div className="flex justify-between"><span>Fee Charged:</span><span className="font-mono text-brand-gold font-bold">₹{formatINR(a.fees)}</span></div>
+                    <div className="flex justify-between"><span>Fee Charged:</span><span className="font-mono text-brand-gold font-bold">â‚¹{formatINR(a.fees)}</span></div>
                   </div>
 
                   {a.reason && (
@@ -871,7 +871,7 @@ export default function AgentPortal() {
               </div>
 
               <span className="font-mono text-xs text-brand-gold font-bold" suppressHydrationWarning>
-                Wallet Liquidity: ₹{formatINR(walletBalance)}
+                Wallet Liquidity: â‚¹{formatINR(walletBalance)}
               </span>
             </div>
 
@@ -918,7 +918,7 @@ export default function AgentPortal() {
                             {l.type}
                           </span>
                         </td>
-                        <td className="p-3 font-mono font-bold text-brand-paper">₹{formatINR(l.amount)}</td>
+                        <td className="p-3 font-mono font-bold text-brand-paper">â‚¹{formatINR(l.amount)}</td>
                         <td className="p-3 text-brand-paper/80">{l.description}</td>
                         <td className="p-3 font-mono text-brand-paper/50">{l.reference}</td>
                       </tr>
@@ -965,7 +965,7 @@ export default function AgentPortal() {
             <h3 className="font-outfit font-bold text-lg text-brand-gold">Agency System Alerts</h3>
             <div className="space-y-2 text-xs">
               <div className="p-3 bg-brand-midnight rounded border border-brand-gold/10 flex justify-between">
-                <span>Wallet liquid balance updated after top-up of ₹4,15,000</span>
+                <span>Wallet liquid balance updated after top-up of â‚¹4,15,000</span>
                 <span className="font-mono text-brand-paper/40">Today, 11:30</span>
               </div>
               <div className="p-3 bg-brand-midnight rounded border border-brand-gold/10 flex justify-between">
@@ -1014,11 +1014,11 @@ export default function AgentPortal() {
                   </div>
                   <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10">
                     <p className="text-brand-paper/50">Fees Processed</p>
-                    <p className="text-xl font-bold text-brand-gold font-mono">₹78,020</p>
+                    <p className="text-xl font-bold text-brand-gold font-mono">â‚¹78,020</p>
                   </div>
                   <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10">
                     <p className="text-brand-paper/50">Commission Earned</p>
-                    <p className="text-xl font-bold text-brand-teal font-mono">₹23,406</p>
+                    <p className="text-xl font-bold text-brand-teal font-mono">â‚¹23,406</p>
                   </div>
                 </div>
               </div>
@@ -1134,7 +1134,7 @@ export default function AgentPortal() {
                   <div key={p.id} className="bg-brand-midnight p-4 rounded border border-brand-gold/10 space-y-2 text-xs">
                     <div className="flex justify-between">
                       <span className="font-bold text-brand-paper">{p.destination} - {p.visaType}</span>
-                      <span className="font-mono text-brand-gold font-bold">₹{formatINR(p.price)}</span>
+                      <span className="font-mono text-brand-gold font-bold">â‚¹{formatINR(p.price)}</span>
                     </div>
                     <p className="text-[10px] text-brand-paper/50">SLA: {p.processingTime}</p>
                     {p.aiRecommend && (
@@ -1226,7 +1226,7 @@ export default function AgentPortal() {
                 <div className="bg-brand-midnight p-4 rounded border border-brand-gold/10 space-y-2">
                   <p>Traveler: <span className="font-bold text-brand-paper">{travelerName || "Aarav Sharma"}</span></p>
                   <p>Passport: <span className="font-mono text-brand-gold">{passportNumber || "Z5592817"}</span></p>
-                  <p>Consular Fee: <span className="font-mono text-brand-gold font-bold">₹{formatINR(selectedProduct?.price || 13280)}</span></p>
+                  <p>Consular Fee: <span className="font-mono text-brand-gold font-bold">â‚¹{formatINR(selectedProduct?.price || 13280)}</span></p>
                 </div>
                 <button
                   onClick={handleSubmitVisaApplication}
@@ -1267,7 +1267,7 @@ export default function AgentPortal() {
                   const amt = parseFloat(topupAmount);
                   if (amt > 0) {
                     addFunds(amt);
-                    triggerToast(`Added ₹${formatINR(amt)} to agency wallet balance!`);
+                    triggerToast(`Added â‚¹${formatINR(amt)} to agency wallet balance!`);
                     setShowAddFundsModal(false);
                   }
                 }}

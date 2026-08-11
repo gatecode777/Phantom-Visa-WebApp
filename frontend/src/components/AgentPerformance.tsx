@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   BarChart3,
   Search,
@@ -247,10 +247,10 @@ export default function AgentPerformance() {
   });
 
   return (
-    <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200 text-slate-800">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -259,36 +259,17 @@ export default function AgentPerformance() {
       )}
 
       {/* HEADER SECTION */}
-      <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-6 rounded-3xl shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-700">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
-            <BarChart3 size={15} />
-            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Productivity & KPI Analytics
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
+      <div className="pb-4 border-b border-slate-200">
+        <div className="flex items-center gap-2 text-xs font-mono text-[#2563EB] mb-1">
+          <BarChart3 size={14} />
+          <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-100 font-bold">
             Agent Performance
-          </h1>
-          <p className="text-xs text-blue-100 font-medium mt-1">
-            Monitor agent productivity, application processing, approval rates, and overall performance across the VisaOS platform.
-          </p>
+          </span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedTier("All");
-              setSelectedCountry("All");
-              setSelectedAppStatus("All");
-              triggerToast("Filters reset to default.");
-            }}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5"
-          >
-            <RefreshCw size={14} /> Reset View
-          </button>
-        </div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Agent Performance</h1>
+        <p className="text-xs text-slate-500 font-medium mt-0.5">
+          Monitor agent productivity, application processing, approval rates, and overall performance across the VisaOS platform.
+        </p>
       </div>
 
       {/* PERFORMANCE OVERVIEW CARDS (8 CARDS AS IN WIREFRAME) */}
@@ -346,7 +327,7 @@ export default function AgentPerformance() {
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 block mb-1">
             Satisfaction
           </span>
-          <div className="text-xl font-black text-amber-600 font-mono">⭐ 4.8 / 5</div>
+          <div className="text-xl font-black text-amber-600 font-mono">â­ 4.8 / 5</div>
         </div>
       </div>
 
@@ -390,10 +371,10 @@ export default function AgentPerformance() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">⭐⭐⭐⭐⭐ Excellent (&gt;90%)</option>
-              <option value="Good">⭐⭐⭐⭐ Good (85-90%)</option>
-              <option value="Average">⭐⭐⭐ Average (75-85%)</option>
-              <option value="Low">⭐⭐ Low (&lt;75%)</option>
+              <option value="Excellent">â­â­â­â­â­ Excellent (&gt;90%)</option>
+              <option value="Good">â­â­â­â­ Good (85-90%)</option>
+              <option value="Average">â­â­â­ Average (75-85%)</option>
+              <option value="Low">â­â­ Low (&lt;75%)</option>
             </select>
           </div>
 
@@ -563,7 +544,7 @@ export default function AgentPerformance() {
                       {rec.avgProcTime}
                     </td>
                     <td className="py-3.5 px-4 text-center font-bold text-amber-600 font-mono">
-                      ⭐ {rec.rating}
+                      â­ {rec.rating}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
@@ -599,7 +580,7 @@ export default function AgentPerformance() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 245 Agents</div>
+          <div>Showing 1â€“10 of 245 Agents</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -674,7 +655,7 @@ export default function AgentPerformance() {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between p-2 bg-amber-50 rounded-xl border border-amber-100">
               <span className="text-amber-700 font-medium">Average Rating:</span>
-              <strong className="text-amber-800 font-mono font-bold">⭐ 4.8 / 5</strong>
+              <strong className="text-amber-800 font-mono font-bold">â­ 4.8 / 5</strong>
             </div>
             <div className="flex justify-between p-2 bg-slate-50 rounded-xl border border-slate-100">
               <span className="text-slate-500 font-medium">Total Customer Reviews:</span>
@@ -730,40 +711,40 @@ export default function AgentPerformance() {
           <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200 p-4 rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-lg shadow-md">
-                🥇
+                ðŸ¥‡
               </div>
               <div>
                 <strong className="text-slate-900 font-extrabold block text-sm">Geeta Bisht</strong>
                 <span className="text-slate-500 text-xs font-mono">112 Completed Apps</span>
               </div>
             </div>
-            <span className="text-amber-600 font-black font-mono text-base">⭐ 4.9</span>
+            <span className="text-amber-600 font-black font-mono text-base">â­ 4.9</span>
           </div>
 
           <div className="bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-slate-300 text-slate-700 flex items-center justify-center font-black text-lg shadow-md">
-                🥈
+                ðŸ¥ˆ
               </div>
               <div>
                 <strong className="text-slate-900 font-extrabold block text-sm">Rahul Sharma</strong>
                 <span className="text-slate-500 text-xs font-mono">87 Completed Apps</span>
               </div>
             </div>
-            <span className="text-slate-700 font-black font-mono text-base">⭐ 4.8</span>
+            <span className="text-slate-700 font-black font-mono text-base">â­ 4.8</span>
           </div>
 
           <div className="bg-gradient-to-br from-amber-50/30 to-amber-100/30 border border-amber-200/80 p-4 rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-700/20 text-amber-800 flex items-center justify-center font-black text-lg shadow-md">
-                🥉
+                ðŸ¥‰
               </div>
               <div>
                 <strong className="text-slate-900 font-extrabold block text-sm">Balram Suman</strong>
                 <span className="text-slate-500 text-xs font-mono">69 Completed Apps</span>
               </div>
             </div>
-            <span className="text-amber-700 font-black font-mono text-base">⭐ 4.5</span>
+            <span className="text-amber-700 font-black font-mono text-base">â­ 4.5</span>
           </div>
         </div>
       </div>
@@ -884,7 +865,7 @@ export default function AgentPerformance() {
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-amber-500 font-extrabold uppercase block">Rating</span>
-                      <strong className="text-amber-500 text-lg font-mono font-black">⭐ {activeRecord.rating}</strong>
+                      <strong className="text-amber-500 text-lg font-mono font-black">â­ {activeRecord.rating}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Avg Speed</span>
@@ -970,7 +951,7 @@ export default function AgentPerformance() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px]">
-                            ✓
+                            âœ“
                           </div>
                           <span className="font-bold text-slate-900">{act.action}</span>
                         </div>

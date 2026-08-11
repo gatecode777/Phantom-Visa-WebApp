@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
@@ -83,7 +83,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "geeta@email.com",
     mobile: "+91 9876543210",
     country: "Canada",
-    flag: "🇨🇦",
+    flag: "ðŸ‡¨ðŸ‡¦",
     totalApplications: 2,
     status: "Active",
     registeredOn: "20 Jul 2026",
@@ -128,7 +128,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "rahul@email.com",
     mobile: "+91 9812345678",
     country: "Australia",
-    flag: "🇦🇺",
+    flag: "ðŸ‡¦ðŸ‡º",
     totalApplications: 1,
     status: "Active",
     registeredOn: "19 Jul 2026",
@@ -172,7 +172,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "priya@email.com",
     mobile: "+91 9765432109",
     country: "UK",
-    flag: "🇬🇧",
+    flag: "ðŸ‡¬ðŸ‡§",
     totalApplications: 3,
     status: "Blocked",
     registeredOn: "18 Jul 2026",
@@ -215,7 +215,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "animesh@email.com",
     mobile: "+91 9654321098",
     country: "USA",
-    flag: "🇺🇸",
+    flag: "ðŸ‡ºðŸ‡¸",
     totalApplications: 1,
     status: "Active",
     registeredOn: "17 Jul 2026",
@@ -258,7 +258,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "bhavani@email.com",
     mobile: "+91 9543210987",
     country: "Germany",
-    flag: "🇩🇪",
+    flag: "ðŸ‡©ðŸ‡ª",
     totalApplications: 2,
     status: "Inactive",
     registeredOn: "15 Jul 2026",
@@ -406,6 +406,7 @@ export default function AllApplicants() {
   const newRegistrationsCount = dbMetrics?.newRegistrations ?? applicants.length;
   const blockedApplicantsCount =
     dbMetrics?.blockedApplicants ?? applicants.filter((a) => a.status === "Blocked" || (a as any).isDeactivated).length;
+  const inactiveApplicantsCount = applicants.filter((a) => a.status === "Inactive").length;
   const activeRatio =
     totalApplicantsCount > 0 ? ((activeApplicantsCount / totalApplicantsCount) * 100).toFixed(1) : "100.0";
 
@@ -532,7 +533,7 @@ export default function AllApplicants() {
     <div className="space-y-6 animate-in fade-in duration-200 text-slate-800">
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#C5A880]/40 text-[#F8F9FA] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#C5A880]/40 text-[#F8F9FA] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#C5A880]/20 flex items-center justify-center text-[#C5A880]">
             <CheckCircle2 size={18} />
           </div>
@@ -563,7 +564,12 @@ export default function AllApplicants() {
       {/* TOP STATISTICS CARDS (4 CARDS GRID) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Applicants */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        <div
+          onClick={() => setStatusFilter("All")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "All" ? "border-[#4848F7] ring-2 ring-[#4848F7]/20" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Total Applicants</span>
             <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#4848F7] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -577,8 +583,13 @@ export default function AllApplicants() {
           </div>
         </div>
 
-        {/* Card 2: Active Applicants */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 2: Active Applicants â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Active" ? "All" : "Active")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Active Applicants</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -588,27 +599,37 @@ export default function AllApplicants() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{activeApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <CheckCircle2 size={13} />
-            <span>{activeRatio}% Active Ratio</span>
+            <span>{statusFilter === "Active" ? "Showing active only âœ“" : `${activeRatio}% Active Ratio â€” Click to filter`}</span>
           </div>
         </div>
 
-        {/* Card 3: New Registrations */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 3: Inactive Applicants â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Inactive" ? "All" : "Inactive")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Inactive" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">New Registrations</span>
+            <span className="text-xs font-bold text-slate-500">Inactive Applicants</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-              <UserPlus size={18} />
+              <Clock size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{newRegistrationsCount}</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{inactiveApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <Clock size={13} />
-            <span>Registered past 7 days</span>
+            <span>{statusFilter === "Inactive" ? "Showing inactive only âœ“" : "Click to filter inactive"}</span>
           </div>
         </div>
 
-        {/* Card 4: Blocked Applicants */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs hover:shadow-md transition group">
+        {/* Card 4: Blocked Applicants â€” click to filter */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === "Blocked" ? "All" : "Blocked")}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
+            statusFilter === "Blocked" ? "border-red-500 ring-2 ring-red-200" : "border-slate-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Blocked Applicants</span>
             <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -618,7 +639,7 @@ export default function AllApplicants() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{blockedApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-red-600 font-semibold mt-2">
             <ShieldAlert size={13} />
-            <span>{blockedApplicantsCount > 0 ? "Requires Admin Review" : "No Blocked Users"}</span>
+            <span>{statusFilter === "Blocked" ? "Showing blocked only âœ“" : (blockedApplicantsCount > 0 ? "Click to filter blocked" : "No Blocked Users")}</span>
           </div>
         </div>
       </div>
@@ -939,7 +960,7 @@ export default function AllApplicants() {
               <span>Showing <strong className="text-slate-900 font-mono">0</strong> Applicants</span>
             ) : (
               <span>
-                Showing <strong className="text-slate-900 font-mono">{startIndex + 1}–{endIndex}</strong> of{" "}
+                Showing <strong className="text-slate-900 font-mono">{startIndex + 1}â€“{endIndex}</strong> of{" "}
                 <strong className="text-slate-900 font-mono">{totalItems}</strong> Applicants
               </span>
             )}
@@ -1025,9 +1046,9 @@ export default function AllApplicants() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewApplicant.id}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span>{viewApplicant.email}</span>
-                    <span className="text-blue-300">•</span>
+                    <span className="text-blue-300">â€¢</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewApplicant.flag}</span> {viewApplicant.country}
                     </span>
@@ -1251,13 +1272,13 @@ export default function AllApplicants() {
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Total Paid Amount</span>
                       <strong className="text-emerald-600 text-xl font-mono font-black">
-                        ₹{(viewApplicant.payments?.totalPaid || 45000).toLocaleString("en-IN")}
+                        â‚¹{(viewApplicant.payments?.totalPaid || 45000).toLocaleString("en-IN")}
                       </strong>
                     </div>
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Pending Balance</span>
                       <strong className="text-red-600 text-xl font-mono font-black">
-                        ₹{(viewApplicant.payments?.pendingAmount || 0).toLocaleString("en-IN")}
+                        â‚¹{(viewApplicant.payments?.pendingAmount || 0).toLocaleString("en-IN")}
                       </strong>
                     </div>
                   </div>
@@ -1270,11 +1291,11 @@ export default function AllApplicants() {
                           <div>
                             <p className="font-bold text-slate-800">{txn.desc}</p>
                             <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                              {txn.date} • via {txn.method}
+                              {txn.date} â€¢ via {txn.method}
                             </p>
                           </div>
                           <span className="font-mono font-bold text-emerald-600 text-sm">
-                            +₹{txn.amount.toLocaleString("en-IN")}
+                            +â‚¹{txn.amount.toLocaleString("en-IN")}
                           </span>
                         </div>
                       ))}

@@ -706,4 +706,22 @@ router.post("/check-duplicate", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/v1/auth/logout-all
+ * Clear all authentication sessions and refresh tokens
+ */
+router.post("/logout-all", async (req: Request, res: Response) => {
+  try {
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    res.clearCookie("token");
+    return res.status(200).json({
+      success: true,
+      message: "All sessions logged out successfully."
+    });
+  } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
 export default router;

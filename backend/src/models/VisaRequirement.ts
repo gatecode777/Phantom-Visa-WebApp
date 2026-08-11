@@ -9,6 +9,7 @@ export interface IVisaRequirement extends Document {
   isMandatory: boolean;
   description?: string;
   sampleFileUrl?: string;
+  templateId?: mongoose.Types.ObjectId;
   status: "Active" | "Inactive";
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,7 @@ const VisaRequirementSchema: Schema = new Schema(
     isMandatory: { type: Boolean, default: true },
     description: { type: String, default: "" },
     sampleFileUrl: { type: String, default: "" },
+    templateId: { type: Schema.Types.ObjectId, ref: "DocumentTemplate" },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" }
   },
   { timestamps: true }

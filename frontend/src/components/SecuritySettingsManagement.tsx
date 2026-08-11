@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   ShieldCheck,
   Shield,
@@ -106,7 +106,7 @@ export default function SecuritySettingsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -151,13 +151,13 @@ export default function SecuritySettingsManagement() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">System Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Protected 🛡️</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Protected ðŸ›¡ï¸</div>
           <span className="text-[10px] text-emerald-600 font-bold">Zero Threats</span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">2FA Enforcement</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Active 🟢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Active ðŸŸ¢</div>
           <span className="text-[10px] text-blue-600 font-bold">Mandatory Admin</span>
         </div>
 
@@ -283,7 +283,7 @@ export default function SecuritySettingsManagement() {
                   onChange={(e) => setEnableIpWhitelist(e.target.value === "Active")}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold text-emerald-700"
                 >
-                  <option value="Active">Active 🟢</option>
+                  <option value="Active">Active ðŸŸ¢</option>
                   <option value="Disabled">Disabled</option>
                 </select>
               </div>

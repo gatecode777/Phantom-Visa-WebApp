@@ -97,6 +97,9 @@ export default function VisaRequirementsManagement() {
     fetchData();
   }, []);
 
+  // Form Api Error State
+  const [apiError, setApiError] = useState<string | null>(null);
+
   // Open Add Modal
   const handleOpenAdd = () => {
     setEditingReq(null);
@@ -110,6 +113,7 @@ export default function VisaRequirementsManagement() {
       status: "Active"
     });
     setFormErrors({});
+    setApiError(null);
     setIsAddModalOpen(true);
   };
 
@@ -126,6 +130,7 @@ export default function VisaRequirementsManagement() {
       status: req.status
     });
     setFormErrors({});
+    setApiError(null);
     setIsAddModalOpen(true);
   };
 
@@ -144,6 +149,7 @@ export default function VisaRequirementsManagement() {
   // Submit Form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -175,14 +181,18 @@ export default function VisaRequirementsManagement() {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        triggerToast(json.error?.message || "Failed to save requirement.");
+        const errMsg = json.error?.message || json.message || "Failed to save requirement.";
+        setApiError(errMsg);
+        triggerToast(errMsg);
       } else {
         triggerToast(editingReq ? "Visa requirement updated!" : "New visa requirement added!");
         setIsAddModalOpen(false);
         fetchData();
       }
     } catch (err) {
-      triggerToast("Error communicating with server.");
+      const errMsg = "Error communicating with server.";
+      setApiError(errMsg);
+      triggerToast(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -226,7 +236,7 @@ export default function VisaRequirementsManagement() {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Toast */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
           <CheckCircle2 size={16} className="text-emerald-400" />
           <span>{toastMsg}</span>
         </div>
@@ -426,6 +436,12 @@ export default function VisaRequirementsManagement() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+              {apiError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
+                  <span>{apiError}</span>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
                   Requirement Title <span className="text-red-500">*</span>
