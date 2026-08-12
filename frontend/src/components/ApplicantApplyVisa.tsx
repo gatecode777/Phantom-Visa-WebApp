@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Application, formatINR } from "../context/VisaContext";
@@ -23,7 +23,10 @@ import {
   Check,
   Sparkles,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Pin,
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
 
 interface CountryRecord {
@@ -55,6 +58,7 @@ interface VisaTypeRecord {
   entryType: "Single Entry" | "Multiple Entry" | "Double Entry";
   validityMonths: number;
   maxStayDays: number;
+  processingTimeDays: number;
   status: string;
 }
 
@@ -65,6 +69,17 @@ interface VisaRequirementRecord {
   visaTypeName: string;
   isMandatory: boolean;
   status: string;
+}
+
+interface AgentRecord {
+  agentId: string;
+  fullName: string;
+  agencyName: string;
+  city: string;
+  state: string;
+  yearsInBusiness: string;
+  monthlyCapacity: string;
+  supportedVisaCountries: string[];
 }
 
 interface CoTraveler {
@@ -105,7 +120,7 @@ export default function ApplicantApplyVisa({
       _id: "c-1",
       name: "Canada",
       code: "CA",
-      flag: "ðŸ‡¨ðŸ‡¦",
+      flag: "🇨🇦",
       startingFee: 12500,
       processingTime: "10-15 Days",
       visaAvailable: true,
@@ -118,7 +133,7 @@ export default function ApplicantApplyVisa({
       _id: "c-2",
       name: "Australia",
       code: "AU",
-      flag: "ðŸ‡¦ðŸ‡º",
+      flag: "🇦🇺",
       startingFee: 16500,
       processingTime: "7-10 Days",
       visaAvailable: true,
@@ -131,7 +146,7 @@ export default function ApplicantApplyVisa({
       _id: "c-3",
       name: "United Kingdom",
       code: "GB",
-      flag: "ðŸ‡¬ðŸ‡§",
+      flag: "🇬🇧",
       startingFee: 18200,
       processingTime: "15-20 Days",
       visaAvailable: true,
@@ -168,9 +183,14 @@ export default function ApplicantApplyVisa({
   const [selectedCountryName, setSelectedCountryName] = useState<string>("Canada");
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("Tourist Visa");
   const [selectedVisaTypeName, setSelectedVisaTypeName] = useState<string>("Tourist Short Stay");
-  const [processingSpeed, setProcessingSpeed] = useState<"standard" | "express" | "vip">("express");
+  const [processingSpeed, setProcessingSpeed] = useState<"standard" | "express">("express");
   const [entryType, setEntryType] = useState<string>("Single Entry");
   const [stayValidity, setStayValidity] = useState<string>("60 Days");
+
+  // Agent selection state
+  const [availableAgents, setAvailableAgents] = useState<AgentRecord[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState<boolean>(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
   // Step 2: Personal Information & Travel Details
   const [givenName, setGivenName] = useState("");
@@ -186,6 +206,23 @@ export default function ApplicantApplyVisa({
   const todayStr = new Date().toISOString().split("T")[0];
   const [travelDate, setTravelDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+
+  // Compute minimum departure date based on selected visa type processing days
+  const minDepartureDate = (() => {
+    const selectedVt = visaTypes.find((v) => v.name === selectedVisaTypeName);
+    const baseDays = selectedVt?.processingTimeDays || 7;
+    // Use exact processingTimeDays — no artificial floor override
+    const d = new Date();
+    d.setDate(d.getDate() + baseDays);
+    return d;
+  })();
+  const minDepartureStr = minDepartureDate.toISOString().split("T")[0];
+  const minDepartureFmt = minDepartureDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  // Keep a derived value for display/validation reuse
+  const minDepartureDays = (() => {
+    const selectedVt = visaTypes.find((v) => v.name === selectedVisaTypeName);
+    return selectedVt?.processingTimeDays || 7;
+  })();
   const [stayType, setStayType] = useState("Hotel Booking");
   const [hostName, setHostName] = useState("");
   const [hostAddress, setHostAddress] = useState("");
@@ -262,7 +299,7 @@ export default function ApplicantApplyVisa({
             _id: "c-1",
             name: "Canada",
             code: "CA",
-            flag: "ðŸ‡¨ðŸ‡¦",
+            flag: "🇨🇦",
             startingFee: 12500,
             processingTime: "10-15 Days",
             visaAvailable: true,
@@ -275,7 +312,7 @@ export default function ApplicantApplyVisa({
             _id: "c-2",
             name: "Australia",
             code: "AU",
-            flag: "ðŸ‡¦ðŸ‡º",
+            flag: "🇦🇺",
             startingFee: 16500,
             processingTime: "7-10 Days",
             visaAvailable: true,
@@ -288,7 +325,7 @@ export default function ApplicantApplyVisa({
             _id: "c-3",
             name: "United Kingdom",
             code: "GB",
-            flag: "ðŸ‡¬ðŸ‡§",
+            flag: "🇬🇧",
             startingFee: 18200,
             processingTime: "15-20 Days",
             visaAvailable: true,
@@ -357,7 +394,7 @@ export default function ApplicantApplyVisa({
             _id: "c-fb-1",
             name: "Canada",
             code: "CA",
-            flag: "ðŸ‡¨ðŸ‡¦",
+            flag: "🇨🇦",
             startingFee: 12500,
             processingTime: "10-15 Days",
             visaAvailable: true,
@@ -370,7 +407,7 @@ export default function ApplicantApplyVisa({
             _id: "c-fb-2",
             name: "Australia",
             code: "AU",
-            flag: "ðŸ‡¦ðŸ‡º",
+            flag: "🇦🇺",
             startingFee: 16500,
             processingTime: "7-10 Days",
             visaAvailable: true,
@@ -403,29 +440,43 @@ export default function ApplicantApplyVisa({
     fetchAdminConfig();
   }, []);
 
+  // Fetch agents whenever selected country changes
+  useEffect(() => {
+    if (!selectedCountryName) return;
+    const fetchAgentsByCountry = async () => {
+      setAgentsLoading(true);
+      setSelectedAgentId("");
+      try {
+        const res = await fetch(`${API_V1_URL}/agent/by-country?country=${encodeURIComponent(selectedCountryName)}`);
+        const json = await res.json();
+        if (res.ok && json.success) {
+          setAvailableAgents(json.data || []);
+        } else {
+          setAvailableAgents([]);
+        }
+      } catch {
+        setAvailableAgents([]);
+      } finally {
+        setAgentsLoading(false);
+      }
+    };
+    fetchAgentsByCountry();
+  }, [selectedCountryName]);
+
   // Compute selected country object
   const currentCountry = countries.find((c) => c.name === selectedCountryName);
 
-  // Compute categories supported for the selected country
-  const availableCategoriesForCountry =
-    currentCountry && currentCountry.availableCategories && currentCountry.availableCategories.length > 0
-      ? categories.filter((cat) =>
-          currentCountry.availableCategories.some(
-            (ac) =>
-              ac.trim().toLowerCase() === cat.name.trim().toLowerCase() ||
-              ac.trim().toLowerCase().includes(cat.name.trim().toLowerCase()) ||
-              cat.name.trim().toLowerCase().includes(ac.trim().toLowerCase())
-          )
-        )
-      : categories;
+  // Show ALL active categories from MongoDB — not restricted by country
+  // (Country selection affects consular fee / processing, not which categories are available)
+  const availableCategoriesForCountry = categories;
 
-  // Compute visa types supported for selected country AND selected category
+  // Compute visa types supported for selected category only
   const availableVisaTypesForCategory = (() => {
-    // Filter visa types matching category
-    const categoryMatched = visaTypes.filter((vt) => {
-      if (!selectedCategoryName) return true;
+    if (!selectedCategoryName) return visaTypes;
+
+    const selCat = selectedCategoryName.trim().toLowerCase();
+    return visaTypes.filter((vt) => {
       const vtCat = (vt.categoryName || "").trim().toLowerCase();
-      const selCat = selectedCategoryName.trim().toLowerCase();
       return (
         vtCat === selCat ||
         vtCat.includes(selCat) ||
@@ -433,62 +484,31 @@ export default function ApplicantApplyVisa({
         vtCat.replace(" visa", "") === selCat.replace(" visa", "")
       );
     });
-
-    if (categoryMatched.length === 0) return [];
-
-    // Refine by country explicit list if present and matching
-    if (currentCountry && currentCountry.availableVisaTypes && currentCountry.availableVisaTypes.length > 0) {
-      const countrySpecific = categoryMatched.filter((vt) =>
-        currentCountry.availableVisaTypes.some((t) => {
-          const tLower = t.trim().toLowerCase();
-          const vtLower = vt.name.trim().toLowerCase();
-          return (
-            tLower === vtLower ||
-            t === vt._id ||
-            vtLower.includes(tLower) ||
-            tLower.includes(vtLower)
-          );
-        })
-      );
-
-      if (countrySpecific.length > 0) return countrySpecific;
-    }
-
-    return categoryMatched;
   })();
 
   // Handle Country Selection Change
   const handleCountryChange = (countryName: string) => {
     setSelectedCountryName(countryName);
-    const countryObj = countries.find((c) => c.name === countryName);
-    if (!countryObj) return;
 
-    // Find valid categories for this country
-    const validCats = categories.filter((cat) =>
-      countryObj.availableCategories.some(
-        (ac) =>
-          ac.trim().toLowerCase() === cat.name.trim().toLowerCase() ||
-          ac.trim().toLowerCase().includes(cat.name.trim().toLowerCase()) ||
-          cat.name.trim().toLowerCase().includes(ac.trim().toLowerCase())
-      )
-    );
+    // Keep current category selection if it has matching visa types;
+    // otherwise reset to first category with visa types available
+    const currentCatHasVts = visaTypes.some((vt) => {
+      const vtCat = (vt.categoryName || "").trim().toLowerCase();
+      const selCat = selectedCategoryName.trim().toLowerCase();
+      return vtCat === selCat || vtCat.includes(selCat) || selCat.includes(vtCat);
+    });
 
-    const newCatName = validCats.length > 0 ? validCats[0].name : categories[0]?.name || "";
-    setSelectedCategoryName(newCatName);
-
-    // Find valid visa types for new category
-    const validVts = visaTypes.filter(
-      (vt) =>
-        vt.categoryName === newCatName ||
-        vt.categoryName?.trim().toLowerCase() === newCatName?.trim().toLowerCase()
-    );
-
-    if (validVts.length > 0) {
-      setSelectedVisaTypeName(validVts[0].name);
-      setEntryType(validVts[0].entryType || "Single Entry");
-      setStayValidity(validVts[0].maxStayDays ? `${validVts[0].maxStayDays} Days` : "60 Days");
-    } else {
-      setSelectedVisaTypeName("");
+    if (!currentCatHasVts && categories.length > 0) {
+      const firstCat = categories[0].name;
+      setSelectedCategoryName(firstCat);
+      const validVts = visaTypes.filter(
+        (vt) => (vt.categoryName || "").trim().toLowerCase() === firstCat.trim().toLowerCase()
+      );
+      if (validVts.length > 0) {
+        setSelectedVisaTypeName(validVts[0].name);
+        setEntryType(validVts[0].entryType || "Single Entry");
+        setStayValidity(validVts[0].maxStayDays ? `${validVts[0].maxStayDays} Days` : "60 Days");
+      }
     }
   };
 
@@ -632,7 +652,7 @@ export default function ApplicantApplyVisa({
       return;
     }
 
-    // Phase 2: Gemini AI Verification Loop â€” max 3 quick attempts (~4s)
+    // Phase 2: Gemini AI Verification Loop — max 3 quick attempts (~4s)
     const slotTitle = uploadedSlots[index]?.title || "";
     const slotDocType = uploadedSlots[index]?.documentType || "";
     let verifyCompleted = false;
@@ -716,7 +736,7 @@ export default function ApplicantApplyVisa({
   // Pricing calculations
   const consularFee = currentCountry?.startingFee || 8500;
   const platformFee = 2500;
-  const expressSurcharge = processingSpeed === "express" ? 2000 : processingSpeed === "vip" ? 4000 : 0;
+  const expressSurcharge = processingSpeed === "express" ? 2000 : 0;
   const totalAmount = consularFee + platformFee + expressSurcharge;
 
   // Save Draft
@@ -749,10 +769,16 @@ export default function ApplicantApplyVisa({
       if (travelDate && returnDate) {
         const dep = new Date(travelDate);
         const ret = new Date(returnDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
-        if (dep < today) errs.travelDate = "Departure date cannot be in the past.";
+        // Departure must be at least minDepartureDate (processing window)
+        const minDep = new Date(minDepartureStr);
+        minDep.setHours(0, 0, 0, 0);
+        dep.setHours(0, 0, 0, 0);
+
+        if (dep < minDep) {
+          errs.travelDate = `Departure date must be at least ${minDepartureDays} days from today (${minDepartureFmt}) — the visa processing time for ${selectedVisaTypeName || "this visa type"}.`;
+        }
+
         if (ret <= dep) {
           errs.returnDate = "Return date must be after departure date.";
         } else {
@@ -873,10 +899,14 @@ export default function ApplicantApplyVisa({
           employmentStatus,
           employerName,
           jobTitle,
-          bankBalance: `â‚¹${Number(bankBalance).toLocaleString("en-IN")}`
+          bankBalance: `₹${Number(bankBalance).toLocaleString("en-IN")}`
         },
         uploadedDocuments: uploadedSlots,
         coTravelers,
+        assignedAgentId: selectedAgentId || "",
+        assignedAgentName: selectedAgentId
+          ? (availableAgents.find(a => a.agentId === selectedAgentId)?.agencyName || "")
+          : "",
         pricing: {
           consularFee,
           platformFee,
@@ -1003,7 +1033,7 @@ export default function ApplicantApplyVisa({
           <div className="flex items-center gap-2">
             <Layers className="text-[#4848F7]" size={20} />
             <h3 className="text-sm font-extrabold tracking-wide uppercase text-indigo-200">
-              Connected Workflow (Applicant âž” Agent âž” Admin)
+              Connected Workflow (Applicant ➔ Agent ➔ Admin)
             </h3>
           </div>
           <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-3 py-1 rounded-full font-bold">
@@ -1029,7 +1059,7 @@ export default function ApplicantApplyVisa({
 
           <div className="bg-emerald-500/20 p-3 rounded-xl border border-emerald-400/30 space-y-1 text-emerald-300">
             <span className="text-emerald-300 block text-[10px] uppercase">Stage 4</span>
-            <p className="font-bold">Visa Decision Granted âœ“</p>
+            <p className="font-bold">Visa Decision Granted ✓</p>
           </div>
         </div>
       </div>
@@ -1048,7 +1078,7 @@ export default function ApplicantApplyVisa({
               <span className="bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full text-xs uppercase tracking-wider">
                 Application Submitted
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Visa Application Submitted Successfully! ðŸŽ‰</h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Visa Application Submitted Successfully! 🎉</h2>
               <p className="text-sm text-slate-600 max-w-xl mx-auto">
                 Your application has been registered in MongoDB and forwarded for consular processing.
               </p>
@@ -1073,7 +1103,7 @@ export default function ApplicantApplyVisa({
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                 <span className="text-slate-500 font-medium">Total Fee Payable:</span>
-                <span className="font-mono font-extrabold text-slate-900 text-sm">â‚¹{totalAmount.toLocaleString("en-IN")}</span>
+                <span className="font-mono font-extrabold text-slate-900 text-sm">₹{totalAmount.toLocaleString("en-IN")}</span>
               </div>
             </div>
 
@@ -1092,7 +1122,7 @@ export default function ApplicantApplyVisa({
                 }}
                 className="w-full sm:w-auto bg-[#4848F7] hover:bg-[#3838E6] text-white font-bold px-6 py-3 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
-                Proceed to Payment (â‚¹{totalAmount.toLocaleString("en-IN")})
+                Proceed to Payment (₹{totalAmount.toLocaleString("en-IN")})
               </button>
             </div>
           </div>
@@ -1175,12 +1205,120 @@ export default function ApplicantApplyVisa({
                   </div>
                 </div>
 
+                {/* Agent Selection — Dynamic from MongoDB */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <User size={15} className="text-[#4848F7]" />
+                    Select Your Visa Processing Agent
+                    <span className="ml-1 text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Optional</span>
+                  </label>
+
+                  {agentsLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-500 py-3">
+                      <RefreshCw size={13} className="animate-spin text-[#4848F7]" />
+                      <span>Loading available agents for {selectedCountryName}…</span>
+                    </div>
+                  ) : availableAgents.length === 0 ? (
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500">
+                      <AlertCircle size={13} className="text-amber-500 shrink-0" />
+                      <span>No agents currently available for <strong>{selectedCountryName}</strong>. Your application will be auto-assigned by our team.</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* No Preference option */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAgentId("")}
+                        className={`relative p-3.5 rounded-2xl border text-left transition cursor-pointer group ${
+                          selectedAgentId === ""
+                            ? "bg-indigo-50 border-[#4848F7] ring-2 ring-[#4848F7]/20"
+                            : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            selectedAgentId === "" ? "bg-[#4848F7]/10" : "bg-slate-200"
+                          }`}>
+                            <Sparkles size={14} className={selectedAgentId === "" ? "text-[#4848F7]" : "text-slate-400"} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs text-slate-800">No Preference</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Auto-assign best available agent</p>
+                          </div>
+                        </div>
+                        {selectedAgentId === "" && (
+                          <span className="absolute top-2 right-2 w-4 h-4 bg-[#4848F7] rounded-full flex items-center justify-center">
+                            <Check size={10} className="text-white" />
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Agent cards */}
+                      {availableAgents.map((agent) => (
+                        <button
+                          key={agent.agentId}
+                          type="button"
+                          onClick={() => setSelectedAgentId(agent.agentId === selectedAgentId ? "" : agent.agentId)}
+                          className={`relative p-3.5 rounded-2xl border text-left transition cursor-pointer group ${
+                            selectedAgentId === agent.agentId
+                              ? "bg-indigo-50 border-[#4848F7] ring-2 ring-[#4848F7]/20"
+                              : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {/* Avatar */}
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-black text-xs ${
+                              selectedAgentId === agent.agentId
+                                ? "bg-[#4848F7] text-white"
+                                : "bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
+                            }`}>
+                              {agent.fullName?.charAt(0)?.toUpperCase() || "A"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs text-slate-900 truncate">{agent.agencyName}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{agent.fullName}</p>
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {agent.city && (
+                                  <span className="text-[9px] font-semibold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">
+                                    📍 {agent.city}{agent.state ? `, ${agent.state}` : ""}
+                                  </span>
+                                )}
+                                {agent.yearsInBusiness && (
+                                  <span className="text-[9px] font-semibold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                                    {agent.yearsInBusiness} yrs exp
+                                  </span>
+                                )}
+                                <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                                  ✓ Serves {selectedCountryName}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {selectedAgentId === agent.agentId && (
+                            <span className="absolute top-2 right-2 w-4 h-4 bg-[#4848F7] rounded-full flex items-center justify-center">
+                              <Check size={10} className="text-white" />
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedAgentId && (() => {
+                    const ag = availableAgents.find(a => a.agentId === selectedAgentId);
+                    return ag ? (
+                      <p className="text-[10px] text-[#4848F7] font-semibold flex items-center gap-1">
+                        <CheckCircle2 size={11} /> Agent selected: <strong>{ag.agencyName}</strong> ({ag.agentId})
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+
                 {/* Processing Speed Selection */}
                 <div className="space-y-2 pt-2">
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Clock size={15} className="text-[#4848F7]" /> Select Consular Processing Speed
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <button
                       type="button"
                       onClick={() => setProcessingSpeed("standard")}
@@ -1191,9 +1329,9 @@ export default function ApplicantApplyVisa({
                       }`}
                     >
                       <span className="font-extrabold block text-sm">Standard Processing</span>
-                      <p className="text-slate-500">5 - 7 Business Days</p>
+                      <p className="text-slate-500">21 - 25 Business Days</p>
                       <p className="font-mono text-indigo-700 font-bold">
-                        Consular Fee (â‚¹{formatINR(consularFee)}) + â‚¹0 Surcharge
+                        Consular Fee (₹{formatINR(consularFee)}) + ₹0 Surcharge
                       </p>
                     </button>
 
@@ -1209,24 +1347,8 @@ export default function ApplicantApplyVisa({
                       <span className="font-extrabold block text-sm flex items-center gap-1">
                         Express Processing <Zap size={14} className="text-amber-500" />
                       </span>
-                      <p className="text-slate-500">48 Hours Fast Track</p>
-                      <p className="font-mono text-indigo-700 font-bold">+ â‚¹2,000 Express Fee</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setProcessingSpeed("vip")}
-                      className={`p-4 rounded-2xl border text-left space-y-1 transition cursor-pointer ${
-                        processingSpeed === "vip"
-                          ? "bg-indigo-50 border-[#4848F7] text-slate-900 ring-2 ring-[#4848F7]/20"
-                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span className="font-extrabold block text-sm flex items-center gap-1">
-                        VIP Super Fast <Zap size={14} className="text-indigo-600" />
-                      </span>
-                      <p className="text-slate-500">24 Hours Guaranteed</p>
-                      <p className="font-mono text-indigo-700 font-bold">+ â‚¹4,000 VIP Fee</p>
+                      <p className="text-slate-500">10 - 15 Business Days</p>
+                      <p className="font-mono text-indigo-700 font-bold">+ ₹2,000 Express Fee</p>
                     </button>
                   </div>
                 </div>
@@ -1254,8 +1376,9 @@ export default function ApplicantApplyVisa({
                       value={stayValidity}
                       className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold focus:outline-none cursor-not-allowed"
                     />
-                    <p className="text-[10px] text-slate-500 font-medium mt-1">
-                      ðŸ“Œ Configured by Consular Rule (Max {visaTypes.find((v) => v.name === selectedVisaTypeName)?.maxStayDays || 180} Days)
+                    <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
+                      <Pin size={12} className="text-amber-500 shrink-0" />
+                      <span>Configured by Consular Rule (Max {visaTypes.find((v) => v.name === selectedVisaTypeName)?.maxStayDays || 180} Days)</span>
                     </p>
                   </div>
                 </div>
@@ -1421,7 +1544,7 @@ export default function ApplicantApplyVisa({
                       <label className="text-slate-700 font-semibold block mb-1">Intended Departure Date *</label>
                       <input
                         type="date"
-                        min={todayStr}
+                        min={minDepartureStr}
                         value={travelDate}
                         onChange={(e) => {
                           setTravelDate(e.target.value);
@@ -1433,6 +1556,12 @@ export default function ApplicantApplyVisa({
                           stepErrors.travelDate ? "border-red-500 bg-red-50/20" : "border-slate-200 focus:border-[#4848F7]"
                         }`}
                       />
+                      <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
+                        <Clock size={10} className="text-[#4848F7] shrink-0" />
+                        <span>
+                          Earliest: <strong>{minDepartureFmt}</strong> — Visa processing requires <strong>{minDepartureDays} day{minDepartureDays !== 1 ? "s" : ""}</strong>
+                        </span>
+                      </p>
                       {stepErrors.travelDate && <p className="text-[10px] text-red-600 font-bold mt-1">{stepErrors.travelDate}</p>}
                     </div>
 
@@ -1623,7 +1752,7 @@ export default function ApplicantApplyVisa({
                       {isBankBalanceLow && (
                         <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-[10px] font-semibold mt-1.5 flex items-center gap-1.5">
                           <AlertCircle size={12} className="shrink-0 text-amber-600" />
-                          <span>Warning: Balance is below recommended â‚¹3,50,000 threshold.</span>
+                          <span>Warning: Balance is below recommended ₹3,50,000 threshold.</span>
                         </div>
                       )}
                     </div>
@@ -1708,7 +1837,7 @@ export default function ApplicantApplyVisa({
                                 <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
                                   <div className="flex items-center gap-2 truncate">
                                     <FileText size={14} className="text-slate-400 shrink-0" />
-                                    <span className="truncate text-xs text-slate-700">{slot.fileName || "Uploaded âœ“"}</span>
+                                    <span className="truncate text-xs text-slate-700">{slot.fileName || "Uploaded ✓"}</span>
                                   </div>
                                   <label className="text-[10px] font-bold text-[#4848F7] hover:underline shrink-0 cursor-pointer">
                                     Change
@@ -1734,7 +1863,7 @@ export default function ApplicantApplyVisa({
                                 <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
                                   <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
                                   <div>
-                                    <p className="text-[10px] font-bold text-emerald-700">AI Verified âœ“</p>
+                                    <p className="text-[10px] font-bold text-emerald-700">AI Verified ✓</p>
                                     <p className="text-[10px] text-emerald-600">{slot.verifiedType}</p>
                                   </div>
                                 </div>
@@ -1834,19 +1963,19 @@ export default function ApplicantApplyVisa({
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span>Embassy Consular Fee ({selectedCountryName}):</span>
-                    <span className="font-bold font-mono">â‚¹{formatINR(consularFee)}</span>
+                    <span className="font-bold font-mono">₹{formatINR(consularFee)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Platform Processing Fee:</span>
-                    <span className="font-bold font-mono">â‚¹{formatINR(platformFee)}</span>
+                    <span className="font-bold font-mono">₹{formatINR(platformFee)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Express Speed Surcharge ({processingSpeed.toUpperCase()}):</span>
-                    <span className="font-bold font-mono">â‚¹{formatINR(expressSurcharge)}</span>
+                    <span className="font-bold font-mono">₹{formatINR(expressSurcharge)}</span>
                   </div>
                   <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-sm text-slate-900">
                     <span>Total Payable Amount:</span>
-                    <span className="text-[#4848F7] font-mono text-base">â‚¹{formatINR(totalAmount)}</span>
+                    <span className="text-[#4848F7] font-mono text-base">₹{formatINR(totalAmount)}</span>
                   </div>
                 </div>
 
@@ -1880,7 +2009,7 @@ export default function ApplicantApplyVisa({
                     ) : (
                       <>
                         <Lock size={16} />
-                        <span>Submit & Proceed to Payment (â‚¹{formatINR(totalAmount)})</span>
+                        <span>Submit & Proceed to Payment (₹{formatINR(totalAmount)})</span>
                       </>
                     )}
                   </button>
@@ -1894,18 +2023,19 @@ export default function ApplicantApplyVisa({
                 type="button"
                 disabled={currentStep === 1}
                 onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 1))}
-                className="bg-slate-100 hover:bg-slate-200 disabled:opacity-30 px-4 py-2 rounded-xl text-slate-700 transition cursor-pointer"
+                className="bg-slate-100 hover:bg-slate-200 disabled:opacity-30 px-4 py-2 rounded-xl text-slate-700 transition cursor-pointer flex items-center gap-1.5"
               >
-                â† Previous Step
+                <ArrowLeft size={14} /> Previous Step
               </button>
 
               {currentStep < 5 && (
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className="bg-[#4848F7] hover:bg-indigo-700 text-white px-5 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-md shadow-indigo-500/20"
+                  className="bg-[#4848F7] hover:bg-indigo-700 text-white px-5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-500/20"
                 >
-                  <span>Next Step â†’</span>
+                  <span>Next Step</span>
+                  <ArrowRight size={14} />
                 </button>
               )}
             </div>

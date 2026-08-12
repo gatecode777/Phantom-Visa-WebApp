@@ -241,7 +241,7 @@ export default function RolesPermissionsManagement() {
                     <td className="py-2.5 text-center font-mono font-bold text-slate-900">{r.usersAssigned.toLocaleString()}</td>
                     <td className="py-2.5 text-center font-mono font-bold text-blue-700">{r.permissionsCount} Rights</td>
                     <td className="py-2.5 text-center">
-                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">ðŸŸ¢ {r.status}</span>
+                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">🟢 {r.status}</span>
                     </td>
                     <td className="py-2.5 text-center font-mono text-[11px] text-slate-500">{r.lastUpdated}</td>
                     <td className="py-2.5 text-right space-x-1">
@@ -284,9 +284,9 @@ export default function RolesPermissionsManagement() {
                 {MOCK_MATRIX.map((m, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-2 font-bold text-slate-800">{m.module}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.view ? "âœ“" : "âœ—"}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.edit ? "âœ“" : "âœ—"}</td>
-                    <td className="py-2 text-center text-emerald-600 font-bold">{m.approve ? "âœ“" : "âœ—"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.view ? "✓" : "✕"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.edit ? "✓" : "✕"}</td>
+                    <td className="py-2 text-center text-emerald-600 font-bold">{m.approve ? "✓" : "✕"}</td>
                   </tr>
                 ))}
               </tbody>

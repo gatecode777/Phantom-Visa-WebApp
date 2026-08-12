@@ -51,6 +51,14 @@ router.post("/upload-flag", upload.single("file"), async (req: Request, res: Res
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
+    // Delete any corrupted country documents where name was accidentally saved as an image URL
+    await Country.deleteMany({
+      $or: [
+        { name: { $regex: "^https?://", $options: "i" } },
+        { name: { $regex: "imagekit", $options: "i" } }
+      ]
+    });
+
     let countries = await Country.find().sort({ name: 1 });
 
     // Auto-seed default countries matching screenshot 1 if empty
@@ -146,10 +154,14 @@ router.get("/", async (req: Request, res: Response) => {
       countries = await Country.insertMany(defaults);
     }
 
+    const cleanCountries = countries.filter(
+      (c) => c.name && !c.name.startsWith("http://") && !c.name.startsWith("https://") && !c.name.includes("imagekit")
+    );
+
     return res.status(200).json({
       success: true,
-      count: countries.length,
-      data: countries
+      count: cleanCountries.length,
+      data: cleanCountries
     });
   } catch (error: any) {
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));

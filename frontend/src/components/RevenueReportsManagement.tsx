@@ -76,19 +76,19 @@ export const REVENUE_REPORT_FEATURES = [
 ];
 
 const MOCK_REVENUE_SUMMARY: RevenueSummaryRow[] = [
-  { source: "Visa Fees", count: 21840, amount: "â‚¹2.10 Cr" },
-  { source: "Service Charges", count: 21840, amount: "â‚¹54.20 L" },
-  { source: "Express Processing", count: 3420, amount: "â‚¹12.50 L" },
-  { source: "Document Verification", count: 14200, amount: "â‚¹8.40 L" },
-  { source: "Total", count: 21840, amount: "â‚¹2.84 Cr" }
+  { source: "Visa Fees", count: 21840, amount: "₹2.10 Cr" },
+  { source: "Service Charges", count: 21840, amount: "₹54.20 L" },
+  { source: "Express Processing", count: 3420, amount: "₹12.50 L" },
+  { source: "Document Verification", count: 14200, amount: "₹8.40 L" },
+  { source: "Total", count: 21840, amount: "₹2.84 Cr" }
 ];
 
 const MOCK_COUNTRY_REVENUE: CountryRevenueRow[] = [
-  { country: "Canada", applications: 4200, amount: "â‚¹78.40 L" },
-  { country: "Australia", applications: 3850, amount: "â‚¹68.20 L" },
-  { country: "United Kingdom", applications: 2940, amount: "â‚¹52.40 L" },
-  { country: "United States", applications: 2500, amount: "â‚¹44.80 L" },
-  { country: "Germany", applications: 1920, amount: "â‚¹34.60 L" }
+  { country: "Canada", applications: 4200, amount: "₹78.40 L" },
+  { country: "Australia", applications: 3850, amount: "₹68.20 L" },
+  { country: "United Kingdom", applications: 2940, amount: "₹52.40 L" },
+  { country: "United States", applications: 2500, amount: "₹44.80 L" },
+  { country: "Germany", applications: 1920, amount: "₹34.60 L" }
 ];
 
 export default function RevenueReportsManagement() {
@@ -166,49 +166,49 @@ export default function RevenueReportsManagement() {
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Gross Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹3.84 Cr</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹3.84 Cr</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Gross Collections</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Net Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹3.24 Cr</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹3.24 Cr</div>
             <span className="text-[10px] text-emerald-600 font-bold">After Commissions</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Visa Fee Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹2.10 Cr</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹2.10 Cr</div>
             <span className="text-[10px] text-blue-600 font-bold">Embassy / Govt Fees</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-teal-600 block mb-1">Service Fee Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹54.20 L</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹54.20 L</div>
             <span className="text-[10px] text-teal-600 font-bold">Platform Earnings</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Express Fee Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹12.50 L</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹12.50 L</div>
             <span className="text-[10px] text-amber-600 font-bold">Priority Add-ons</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Agent Commissions</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹7.30 L</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹7.30 L</div>
             <span className="text-[10px] text-purple-600 font-bold">B2B Payouts</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Refunds Issued</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹18.65 L</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹18.65 L</div>
             <span className="text-[10px] text-red-600 font-bold">Returned Capital</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-indigo-600 block mb-1">Avg Revenue / Applicant</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹1,560</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹1,560</div>
             <span className="text-[10px] text-indigo-600 font-bold">Average Yield</span>
           </div>
         </div>
@@ -226,8 +226,8 @@ export default function RevenueReportsManagement() {
 
           <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-1 text-[10px] font-semibold text-slate-700">
             <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Growth Rate: +14.2%</div>
-            <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Daily Avg: â‚¹1.25 L</div>
-            <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Monthly Avg: â‚¹32.0 L</div>
+            <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Daily Avg: ₹1.25 L</div>
+            <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Monthly Avg: ₹32.0 L</div>
             <div className="flex items-center gap-1"><Check size={11} className="text-emerald-600" /> Profit Margin: 84.4%</div>
           </div>
         </div>
@@ -355,10 +355,10 @@ export default function RevenueReportsManagement() {
               <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono font-bold">Line Chart</span>
             </div>
             <div className="space-y-2 text-xs font-semibold text-slate-700">
-              <div className="flex justify-between"><span>Daily Revenue:</span><strong className="font-mono text-slate-900">â‚¹1.25 L</strong></div>
-              <div className="flex justify-between"><span>Weekly Revenue:</span><strong className="font-mono text-slate-900">â‚¹8.75 L</strong></div>
-              <div className="flex justify-between"><span>Monthly Revenue:</span><strong className="font-mono text-slate-900">â‚¹32.00 L</strong></div>
-              <div className="flex justify-between"><span>Yearly Revenue:</span><strong className="font-mono text-slate-900">â‚¹3.84 Cr</strong></div>
+              <div className="flex justify-between"><span>Daily Revenue:</span><strong className="font-mono text-slate-900">₹1.25 L</strong></div>
+              <div className="flex justify-between"><span>Weekly Revenue:</span><strong className="font-mono text-slate-900">₹8.75 L</strong></div>
+              <div className="flex justify-between"><span>Monthly Revenue:</span><strong className="font-mono text-slate-900">₹32.00 L</strong></div>
+              <div className="flex justify-between"><span>Yearly Revenue:</span><strong className="font-mono text-slate-900">₹3.84 Cr</strong></div>
             </div>
           </div>
         </div>
@@ -373,10 +373,10 @@ export default function RevenueReportsManagement() {
               <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-mono font-bold">Doughnut</span>
             </div>
             <div className="space-y-1.5 text-xs font-semibold text-slate-700">
-              <div className="flex justify-between"><span>Visa Fees:</span><strong className="font-mono text-emerald-700">â‚¹2.10 Cr (54.7%)</strong></div>
-              <div className="flex justify-between"><span>Service Charges:</span><strong className="font-mono text-blue-700">â‚¹54.20 L (14.1%)</strong></div>
-              <div className="flex justify-between"><span>Express Processing:</span><strong className="font-mono text-amber-700">â‚¹12.50 L (3.2%)</strong></div>
-              <div className="flex justify-between"><span>Agent Commissions:</span><strong className="font-mono text-purple-700">â‚¹7.30 L (1.9%)</strong></div>
+              <div className="flex justify-between"><span>Visa Fees:</span><strong className="font-mono text-emerald-700">₹2.10 Cr (54.7%)</strong></div>
+              <div className="flex justify-between"><span>Service Charges:</span><strong className="font-mono text-blue-700">₹54.20 L (14.1%)</strong></div>
+              <div className="flex justify-between"><span>Express Processing:</span><strong className="font-mono text-amber-700">₹12.50 L (3.2%)</strong></div>
+              <div className="flex justify-between"><span>Agent Commissions:</span><strong className="font-mono text-purple-700">₹7.30 L (1.9%)</strong></div>
             </div>
           </div>
         </div>
@@ -391,10 +391,10 @@ export default function RevenueReportsManagement() {
               <span className="text-[9px] bg-teal-100 text-teal-700 px-2 py-0.5 rounded font-mono font-bold">Bar / Map</span>
             </div>
             <div className="space-y-1.5 text-xs font-semibold text-slate-700">
-              <div className="flex justify-between"><span>Canada:</span><strong className="font-mono text-slate-900">â‚¹78.40 L</strong></div>
-              <div className="flex justify-between"><span>Australia:</span><strong className="font-mono text-slate-900">â‚¹68.20 L</strong></div>
-              <div className="flex justify-between"><span>United Kingdom:</span><strong className="font-mono text-slate-900">â‚¹52.40 L</strong></div>
-              <div className="flex justify-between"><span>United States:</span><strong className="font-mono text-slate-900">â‚¹44.80 L</strong></div>
+              <div className="flex justify-between"><span>Canada:</span><strong className="font-mono text-slate-900">₹78.40 L</strong></div>
+              <div className="flex justify-between"><span>Australia:</span><strong className="font-mono text-slate-900">₹68.20 L</strong></div>
+              <div className="flex justify-between"><span>United Kingdom:</span><strong className="font-mono text-slate-900">₹52.40 L</strong></div>
+              <div className="flex justify-between"><span>United States:</span><strong className="font-mono text-slate-900">₹44.80 L</strong></div>
             </div>
           </div>
         </div>
@@ -464,7 +464,7 @@ export default function RevenueReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {REVENUE_REPORT_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
                   <span>{wf}</span>
                 </div>
               ))}

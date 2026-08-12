@@ -107,7 +107,7 @@ const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
     visaIssueDate: "01 Aug 2026",
     visaStatus: "Visa Issued",
     status: "Approved",
-    amountPaid: "â‚¹12,350",
+    amountPaid: "₹12,350",
     transactionId: "TXN-9988112",
     dob: "1994-08-12",
     gender: "Female",
@@ -144,7 +144,7 @@ const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
     visaIssueDate: "31 Jul 2026",
     visaStatus: "Ready for Issue",
     status: "Approved",
-    amountPaid: "â‚¹18,930",
+    amountPaid: "₹18,930",
     transactionId: "TXN-7733441",
     dob: "1999-02-15",
     gender: "Male",
@@ -177,7 +177,7 @@ const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
     visaIssueDate: "30 Jul 2026",
     visaStatus: "Completed",
     status: "Approved",
-    amountPaid: "â‚¹8,670",
+    amountPaid: "₹8,670",
     transactionId: "TXN-5511223",
     dob: "1988-06-25",
     gender: "Male",
@@ -371,7 +371,7 @@ export default function ApprovedApplicationsManagement() {
               {APPROVAL_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -578,7 +578,7 @@ export default function ApprovedApplicationsManagement() {
                     <td className="py-3.5 px-4 font-mono font-bold">
                       {a.visaStatus === "Visa Issued" ? (
                         <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded text-[10px] border border-purple-200">
-                          ðŸŸ£ Visa Issued
+                          🟢 Visa Issued
                         </span>
                       ) : a.visaStatus === "Completed" ? (
                         <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] border border-emerald-200">
@@ -586,13 +586,13 @@ export default function ApprovedApplicationsManagement() {
                         </span>
                       ) : (
                         <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[10px] border border-blue-200">
-                          ðŸ“‹ Ready for Issue
+                          📋 Ready for Issue
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                        ðŸŸ¢ Approved
+                        🟢 Approved
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -639,7 +639,7 @@ export default function ApprovedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 1,856 Approved Applications</div>
+          <div>Showing 1-10 of 1,856 Approved Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

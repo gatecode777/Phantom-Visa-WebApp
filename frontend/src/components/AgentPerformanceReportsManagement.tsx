@@ -76,11 +76,11 @@ export const AGENT_REPORT_FEATURES = [
 ];
 
 const MOCK_AGENT_PERFORMANCE: AgentPerformanceRow[] = [
-  { agentId: "AG-1001", agentName: "Apex Travels", contactPerson: "Rahul Verma", applications: 580, approved: 540, rejected: 22, approvalRate: "93.1%", revenue: "â‚¹48.50 L", rating: 4.9 },
-  { agentId: "AG-1002", agentName: "Global Visas", contactPerson: "Priya Shah", applications: 420, approved: 385, rejected: 18, approvalRate: "91.6%", revenue: "â‚¹36.20 L", rating: 4.8 },
-  { agentId: "AG-1003", agentName: "Sun Travel", contactPerson: "Amit Kumar", applications: 310, approved: 280, rejected: 12, approvalRate: "90.3%", revenue: "â‚¹25.80 L", rating: 4.7 },
-  { agentId: "AG-1004", agentName: "Fast Track Visas", contactPerson: "Suresh Menon", applications: 290, approved: 265, rejected: 10, approvalRate: "91.4%", revenue: "â‚¹22.10 L", rating: 4.9 },
-  { agentId: "AG-1005", agentName: "Jet Airways B2B", contactPerson: "Kavita Rao", applications: 240, approved: 215, rejected: 14, approvalRate: "89.5%", revenue: "â‚¹18.40 L", rating: 4.6 }
+  { agentId: "AG-1001", agentName: "Apex Travels", contactPerson: "Rahul Verma", applications: 580, approved: 540, rejected: 22, approvalRate: "93.1%", revenue: "₹48.50 L", rating: 4.9 },
+  { agentId: "AG-1002", agentName: "Global Visas", contactPerson: "Priya Shah", applications: 420, approved: 385, rejected: 18, approvalRate: "91.6%", revenue: "₹36.20 L", rating: 4.8 },
+  { agentId: "AG-1003", agentName: "Sun Travel", contactPerson: "Amit Kumar", applications: 310, approved: 280, rejected: 12, approvalRate: "90.3%", revenue: "₹25.80 L", rating: 4.7 },
+  { agentId: "AG-1004", agentName: "Fast Track Visas", contactPerson: "Suresh Menon", applications: 290, approved: 265, rejected: 10, approvalRate: "91.4%", revenue: "₹22.10 L", rating: 4.9 },
+  { agentId: "AG-1005", agentName: "Jet Airways B2B", contactPerson: "Kavita Rao", applications: 240, approved: 215, rejected: 14, approvalRate: "89.5%", revenue: "₹18.40 L", rating: 4.6 }
 ];
 
 export default function AgentPerformanceReportsManagement() {
@@ -190,7 +190,7 @@ export default function AgentPerformanceReportsManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-purple-600 block mb-1">Agent Revenue</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹2.45 Cr</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹2.45 Cr</div>
           <span className="text-[9px] text-purple-600 font-bold">Gross Volume</span>
         </div>
 
@@ -202,7 +202,7 @@ export default function AgentPerformanceReportsManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-indigo-600 block mb-1">Commissions</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹18.50 L</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹18.50 L</div>
           <span className="text-[9px] text-indigo-600 font-bold">Paid Payouts</span>
         </div>
 
@@ -336,7 +336,7 @@ export default function AgentPerformanceReportsManagement() {
             <div className="space-y-2 text-xs font-semibold text-slate-700">
               <div className="flex justify-between items-center bg-amber-50/60 p-2 rounded-xl border border-amber-200">
                 <span>Top Agent by Revenue:</span>
-                <strong className="font-bold text-slate-900">Apex Travels (â‚¹48.5L)</strong>
+                <strong className="font-bold text-slate-900">Apex Travels (₹48.5L)</strong>
               </div>
               <div className="flex justify-between items-center bg-blue-50/60 p-2 rounded-xl border border-blue-200">
                 <span>Top Agent by Volume:</span>
@@ -348,7 +348,7 @@ export default function AgentPerformanceReportsManagement() {
               </div>
               <div className="flex justify-between items-center bg-purple-50/60 p-2 rounded-xl border border-purple-200">
                 <span>Top Rated Agent:</span>
-                <strong className="font-bold text-slate-900">Fast Track (4.9 â˜…)</strong>
+                <strong className="font-bold text-slate-900">Fast Track (4.9 ★)</strong>
               </div>
             </div>
           </div>
@@ -386,7 +386,7 @@ export default function AgentPerformanceReportsManagement() {
                     <td className="py-2 text-center font-mono font-bold text-red-700">{ag.rejected}</td>
                     <td className="py-2 text-center font-mono font-bold text-blue-700">{ag.approvalRate}</td>
                     <td className="py-2 text-right font-mono font-bold text-emerald-800">{ag.revenue}</td>
-                    <td className="py-2 text-center font-bold text-amber-600">â­ {ag.rating}</td>
+                    <td className="py-2 text-center font-bold text-amber-600">⭐ {ag.rating}</td>
                   </tr>
                 ))}
               </tbody>
@@ -406,7 +406,7 @@ export default function AgentPerformanceReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {AGENT_REPORT_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
                   <span>{wf}</span>
                 </div>
               ))}

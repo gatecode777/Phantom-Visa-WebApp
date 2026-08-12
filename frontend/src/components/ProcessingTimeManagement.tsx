@@ -92,9 +92,9 @@ const MOCK_PROCESSING_RULES: ProcessingTimeRecord[] = [
     visaType: "Tourist E-Visa",
     entryType: "Single Entry",
     status: "Active",
-    regular: { minDays: 10, maxDays: 15, text: "10â€“15 Days" },
-    express: { minDays: 5, maxDays: 7, text: "5â€“7 Days" },
-    urgent: { minDays: 2, maxDays: 3, text: "2â€“3 Days" },
+    regular: { minDays: 10, maxDays: 15, text: "10-15 Days" },
+    express: { minDays: 5, maxDays: 7, text: "5-7 Days" },
+    urgent: { minDays: 2, maxDays: 3, text: "2-3 Days" },
     sla: {
       workingDaysOnly: true,
       excludeWeekends: true,
@@ -128,9 +128,9 @@ const MOCK_PROCESSING_RULES: ProcessingTimeRecord[] = [
     visaType: "Student Long Stay",
     entryType: "Multiple Entry",
     status: "Active",
-    regular: { minDays: 15, maxDays: 20, text: "15â€“20 Days" },
-    express: { minDays: 10, maxDays: 12, text: "10â€“12 Days" },
-    urgent: { minDays: 5, maxDays: 7, text: "5â€“7 Days" },
+    regular: { minDays: 15, maxDays: 20, text: "15-20 Days" },
+    express: { minDays: 10, maxDays: 12, text: "10-12 Days" },
+    urgent: { minDays: 5, maxDays: 7, text: "5-7 Days" },
     sla: {
       workingDaysOnly: true,
       excludeWeekends: true,
@@ -164,8 +164,8 @@ const MOCK_PROCESSING_RULES: ProcessingTimeRecord[] = [
     visaType: "Multiple Entry Business",
     entryType: "Multiple Entry",
     status: "Active",
-    regular: { minDays: 5, maxDays: 7, text: "5â€“7 Days" },
-    express: { minDays: 2, maxDays: 3, text: "2â€“3 Days" },
+    regular: { minDays: 5, maxDays: 7, text: "5-7 Days" },
+    express: { minDays: 2, maxDays: 3, text: "2-3 Days" },
     urgent: { minDays: 1, maxDays: 1, text: "24 Hours" },
     sla: {
       workingDaysOnly: false,
@@ -356,17 +356,17 @@ export default function ProcessingTimeManagement() {
                 regular: {
                   minDays: formData.regularMin,
                   maxDays: formData.regularMax,
-                  text: `${formData.regularMin}â€“${formData.regularMax} Days`
+                  text: `${formData.regularMin}-${formData.regularMax} Days`
                 },
                 express: {
                   minDays: formData.expressMin,
                   maxDays: formData.expressMax,
-                  text: `${formData.expressMin}â€“${formData.expressMax} Days`
+                  text: `${formData.expressMin}-${formData.expressMax} Days`
                 },
                 urgent: {
                   minDays: formData.urgentMin,
                   maxDays: formData.urgentMax,
-                  text: `${formData.urgentMin}â€“${formData.urgentMax} Days`
+                  text: `${formData.urgentMin}-${formData.urgentMax} Days`
                 },
                 sla: {
                   workingDaysOnly: formData.workingDaysOnly,
@@ -397,17 +397,17 @@ export default function ProcessingTimeManagement() {
         regular: {
           minDays: formData.regularMin,
           maxDays: formData.regularMax,
-          text: `${formData.regularMin}â€“${formData.regularMax} Days`
+          text: `${formData.regularMin}-${formData.regularMax} Days`
         },
         express: {
           minDays: formData.expressMin,
           maxDays: formData.expressMax,
-          text: `${formData.expressMin}â€“${formData.expressMax} Days`
+          text: `${formData.expressMin}-${formData.expressMax} Days`
         },
         urgent: {
           minDays: formData.urgentMin,
           maxDays: formData.urgentMax,
-          text: `${formData.urgentMin}â€“${formData.urgentMax} Days`
+          text: `${formData.urgentMin}-${formData.urgentMax} Days`
         },
         sla: {
           workingDaysOnly: formData.workingDaysOnly,
@@ -579,7 +579,7 @@ export default function ProcessingTimeManagement() {
               {PROCESSING_TYPES_LIST.map((type, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                    âœ“
+                    ✓
                   </div>
                   <span>{type}</span>
                 </div>
@@ -855,7 +855,7 @@ export default function ProcessingTimeManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 248 Processing Rules</div>
+          <div>Showing 1-10 of 248 Processing Rules</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

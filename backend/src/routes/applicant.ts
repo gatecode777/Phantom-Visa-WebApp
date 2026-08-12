@@ -580,44 +580,39 @@ router.post("/verify-visa-document", (req: Request, res: Response, next) => {
       return res.status(500).json({ success: false, verificationStatus: "error", message: "AI verification not configured." });
     }
 
-    // Pre-checks for filename & document type mismatches
+    // Pre-checks: classify the EXPECTED document type from its title
     const docName = (documentTitle || documentType || "visa document").toLowerCase();
     const fileNameLower = (file.originalname || "").toLowerCase();
-    const isPassportDoc = docName.includes("passport") && !docName.includes("photo") && !docName.includes("photograph");
-    const isPhotoDoc = docName.includes("photo") || docName.includes("photograph") || docName.includes("picture") || docName.includes("headshot") || docName.includes("portrait");
-    const isBankDoc = docName.includes("bank") || docName.includes("statement") || docName.includes("financial");
-    const isFlightDoc = docName.includes("flight") || docName.includes("ticket") || docName.includes("booking") || docName.includes("itinerary");
 
-    const isGraphicLogoOrIcon = fileNameLower.includes("logo") || fileNameLower.includes("removebg") || fileNameLower.includes("icon") || fileNameLower.includes("avatar") || fileNameLower.includes("generated") || fileNameLower.includes("graphic") || fileNameLower.includes("illustration") || fileNameLower.includes("vector") || fileNameLower.includes("dall-e") || fileNameLower.includes("midjourney") || fileNameLower.includes("clipart") || fileNameLower.includes("design") || fileNameLower.includes("anime") || fileNameLower.includes("manga") || fileNameLower.includes("cartoon") || fileNameLower.includes("wallpaper") || fileNameLower.includes("wallhaven") || fileNameLower.includes("drawing") || fileNameLower.includes("sketch");
-    const isScreenshotFile = fileNameLower.includes("screenshot") || fileNameLower.includes("screencapture") || fileNameLower.includes("screen_capture") || fileNameLower.includes("mailersend") || fileNameLower.includes("dashboard") || fileNameLower.includes("web-page") || fileNameLower.includes("browser");
-    const isElectricityBillFile = fileNameLower.includes("electricity") || fileNameLower.includes("utility") || fileNameLower.includes("electric_bill") || fileNameLower.includes("electricity-bill") || fileNameLower.includes("power_bill") || fileNameLower.includes("invoice") || fileNameLower.includes("receipt");
+    // ──── Document type classifiers (non-overlapping) ────────────────────────
+    const isPassportDoc   = docName.includes("passport") && !docName.includes("photo") && !docName.includes("photograph");
+    const isPhotoDoc      = docName.includes("photo") || docName.includes("photograph") || docName.includes("picture") || docName.includes("headshot") || docName.includes("portrait");
+    const isBankDoc       = docName.includes("bank") || docName.includes("statement") || docName.includes("financial");
+    // Hotel booking must come BEFORE flight/booking so "hotel booking" is not misclassified as flight
+    const isHotelDoc      = docName.includes("hotel") || docName.includes("accommodation") || docName.includes("resort") || docName.includes("hostel") || docName.includes("lodge");
+    // Flight doc: only pure flight/ticket/itinerary (NOT "booking" alone since hotel booking contains it)
+    const isFlightDoc     = (docName.includes("flight") || docName.includes("air ticket") || docName.includes("boarding") || docName.includes("e-ticket") || docName.includes("eticket") || docName.includes("itinerary")) && !isHotelDoc;
+    const isInsuranceDoc  = docName.includes("insurance") || docName.includes("travel insurance") || docName.includes("health insurance");
+    const isNOCDoc        = docName.includes("noc") || docName.includes("no objection") || docName.includes("employment") || docName.includes("offer letter") || docName.includes("salary");
 
+    // ──── Filename-based rejection heuristics (conservative — only obvious junk) ────
+    const isGraphicLogoOrIcon  = fileNameLower.includes("logo") || fileNameLower.includes("removebg") || fileNameLower.includes("icon") || fileNameLower.includes("avatar") || fileNameLower.includes("generated") || fileNameLower.includes("graphic") || fileNameLower.includes("illustration") || fileNameLower.includes("vector") || fileNameLower.includes("dall-e") || fileNameLower.includes("midjourney") || fileNameLower.includes("clipart") || fileNameLower.includes("anime") || fileNameLower.includes("manga") || fileNameLower.includes("cartoon") || fileNameLower.includes("wallpaper") || fileNameLower.includes("wallhaven") || fileNameLower.includes("drawing") || fileNameLower.includes("sketch");
+    const isScreenshotFile     = fileNameLower.includes("screenshot") || fileNameLower.includes("screencapture") || fileNameLower.includes("screen_capture") || fileNameLower.includes("mailersend") || fileNameLower.includes("web-page") || fileNameLower.includes("browser");
+    // Electricity bill: only genuinely utility-specific terms — NOT "invoice" (hotel booking invoices are valid)
+    const isElectricityBillFile = (fileNameLower.includes("electricity") || fileNameLower.includes("electric_bill") || fileNameLower.includes("electricity-bill") || fileNameLower.includes("power_bill") || fileNameLower.includes("utility_bill")) && !fileNameLower.includes("hotel") && !fileNameLower.includes("booking") && !fileNameLower.includes("flight") && !fileNameLower.includes("bank") && !fileNameLower.includes("passport");
+
+    // ──── Pre-reject obvious graphic files before hitting Gemini API ─────────
     if (isGraphicLogoOrIcon && isPassportDoc) {
-      return res.status(200).json({
-        success: false,
-        verificationStatus: "wrong_type",
-        message: "Uploaded file is a logo image, not a valid Passport."
-      });
+      return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: "Uploaded file is a graphic/logo image, not a valid Passport." });
     }
-
     if (isGraphicLogoOrIcon && isPhotoDoc) {
-      return res.status(200).json({
-        success: false,
-        verificationStatus: "wrong_type",
-        message: "Uploaded file is an anime drawing, not a real human photo."
-      });
+      return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: "Uploaded file is an anime/cartoon drawing, not a real human passport photo." });
+    }
+    if (isElectricityBillFile && (isPassportDoc || isPhotoDoc || isBankDoc || isFlightDoc || isHotelDoc)) {
+      return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: `Uploaded file appears to be a utility/electricity bill, not a valid ${documentTitle || "document"}.` });
     }
 
-    if ((isGraphicLogoOrIcon || isScreenshotFile || isElectricityBillFile) && (isPassportDoc || isPhotoDoc || isBankDoc || isFlightDoc)) {
-      const rejectType = isGraphicLogoOrIcon ? "logo / graphic image" : isScreenshotFile ? "screenshot" : "electricity bill";
-      return res.status(200).json({
-        success: false,
-        verificationStatus: "wrong_type",
-        message: `Uploaded file is a ${rejectType}, not a valid ${documentTitle || "Passport"}.`
-      });
-    }
-
-    // Read file buffer
+    // ──── Read file buffer ────────────────────────────────────────────────────
     let fileBuffer: Buffer;
     if (file.buffer) {
       fileBuffer = file.buffer;
@@ -630,57 +625,67 @@ router.post("/verify-visa-document", (req: Request, res: Response, next) => {
     const base64Data = fileBuffer.toString("base64");
     let mimeType = file.mimetype || "image/jpeg";
     const isPdf = mimeType === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
-    if (!mimeType.startsWith("image/")) {
+    // Gemini inlineData needs image/* or application/pdf
+    if (!mimeType.startsWith("image/") && mimeType !== "application/pdf") {
       mimeType = "image/png";
     }
 
-    // Construct AI Prompts
+    // ──── Build Gemini prompt based on expected document type ─────────────────
     let expectedTypes = "";
     let checkInstruction = "";
 
     if (isPhotoDoc) {
-      expectedTypes = "\"Passport Photograph\" | \"Passport Photo\" | \"Portrait Photo\"";
-      checkInstruction = "Check if this is a clear passport-size photograph or studio portrait photo showing a REAL HUMAN face. Accept genuine human passport-style portrait photographs, studio portraits, headshots, or passport photos. STRICTLY REJECT anime drawings, manga art, cartoons, wallpapers, illustrations, animal photos, logos, graphic designs, icons, avatars, website screenshots, mailer dashboards, utility bills, electricity bills, invoices, passport booklets/pages, bank statements, or unrelated files.";
+      expectedTypes = `"Passport Photograph" | "Passport Photo" | "Portrait Photo" | "Headshot"`;
+      checkInstruction = `Check if this is a clear passport-size photograph or studio portrait showing a REAL HUMAN face. Accept genuine human passport-style portraits, headshots, or studio photos. REJECT anime drawings, manga art, cartoons, wallpapers, logos, graphic designs, icons, avatars, screenshots, utility bills, electricity bills, bank statements, or unrelated files.`;
     } else if (isPassportDoc) {
-      expectedTypes = "\"Passport\"";
-      checkInstruction = "Check if this is a genuine international travel passport booklet or bio-data page showing a photo, full name, passport number, nationality, date of birth, issue date, and expiry date. STRICTLY REJECT anime images, manga drawings, wallpapers, logos, graphic designs, icons, removebg graphics, website screenshots, mailer dashboards, browser screen captures, utility bills, electricity bills, invoices, loose photos, driving licences, Aadhaar/PAN cards, or unrelated files.";
+      expectedTypes = `"Passport" | "Passport Bio Page" | "Passport Booklet"`;
+      checkInstruction = `Check if this is a genuine international travel passport booklet or bio-data page showing a photo, full name, passport number, nationality, date of birth, issue date, and expiry date. REJECT anime images, drawings, wallpapers, logos, graphic designs, screenshots, utility bills, electricity bills, invoices, loose photos, driving licences, Aadhaar/PAN cards, or unrelated files.`;
     } else if (isBankDoc) {
-      expectedTypes = "\"Bank Statement\"";
-      checkInstruction = "Check if this is a genuine bank account statement showing account holder name, account number, transaction history, and bank logo. STRICTLY REJECT anime images, drawings, wallpapers, random photos, logos, graphic icons, website screenshots, utility bills, or unrelated documents.";
+      expectedTypes = `"Bank Statement" | "Bank Account Statement" | "Financial Statement"`;
+      checkInstruction = `Check if this is a genuine bank account statement showing account holder name, account number, transaction history, opening/closing balance, and bank logo. REJECT anime images, wallpapers, logos, screenshots, utility bills, hotel bookings, flight tickets, or unrelated documents.`;
+    } else if (isHotelDoc) {
+      expectedTypes = `"Hotel Booking" | "Hotel Reservation" | "Hotel Invoice" | "Accommodation Confirmation" | "Hotel Booking Confirmation" | "Hotel Receipt" | "Hotel Invoice"`;
+      checkInstruction = `Check if this is a genuine hotel booking confirmation, hotel reservation letter, hotel invoice, or accommodation confirmation document. It should show hotel name, guest name, check-in/check-out dates, booking reference, room type, or total amount. ACCEPT hotel booking invoices, hotel receipts, accommodation letters, resort confirmations. REJECT anime images, wallpapers, logos, screenshots, electricity bills, passports, bank statements, or unrelated documents.`;
     } else if (isFlightDoc) {
-      expectedTypes = "\"Flight Booking\" | \"Flight Ticket\" | \"Travel Itinerary\"";
-      checkInstruction = "Check if this is a genuine flight booking confirmation or e-ticket showing passenger name, flight number, departure/arrival cities, and travel dates. STRICTLY REJECT anime images, wallpapers, logos, website screenshots, utility bills, hotel bookings, or random images.";
+      expectedTypes = `"Flight Booking" | "Flight Ticket" | "Air Ticket" | "Travel Itinerary" | "E-Ticket" | "Boarding Pass"`;
+      checkInstruction = `Check if this is a genuine flight booking confirmation, e-ticket, or travel itinerary showing passenger name, flight number, departure/arrival cities, and travel dates. REJECT anime images, wallpapers, logos, screenshots, utility bills, hotel bookings, or unrelated documents.`;
+    } else if (isInsuranceDoc) {
+      expectedTypes = `"Travel Insurance" | "Insurance Policy" | "Insurance Certificate"`;
+      checkInstruction = `Check if this is a genuine travel insurance policy or certificate showing policyholder name, coverage period, policy number, and insurer details. REJECT anime images, wallpapers, logos, screenshots, utility bills, or unrelated documents.`;
+    } else if (isNOCDoc) {
+      expectedTypes = `"Employment NOC" | "No Objection Certificate" | "Employer Letter" | "Salary Letter" | "Offer Letter"`;
+      checkInstruction = `Check if this is a genuine employment no-objection certificate, salary slip, employer letter, or similar employment document on official letterhead. REJECT anime images, wallpapers, logos, screenshots, or completely unrelated files.`;
     } else {
-      expectedTypes = "\"Official Document\"";
-      checkInstruction = `Check if this is a genuine official document that could reasonably serve as a "${documentTitle || "visa requirement document"}" for an international visa application. It should be readable, legitimate-looking, and clearly identifiable. STRICTLY REJECT anime images, logos, graphic icons, and website screenshots.`;
+      expectedTypes = `"Official Document" | "Government Document" | "Supporting Document"`;
+      checkInstruction = `Check if this is a genuine official document that could reasonably serve as a "${documentTitle || "visa requirement document"}" for an international visa application. It should be readable, legitimate-looking, and clearly identifiable. REJECT anime images, logos, graphic icons, screenshots, and clearly unrelated files.`;
     }
 
-    const promptText = `You are an AI document verification system for an international visa processing platform.
+    const promptText = `You are a professional AI document verification system for an international visa processing platform. Your job is to verify that applicants upload the CORRECT document type as requested.
 
-Examine this uploaded document image carefully.
+Expected document: "${documentTitle || documentType || "Visa Document"}"
+Accepted document types for this slot: ${expectedTypes}
 
-Expected document requirement: "${documentTitle || documentType || "Visa Document"}"
-${checkInstruction}
+Verification instruction: ${checkInstruction}
 
-Tasks:
+Carefully examine the uploaded document image and answer:
 1. Is the image clear, readable, and not blurry/cropped/dark?
-2. Does this document MATCH the expected document requirement ("${documentTitle}")?
-3. What type of document is this image ACTUALLY? (e.g. "Passport", "Anime / Manga Drawing", "Logo Image", "Graphic Icon", "Website Screenshot", "Electricity Bill", "Bank Statement", "Aadhaar Card", "PAN Card", "Passport Photo", "Invoice", "Unknown Image").
+2. What type of document is this ACTUALLY? Be specific (e.g. "Hotel Booking Invoice", "Hotel Reservation Confirmation", "Passport Bio Page", "Bank Statement", "Electricity Bill", "Flight E-Ticket", "Anime Drawing", "Logo Image", "Unknown", etc.)
+3. Does this document MATCH the expected slot "${documentTitle}"? Consider semantic equivalents — a "Hotel Booking Invoice" IS a valid "Hotel Booking" document.
 
-Respond STRICTLY with valid JSON in this exact schema (no markdown, no extra text):
+Respond STRICTLY with valid JSON (no markdown, no extra text):
 {
   "isReadable": true,
   "isCorrectDocumentType": true,
-  "detectedDocumentName": "brief title of what this document actually is (e.g. 'Anime / Manga Drawing')",
+  "detectedDocumentName": "exact name of what this document actually is",
   "confidence": 95,
   "reasoning": "one-sentence explanation of why it matches or why it is rejected"
 }`;
 
-    // Active Gemini models (v1beta API endpoints)
-    const modelsToTry = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-flash-latest"];
+    // ──── Call Gemini with working model names ────────────────────────────────
+    const modelsToTry = ["gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-2.0-flash-lite"];
     let geminiJson: any = null;
 
-    for (let attempt = 1; attempt <= 2 && !geminiJson; attempt++) {
+    for (let attempt = 1; attempt <= 3 && !geminiJson; attempt++) {
       for (const model of modelsToTry) {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         try {
@@ -689,7 +694,7 @@ Respond STRICTLY with valid JSON in this exact schema (no markdown, no extra tex
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ parts: [{ inlineData: { mimeType, data: base64Data } }, { text: promptText }] }],
-              generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
+              generationConfig: { temperature: 0.05, responseMimeType: "application/json" }
             })
           });
 
@@ -697,122 +702,140 @@ Respond STRICTLY with valid JSON in this exact schema (no markdown, no extra tex
             const data = await response.json();
             if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
               geminiJson = data;
+              console.log(`✅ Gemini response received from model: ${model} (attempt ${attempt})`);
               break;
             }
+          } else {
+            const errText = await response.text().catch(() => "");
+            console.warn(`⚠️ Gemini [${model}] attempt ${attempt} HTTP ${response.status}: ${errText.slice(0, 200)}`);
           }
-        } catch (e) {}
+        } catch (callErr: any) {
+          console.warn(`⚠️ Gemini [${model}] attempt ${attempt} exception:`, callErr?.message || callErr);
+        }
       }
-      if (!geminiJson && attempt < 2) await new Promise((r) => setTimeout(r, 800));
+      if (!geminiJson && attempt < 3) await new Promise((r) => setTimeout(r, 1000));
     }
 
-    // Fallback when AI service fails
+    // ──── Fallback: AI unavailable — use conservative filename-based accept ──
     if (!geminiJson) {
+      console.warn("⚠️ All Gemini models unavailable — using fallback heuristic.");
+
+      // Reject obvious junk even in fallback
       if (isGraphicLogoOrIcon || isScreenshotFile || isElectricityBillFile) {
-        const fallbackMsg = isGraphicLogoOrIcon ? (isPhotoDoc ? "Uploaded file is an anime drawing, not a real human photo." : "Uploaded file is a logo image, not a valid Passport.") : isScreenshotFile ? "Uploaded file is a screenshot, not a valid Passport." : "Uploaded file is an electricity bill, not a valid Passport.";
+        const rejectType = isGraphicLogoOrIcon ? "graphic/logo image" : isScreenshotFile ? "screenshot" : "utility bill";
         return res.status(200).json({
           success: false,
           verificationStatus: "wrong_type",
-          message: fallbackMsg
+          message: `Uploaded file appears to be a ${rejectType}, not a valid ${documentTitle || "document"}.`
         });
       }
 
-      // Require PDF or document indicators for Bank Statements / Passports
+      // Require PDF for bank statements in fallback
       if (isBankDoc && !isPdf && !fileNameLower.includes("bank") && !fileNameLower.includes("statement")) {
-        return res.status(200).json({
-          success: false,
-          verificationStatus: "wrong_type",
-          message: "Uploaded file is a photo, not a valid Bank Statement."
-        });
+        return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: "Uploaded file does not appear to be a Bank Statement." });
       }
 
-      if (isPassportDoc && !isPdf && !fileNameLower.includes("passport")) {
-        return res.status(200).json({
-          success: false,
-          verificationStatus: "wrong_type",
-          message: "Uploaded file is an image, not a valid Passport."
-        });
-      }
-
+      // Accept everything else in fallback (AI is down)
       return res.status(200).json({
         success: true,
         verificationStatus: "verified",
         documentType: documentTitle || documentType || "Uploaded Document",
         detectedDocumentName: documentTitle || "Uploaded Scan",
-        confidence: 90,
-        message: `✓ Document accepted: ${documentTitle || "Uploaded Scan"}`
+        confidence: 85,
+        message: `✓ Document accepted: ${documentTitle || "Uploaded Scan"} (AI service temporarily unavailable)`
       });
     }
 
+    // ──── Parse Gemini JSON response ──────────────────────────────────────────
     const rawText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
     let parsed: any;
     try {
       parsed = JSON.parse(rawText.replace(/```json\s*|\s*```/g, "").trim());
     } catch (e) {
-      return res.status(200).json({ success: false, verificationStatus: "error", message: "AI response parsing failed. Please retry." });
+      console.error("❌ Failed to parse Gemini JSON response:", rawText?.slice(0, 300));
+      return res.status(200).json({ success: false, verificationStatus: "error", message: "AI response parsing error. Please retry." });
     }
 
+    // ──── Readability check ───────────────────────────────────────────────────
     if (!parsed.isReadable) {
       return res.status(200).json({
         success: false,
         verificationStatus: "unreadable",
-        message: "The uploaded image is too blurry, cropped, or low quality."
+        message: "The uploaded image is too blurry, cropped, or low quality for AI verification. Please upload a clear, high-resolution scan."
       });
     }
 
+    // ──── Detect clearly wrong file types from AI response ───────────────────
     const detectedLower = ((parsed.detectedDocumentName || "") + " " + (parsed.reasoning || "")).toLowerCase();
-    const isDetectedAnimeOrCartoon = detectedLower.includes("anime") || detectedLower.includes("manga") || detectedLower.includes("cartoon") || detectedLower.includes("drawing") || detectedLower.includes("artwork") || detectedLower.includes("wallpaper") || detectedLower.includes("character") || detectedLower.includes("illustration") || detectedLower.includes("wallhaven") || detectedLower.includes("fictional");
-    const isDetectedLogoOrIcon = detectedLower.includes("logo") || detectedLower.includes("icon") || detectedLower.includes("avatar") || detectedLower.includes("graphic") || detectedLower.includes("removebg") || detectedLower.includes("badge") || detectedLower.includes("vector");
-    const isDetectedScreenshot = detectedLower.includes("screenshot") || detectedLower.includes("capture") || detectedLower.includes("web") || detectedLower.includes("dashboard") || detectedLower.includes("mailersend") || detectedLower.includes("screen") || detectedLower.includes("browser");
-    const isDetectedUtilityBill = detectedLower.includes("bill") || detectedLower.includes("electricity") || detectedLower.includes("utility") || detectedLower.includes("power") || detectedLower.includes("invoice");
 
+    const isDetectedAnimeOrCartoon = detectedLower.includes("anime") || detectedLower.includes("manga") || detectedLower.includes("cartoon") || detectedLower.includes("drawing") || detectedLower.includes("artwork") || detectedLower.includes("wallpaper") || detectedLower.includes("character") || detectedLower.includes("illustration") || detectedLower.includes("fictional");
+    const isDetectedLogoOrIcon     = detectedLower.includes("logo") && !detectedLower.includes("hotel") && !detectedLower.includes("bank") || detectedLower.includes("graphic design") || detectedLower.includes("removebg");
+    const isDetectedScreenshot     = detectedLower.includes("screenshot") || detectedLower.includes("screen capture") || detectedLower.includes("mailersend") || detectedLower.includes("browser capture");
+    // Utility bill detection: require explicit electricity/gas/water/power + bill together — NOT standalone "invoice"
+    const isDetectedUtilityBill    = (detectedLower.includes("electricity") || detectedLower.includes("gas bill") || detectedLower.includes("water bill") || detectedLower.includes("utility bill") || detectedLower.includes("power bill")) && !detectedLower.includes("hotel") && !detectedLower.includes("flight") && !detectedLower.includes("booking");
+
+    // Start with AI's own verdict
     let isAccepted = parsed.isCorrectDocumentType !== false;
 
-    if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot) {
+    // Override: reject if clearly wrong category
+    if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
       isAccepted = false;
     }
 
-    // Strict checks per slot
+    // ──── Per-slot semantic acceptance rules ──────────────────────────────────
     if (isPhotoDoc) {
       if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
         isAccepted = false;
-      } else if (detectedLower.includes("real human") || detectedLower.includes("human face") || detectedLower.includes("portrait photo") || detectedLower.includes("headshot") || detectedLower.includes("passport photo")) {
+      } else if (detectedLower.includes("human") || detectedLower.includes("face") || detectedLower.includes("portrait") || detectedLower.includes("headshot") || detectedLower.includes("passport photo")) {
         isAccepted = true;
       }
     } else if (isPassportDoc) {
-      if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill || (detectedLower.includes("photo") && !detectedLower.includes("passport page")) || detectedLower.includes("bank") || detectedLower.includes("statement")) {
-        if (!detectedLower.includes("passport bio") && !detectedLower.includes("passport page") && !detectedLower.includes("passport booklet")) {
-          isAccepted = false;
-        }
+      if (detectedLower.includes("passport bio") || detectedLower.includes("passport page") || detectedLower.includes("passport booklet") || detectedLower.includes("passport document")) {
+        isAccepted = true;
+      } else if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
+        isAccepted = false;
       }
     } else if (isBankDoc) {
-      if ((isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) && !detectedLower.includes("bank")) {
+      if (detectedLower.includes("bank") || detectedLower.includes("statement") || detectedLower.includes("account")) {
+        isAccepted = true;
+      } else if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
+        isAccepted = false;
+      }
+    } else if (isHotelDoc) {
+      // Accept hotel booking, hotel invoice, accommodation confirmation, hotel receipt, reservation — all are valid
+      if (detectedLower.includes("hotel") || detectedLower.includes("accommodation") || detectedLower.includes("booking") || detectedLower.includes("reservation") || detectedLower.includes("resort") || detectedLower.includes("hostel") || detectedLower.includes("lodg")) {
+        isAccepted = true;
+      } else if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
         isAccepted = false;
       }
     } else if (isFlightDoc) {
-      if ((isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) && !detectedLower.includes("flight") && !detectedLower.includes("ticket")) {
+      if (detectedLower.includes("flight") || detectedLower.includes("ticket") || detectedLower.includes("itinerary") || detectedLower.includes("boarding") || detectedLower.includes("e-ticket")) {
+        isAccepted = true;
+      } else if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
         isAccepted = false;
       }
     }
 
+    // ──── Build contextual rejection message ──────────────────────────────────
     if (!isAccepted) {
-      let shortMsg = `Uploaded document is invalid. Please upload a genuine ${documentTitle || "document"}.`;
+      const detectedName = parsed.detectedDocumentName || "an unrecognized file";
+      let shortMsg: string;
       if (isDetectedAnimeOrCartoon) {
-        shortMsg = "Uploaded file is an anime drawing, not a real human photo.";
+        shortMsg = `Uploaded file is an anime/cartoon drawing, not a valid ${documentTitle || "document"}.`;
       } else if (isDetectedLogoOrIcon) {
-        shortMsg = `Uploaded file is a logo image, not a valid ${documentTitle || "Passport"}.`;
+        shortMsg = `Uploaded file is a graphic/logo image, not a valid ${documentTitle || "document"}.`;
       } else if (isDetectedScreenshot) {
-        shortMsg = `Uploaded file is a screenshot, not a valid ${documentTitle || "Passport"}.`;
+        shortMsg = `Uploaded file is a screenshot, not a valid ${documentTitle || "document"}.`;
       } else if (isDetectedUtilityBill) {
-        shortMsg = `Uploaded file is an electricity bill, not a valid ${documentTitle || "Passport"}.`;
+        shortMsg = `Uploaded file is a utility/electricity bill, not a valid ${documentTitle || "document"}.`;
+      } else {
+        shortMsg = `Uploaded file is "${detectedName}", not a valid ${documentTitle || "document"}. ${parsed.reasoning ? `(${parsed.reasoning})` : ""}`.trim();
       }
 
-      return res.status(200).json({
-        success: false,
-        verificationStatus: "wrong_type",
-        message: shortMsg
-      });
+      return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: shortMsg });
     }
 
+    // ──── Verified successfully ───────────────────────────────────────────────
     return res.status(200).json({
       success: true,
       verificationStatus: "verified",
@@ -827,6 +850,7 @@ Respond STRICTLY with valid JSON in this exact schema (no markdown, no extra tex
     return res.status(200).json({ success: false, verificationStatus: "error", message: "Server error during AI verification. Please retry." });
   }
 });
+
 
 
 

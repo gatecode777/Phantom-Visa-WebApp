@@ -52,7 +52,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "IN",
     name: "India",
     dialCode: "+91",
-    flag: "ðŸ‡®ðŸ‡³",
+    flag: "🇮🇳",
     postalLabel: "PIN Code",
     stateLabel: "State",
     cityLabel: "City / District",
@@ -71,7 +71,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "US",
     name: "United States",
     dialCode: "+1",
-    flag: "ðŸ‡ºðŸ‡¸",
+    flag: "🇺🇸",
     postalLabel: "ZIP Code",
     stateLabel: "State",
     cityLabel: "City",
@@ -92,7 +92,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "GB",
     name: "United Kingdom",
     dialCode: "+44",
-    flag: "ðŸ‡¬ðŸ‡§",
+    flag: "🇬🇧",
     postalLabel: "Postcode",
     stateLabel: "County (Optional)",
     cityLabel: "Town / City",
@@ -105,7 +105,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "CA",
     name: "Canada",
     dialCode: "+1",
-    flag: "ðŸ‡¨ðŸ‡¦",
+    flag: "🇨🇦",
     postalLabel: "Postal Code",
     stateLabel: "Province / Territory",
     cityLabel: "City",
@@ -122,7 +122,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "AU",
     name: "Australia",
     dialCode: "+61",
-    flag: "ðŸ‡¦ðŸ‡º",
+    flag: "🇦🇺",
     postalLabel: "Postcode",
     stateLabel: "State / Territory",
     cityLabel: "Suburb / City",
@@ -152,7 +152,7 @@ export const WORLD_COUNTRIES_LIST: ISOCountry[] = [
     code: "DE",
     name: "Germany",
     dialCode: "+49",
-    flag: "ðŸ‡©ðŸ‡ª",
+    flag: "🇩🇪",
     postalLabel: "Postal Code",
     stateLabel: "State / Bundesland",
     cityLabel: "City",
@@ -1230,16 +1230,16 @@ export default function RegisterApplicant({ onClose, onSuccessSubmit }: Register
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-500 font-medium">
                       <div className={`flex items-center gap-1 ${pwdStrength.checks.length ? "text-emerald-600 font-bold" : ""}`}>
-                        {pwdStrength.checks.length ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">â€¢</span>} 8+ characters
+                        {pwdStrength.checks.length ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} 8+ characters
                       </div>
                       <div className={`flex items-center gap-1 ${pwdStrength.checks.capital && pwdStrength.checks.lowercase ? "text-emerald-600 font-bold" : ""}`}>
-                        {pwdStrength.checks.capital && pwdStrength.checks.lowercase ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">â€¢</span>} Upper & lowercase
+                        {pwdStrength.checks.capital && pwdStrength.checks.lowercase ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} Upper & lowercase
                       </div>
                       <div className={`flex items-center gap-1 ${pwdStrength.checks.number ? "text-emerald-600 font-bold" : ""}`}>
-                        {pwdStrength.checks.number ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">â€¢</span>} One number (0-9)
+                        {pwdStrength.checks.number ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} One number (0-9)
                       </div>
                       <div className={`flex items-center gap-1 ${pwdStrength.checks.special ? "text-emerald-600 font-bold" : ""}`}>
-                        {pwdStrength.checks.special ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">â€¢</span>} Special symbol (!@#$)
+                        {pwdStrength.checks.special ? <Check className="w-3 h-3 text-emerald-500" /> : <span className="w-3 h-3">•</span>} Special symbol (!@#$)
                       </div>
                     </div>
                   </div>

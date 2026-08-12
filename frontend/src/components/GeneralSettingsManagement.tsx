@@ -74,7 +74,7 @@ export default function GeneralSettingsManagement() {
   const [defaultLanguage, setDefaultLanguage] = useState("English");
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
   const [timeFormat, setTimeFormat] = useState("12-Hour (09:00 AM)");
-  const [currencySymbol, setCurrencySymbol] = useState("INR (â‚¹)");
+  const [currencySymbol, setCurrencySymbol] = useState("INR (₹)");
 
   // Performance & Security Toggles
   const [enableCache, setEnableCache] = useState(true);
@@ -327,9 +327,9 @@ export default function GeneralSettingsManagement() {
                   onChange={(e) => setCurrencySymbol(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold"
                 >
-                  <option value="INR (â‚¹)">Indian Rupee (INR â‚¹)</option>
+                  <option value="INR (₹)">Indian Rupee (INR ₹)</option>
                   <option value="USD ($)">US Dollar (USD $)</option>
-                  <option value="EUR (â‚¬)">Euro (EUR â‚¬)</option>
+                  <option value="EUR (€)">Euro (EUR €)</option>
                   <option value="GBP (Â£)">British Pound (GBP Â£)</option>
                 </select>
               </div>
@@ -381,7 +381,7 @@ export default function GeneralSettingsManagement() {
             <div className="space-y-2 text-xs font-semibold">
               <div className="flex justify-between items-center bg-emerald-50/70 p-2 rounded-xl border border-emerald-100">
                 <span>Server Status:</span>
-                <span className="font-bold text-emerald-800 flex items-center gap-1">ðŸŸ¢ Online & Healthy</span>
+                <span className="font-bold text-emerald-800 flex items-center gap-1">🟢 Online & Healthy</span>
               </div>
               <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl">
                 <span>Platform Version:</span>

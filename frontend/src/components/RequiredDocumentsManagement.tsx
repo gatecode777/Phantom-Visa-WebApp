@@ -549,7 +549,7 @@ export default function RequiredDocumentsManagement() {
               {MASTER_DOCUMENT_LIBRARY.map((grp, idx) => (
                 <div key={idx} className="space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-[#2563EB] tracking-wider block">
-                    â€¢ {grp.category}
+                    • {grp.category}
                   </span>
                   <div className="pl-2 space-y-0.5 text-slate-600">
                     {grp.items.map((item, itemIdx) => (
@@ -828,7 +828,7 @@ export default function RequiredDocumentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 268 Document Sets</div>
+          <div>Showing 1-10 of 268 Document Sets</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

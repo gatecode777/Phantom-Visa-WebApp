@@ -472,7 +472,7 @@ export default function UnderReviewManagement() {
               {REVIEW_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -666,11 +666,11 @@ export default function UnderReviewManagement() {
                     <td className="py-3.5 px-4">
                       {a.documentsStatus === "Complete" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          âœ“ Complete
+                          ✓ Complete
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
-                          âš ï¸ {a.documentsStatus}
+                          ⚠️ï¸ {a.documentsStatus}
                         </span>
                       )}
                     </td>
@@ -688,15 +688,15 @@ export default function UnderReviewManagement() {
                     <td className="py-3.5 px-4">
                       {a.status === "Ready for Approval" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Ready for Approval
+                          🟢 Ready for Approval
                         </span>
                       ) : a.status === "Doc Pending" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ  Doc Pending
+                          🟠 Doc Pending
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸ”µ Under Review
+                          🔵 Under Review
                         </span>
                       )}
                     </td>
@@ -744,7 +744,7 @@ export default function UnderReviewManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 334 Applications Under Review</div>
+          <div>Showing 1-10 of 334 Applications Under Review</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

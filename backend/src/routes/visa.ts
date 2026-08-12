@@ -418,7 +418,7 @@ router.get("/requirements", async (req: Request, res: Response) => {
           visaTypeName: defaultTypeName,
           documentType: "Bank Statement",
           isMandatory: true,
-          description: "Attested bank statement showing minimum closing balance of â‚¹2.5 Lakhs per applicant.",
+          description: "Attested bank statement showing minimum closing balance of ₹2.5 Lakhs per applicant.",
           status: "Active"
         },
         {
@@ -432,7 +432,7 @@ router.get("/requirements", async (req: Request, res: Response) => {
           status: "Active"
         },
         {
-          title: "Schengen Approved Travel Health Insurance (â‚¬30,000 Cover)",
+          title: "Schengen Approved Travel Health Insurance (€30,000 Cover)",
           code: "VR-REQ-INSURANCE",
           visaTypeId: defaultTypeId,
           visaTypeName: defaultTypeName,

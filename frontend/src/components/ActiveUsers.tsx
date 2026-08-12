@@ -113,7 +113,7 @@ export default function ActiveUsers() {
             email: item.email || "N/A",
             mobile: item.mobile || "N/A",
             country: item.country || "India",
-            flag: item.country === "Canada" ? "ðŸ‡¨ðŸ‡¦" : item.country === "Australia" ? "ðŸ‡¦ðŸ‡º" : item.country === "United States" ? "ðŸ‡ºðŸ‡¸" : item.country === "United Kingdom" ? "ðŸ‡¬ðŸ‡§" : "ðŸ‡®ðŸ‡³",
+            flag: item.country === "Canada" ? "🇨🇦" : item.country === "Australia" ? "🇦🇺" : item.country === "United States" ? "🇺🇸" : item.country === "United Kingdom" ? "🇬🇧" : "🇮🇳",
             activeApplications: 1,
             lastLogin: "Active Now",
             status: "Active",
@@ -316,11 +316,11 @@ export default function ActiveUsers() {
             className="text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 focus:outline-none focus:border-[#4848F7] cursor-pointer"
           >
             <option value="All Countries">All Residence Countries</option>
-            <option value="India">India ðŸ‡®ðŸ‡³</option>
-            <option value="Canada">Canada ðŸ‡¨ðŸ‡¦</option>
-            <option value="United States">United States ðŸ‡ºðŸ‡¸</option>
-            <option value="United Kingdom">United Kingdom ðŸ‡¬ðŸ‡§</option>
-            <option value="Australia">Australia ðŸ‡¦ðŸ‡º</option>
+            <option value="India">India 🇮🇳</option>
+            <option value="Canada">Canada 🇨🇦</option>
+            <option value="United States">United States 🇺🇸</option>
+            <option value="United Kingdom">United Kingdom 🇬🇧</option>
+            <option value="Australia">Australia 🇦🇺</option>
           </select>
         </div>
       </div>
@@ -371,7 +371,7 @@ export default function ActiveUsers() {
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        â€¢ {u.status}
+                        • {u.status}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -404,7 +404,7 @@ export default function ActiveUsers() {
           <div>
             Showing{" "}
             <span className="font-bold text-slate-900">
-              {filteredUsers.length === 0 ? 0 : startIndex + 1}â€“{Math.min(startIndex + itemsPerPage, filteredUsers.length)}
+              {filteredUsers.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredUsers.length)}
             </span>{" "}
             of <span className="font-bold text-slate-900">{filteredUsers.length}</span> Active Users
           </div>
@@ -582,7 +582,7 @@ export default function ActiveUsers() {
                 <img src={viewUser.avatar} alt={viewUser.name} className="w-10 h-10 rounded-full border-2 border-white/80" />
                 <div>
                   <h3 className="text-base font-black tracking-tight">{viewUser.name}</h3>
-                  <p className="text-xs text-blue-100 font-mono">{viewUser.id} â€¢ {viewUser.email}</p>
+                  <p className="text-xs text-blue-100 font-mono">{viewUser.id} • {viewUser.email}</p>
                 </div>
               </div>
               <button

@@ -251,7 +251,7 @@ export default function RefundRequestsManagement() {
     setRefundsList((prev) =>
       prev.map((r) => (r.id === rfd.id ? { ...r, status: "Processed", payoutRefNo: "PAYOUT_RELEASED_" + Date.now() } : r))
     );
-    triggerToast(`Payout released for refund ${rfd.refundId} (â‚¹${rfd.refundAmount.toLocaleString()}).`);
+    triggerToast(`Payout released for refund ${rfd.refundId} (₹${rfd.refundAmount.toLocaleString()}).`);
     if (activeModalRefund?.id === rfd.id) {
       setActiveModalRefund((prev) => (prev ? { ...prev, status: "Processed", payoutRefNo: "PAYOUT_RELEASED_" + Date.now() } : null));
     }
@@ -329,7 +329,7 @@ export default function RefundRequestsManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Total Refund Amount</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹18,65,400</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹18,65,400</div>
             <span className="text-[10px] text-purple-600 font-bold">Total Disbursed</span>
           </div>
         </div>
@@ -346,7 +346,7 @@ export default function RefundRequestsManagement() {
               {REFUND_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -560,7 +560,7 @@ export default function RefundRequestsManagement() {
                       {r.refundReason}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
-                      â‚¹{r.refundAmount.toLocaleString()}
+                      ₹{r.refundAmount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">
                       {r.requestDate}
@@ -568,19 +568,19 @@ export default function RefundRequestsManagement() {
                     <td className="py-3.5 px-4">
                       {r.status === "Approved" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Approved
+                          🟢 Approved
                         </span>
                       ) : r.status === "Processed" ? (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸ”µ Processed
+                          🔵 Processed
                         </span>
                       ) : r.status === "Rejected" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Rejected
+                          🔴 Rejected
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Pending Approval
+                          🟡 Pending Approval
                         </span>
                       )}
                     </td>
@@ -635,7 +635,7 @@ export default function RefundRequestsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 206 Refund Requests</div>
+          <div>Showing 1-10 of 206 Refund Requests</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -676,7 +676,7 @@ export default function RefundRequestsManagement() {
                       Refund Request {activeModalRefund.refundId}
                     </h3>
                     <span className="font-mono text-xs font-bold text-purple-300 bg-purple-900/50 px-2 py-0.5 rounded border border-purple-700">
-                      â‚¹{activeModalRefund.refundAmount.toLocaleString()}
+                      ₹{activeModalRefund.refundAmount.toLocaleString()}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">Txn ID: <strong className="text-blue-300">{activeModalRefund.txnId}</strong> &bull; Applicant: {activeModalRefund.applicantName}</p>

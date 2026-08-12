@@ -322,7 +322,7 @@ export default function PendingPaymentsManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Pending Amount</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹98,87,500</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹98,87,500</div>
             <span className="text-[10px] text-red-600 font-bold">Potential Revenue</span>
           </div>
         </div>
@@ -339,7 +339,7 @@ export default function PendingPaymentsManagement() {
               {PENDING_PAYMENT_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -572,7 +572,7 @@ export default function PendingPaymentsManagement() {
                       {p.agentName && <span className="block text-[10px] text-slate-400 font-normal">({p.agentName})</span>}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-amber-600">
-                      â‚¹{p.amount.toLocaleString()}
+                      ₹{p.amount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">
                       {p.paymentMethod}
@@ -586,11 +586,11 @@ export default function PendingPaymentsManagement() {
                     <td className="py-3.5 px-4">
                       {p.status === "Confirmed" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Confirmed
+                          🟢 Confirmed
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Pending
+                          🟡 Pending
                         </span>
                       )}
                     </td>
@@ -638,7 +638,7 @@ export default function PendingPaymentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 824 Pending Payments</div>
+          <div>Showing 1-10 of 824 Pending Payments</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -679,7 +679,7 @@ export default function PendingPaymentsManagement() {
                       Transaction {activeModalPayment.txnId}
                     </h3>
                     <span className="font-mono text-xs font-bold text-amber-300 bg-amber-900/50 px-2 py-0.5 rounded border border-amber-700">
-                      â‚¹{activeModalPayment.amount.toLocaleString()} (PENDING)
+                      ₹{activeModalPayment.amount.toLocaleString()} (PENDING)
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">App ID: <strong className="text-blue-300">{activeModalPayment.appId}</strong> &bull; Applicant: {activeModalPayment.applicantName}</p>
@@ -752,23 +752,23 @@ export default function PendingPaymentsManagement() {
                     <div className="space-y-2 text-xs font-medium text-slate-700">
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Visa Application Fee</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.visaFee.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.visaFee.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Service Charge</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.serviceCharge.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.serviceCharge.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Processing Fee</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.processingFee.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.processingFee.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Tax (18% GST)</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.taxGst.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.taxGst.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
                         <span>Total Payable Amount Due</span>
-                        <span className="font-mono text-amber-600">â‚¹{activeModalPayment.amount.toLocaleString()}</span>
+                        <span className="font-mono text-amber-600">₹{activeModalPayment.amount.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

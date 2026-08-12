@@ -99,7 +99,7 @@ export default function BlockedUsers() {
             email: item.email || "N/A",
             mobile: item.mobile || "N/A",
             country: item.country || "India",
-            flag: item.country === "Canada" ? "ðŸ‡¨ðŸ‡¦" : item.country === "Australia" ? "ðŸ‡¦ðŸ‡º" : item.country === "United States" ? "ðŸ‡ºðŸ‡¸" : item.country === "United Kingdom" ? "ðŸ‡¬ðŸ‡§" : "ðŸ‡®ðŸ‡³",
+            flag: item.country === "Canada" ? "🇨🇦" : item.country === "Australia" ? "🇦🇺" : item.country === "United States" ? "🇺🇸" : item.country === "United Kingdom" ? "🇬🇧" : "🇮🇳",
             blockType: item.blockType || "Temporary",
             blockedOn: item.blockedOn || item.registeredOn || "Recently",
             blockedBy: item.blockedBy || "Admin (Consular Officer)",
@@ -393,7 +393,7 @@ export default function BlockedUsers() {
           <div>
             Showing{" "}
             <span className="font-bold text-slate-900">
-              {filteredUsers.length === 0 ? 0 : startIndex + 1}â€“{Math.min(startIndex + itemsPerPage, filteredUsers.length)}
+              {filteredUsers.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredUsers.length)}
             </span>{" "}
             of <span className="font-bold text-slate-900">{filteredUsers.length}</span> Blocked Users
           </div>
@@ -503,7 +503,7 @@ export default function BlockedUsers() {
                 <img src={viewUser.avatar} alt={viewUser.name} className="w-10 h-10 rounded-full border-2 border-white/80" />
                 <div>
                   <h3 className="text-base font-black tracking-tight">{viewUser.name}</h3>
-                  <p className="text-xs text-rose-100 font-mono">{viewUser.id} â€¢ {viewUser.email}</p>
+                  <p className="text-xs text-rose-100 font-mono">{viewUser.id} • {viewUser.email}</p>
                 </div>
               </div>
               <button

@@ -381,7 +381,7 @@ export default function VisaTypesManagement() {
                       <div className="space-y-0.5">
                         <p className="font-bold text-slate-800">{vt.entryType}</p>
                         <p className="text-[10px] text-slate-500 font-mono">
-                          {vt.validityMonths} Months | Max {vt.maxStayDays} Days
+                          {vt.validityMonths} Months | Max {vt.maxStayDays} Days | {vt.processingTimeDays || 7} Days Proc.
                         </p>
                       </div>
                     </td>
@@ -514,13 +514,14 @@ export default function VisaTypesManagement() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
                     Validity (Months)
                   </label>
                   <input
                     type="number"
+                    min="1"
                     value={formData.validityMonths}
                     onChange={(e) => setFormData((prev) => ({ ...prev, validityMonths: Number(e.target.value) }))}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-mono"
@@ -533,8 +534,22 @@ export default function VisaTypesManagement() {
                   </label>
                   <input
                     type="number"
+                    min="1"
                     value={formData.maxStayDays}
                     onChange={(e) => setFormData((prev) => ({ ...prev, maxStayDays: Number(e.target.value) }))}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                    Processing Days
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.processingTimeDays}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, processingTimeDays: Number(e.target.value) }))}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-3 py-2.5 rounded-xl focus:outline-none focus:border-[#2563EB] font-mono"
                   />
                 </div>

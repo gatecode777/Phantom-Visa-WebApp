@@ -617,7 +617,7 @@ export default function CountriesManagement() {
                       {c.processingTime || "15 Days"}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
-                      â‚¹{(c.startingFee || 8500).toLocaleString("en-IN")}
+                      ₹{(c.startingFee || 8500).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
@@ -749,7 +749,7 @@ export default function CountriesManagement() {
                       ) : (
                         <input
                           type="text"
-                          placeholder="ðŸ‡¨ðŸ‡¦ or Emoji"
+                          placeholder="🇨🇦 or Emoji"
                           value={formData.flag}
                           onChange={(e) => setFormData((prev) => ({ ...prev, flag: e.target.value }))}
                           className="w-16 bg-slate-50 border border-slate-200 text-slate-800 text-center text-sm py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
@@ -861,7 +861,7 @@ export default function CountriesManagement() {
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Starting Visa Fee (â‚¹) <span className="text-red-500">*</span>
+                      Starting Visa Fee (₹) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1076,7 +1076,7 @@ export default function CountriesManagement() {
             <div className="space-y-3 text-xs text-slate-700">
               <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl">
                 <div><span className="text-slate-400">Processing Time:</span> <strong>{viewCountry.processingTime}</strong></div>
-                <div><span className="text-slate-400">Starting Fee:</span> <strong>â‚¹{(viewCountry.startingFee || 8500).toLocaleString("en-IN")}</strong></div>
+                <div><span className="text-slate-400">Starting Fee:</span> <strong>₹{(viewCountry.startingFee || 8500).toLocaleString("en-IN")}</strong></div>
                 <div><span className="text-slate-400">Currency:</span> <strong>{viewCountry.currency || "USD ($)"}</strong></div>
                 <div><span className="text-slate-400">Time Zone:</span> <strong>{viewCountry.timeZone || "GMT+0"}</strong></div>
               </div>
@@ -1117,7 +1117,7 @@ export default function CountriesManagement() {
                   {viewCountry.requiredDocuments && viewCountry.requiredDocuments.length > 0 ? (
                     viewCountry.requiredDocuments.map((d) => (
                       <span key={d} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-semibold text-[11px]">
-                        âœ“ {d}
+                        ✓ {d}
                       </span>
                     ))
                   ) : (
