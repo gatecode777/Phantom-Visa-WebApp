@@ -241,7 +241,7 @@ export default function ApiIntegrationManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">System Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Connected ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Connected 🟢</div>
           <span className="text-[10px] text-emerald-600 font-bold">All APIs Online</span>
         </div>
       </div>
@@ -264,7 +264,7 @@ export default function ApiIntegrationManagement() {
                   {c.category}
                 </span>
                 <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
-                  ðŸŸ¢ {c.status}
+                  🟢 {c.status}
                 </span>
               </div>
               <h4 className="text-xs font-bold text-slate-900 font-outfit">{c.name}</h4>
@@ -405,7 +405,7 @@ export default function ApiIntegrationManagement() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           k.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                         }`}>
-                          {k.status === "Active" ? "ðŸŸ¢ Active" : "ðŸŸ¡ Sandbox"}
+                          {k.status === "Active" ? "🟢 Active" : "🟡 Sandbox"}
                         </span>
                       </td>
                       <td className="py-2.5 text-center font-mono text-[11px] text-slate-600">{k.environment}</td>

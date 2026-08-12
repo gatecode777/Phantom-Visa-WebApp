@@ -86,7 +86,7 @@ export default function KycVerifications() {
           email: item.email || "N/A",
           mobile: item.mobile || "N/A",
           country: item.country || "India",
-          flag: item.country === "Canada" ? "ðŸ‡¨ðŸ‡¦" : item.country === "Australia" ? "ðŸ‡¦ðŸ‡º" : item.country === "United States" ? "ðŸ‡ºðŸ‡¸" : item.country === "United Kingdom" ? "ðŸ‡¬ðŸ‡§" : "ðŸ‡®ðŸ‡³",
+          flag: item.country === "Canada" ? "🇨🇦" : item.country === "Australia" ? "🇦🇺" : item.country === "United States" ? "🇺🇸" : item.country === "United Kingdom" ? "🇬🇧" : "🇮🇳",
           kycStatus: item.kycStatus || item.kycDetails?.kycStatus || "Pending",
           submittedOn: item.registeredOn || "Recently",
           govtIdType: item.kycDetails?.govtIdType || (item.country === "India" ? "Aadhaar & PAN Card" : "National Passport / ID"),
@@ -357,7 +357,7 @@ export default function KycVerifications() {
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
-                        â€¢ {r.kycStatus}
+                        • {r.kycStatus}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -399,7 +399,7 @@ export default function KycVerifications() {
           <div>
             Showing{" "}
             <span className="font-bold text-slate-900">
-              {filteredRecords.length === 0 ? 0 : startIndex + 1}â€“{Math.min(startIndex + itemsPerPage, filteredRecords.length)}
+              {filteredRecords.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredRecords.length)}
             </span>{" "}
             of <span className="font-bold text-slate-900">{filteredRecords.length}</span> KYC Submissions
           </div>
@@ -440,7 +440,7 @@ export default function KycVerifications() {
                 <img src={viewRecord.avatar} alt={viewRecord.name} className="w-10 h-10 rounded-full border-2 border-white/80" />
                 <div>
                   <h3 className="text-base font-black tracking-tight">{viewRecord.name}</h3>
-                  <p className="text-xs text-blue-100 font-mono">{viewRecord.id} â€¢ {viewRecord.email}</p>
+                  <p className="text-xs text-blue-100 font-mono">{viewRecord.id} • {viewRecord.email}</p>
                 </div>
               </div>
               <button

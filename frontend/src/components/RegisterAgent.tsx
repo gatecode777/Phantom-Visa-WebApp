@@ -1,6 +1,7 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
+import { ALL_VISA_DESTINATION_COUNTRIES } from "./AddNewAgent";
 import {
   Briefcase,
   User,
@@ -24,7 +25,8 @@ import {
   MapPin,
   Sparkles,
   DollarSign,
-  Info
+  Info,
+  Search
 } from "lucide-react";
 
 export interface RegisterAgentProps {
@@ -74,6 +76,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
     employeeCount: "5-20 Employees",
     monthlyCapacity: "100",
     officeContactNumber: "",
+    supportedVisaCountries: [] as string[],
 
     // Step 3: Office Address
     officeAddress: "",
@@ -92,6 +95,73 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
     accountStatus: "Pending Approval",
     adminNotes: "Self-registered via Public Agent Registration Portal"
   });
+
+  // Dynamic Destination Countries Loaded directly from MongoDB Database API (/api/v1/countries)
+  const [availableDbCountries, setAvailableDbCountries] = useState<{ name: string; flag: string; code?: string }[]>([]);
+  const [isLoadingDbCountries, setIsLoadingDbCountries] = useState<boolean>(true);
+  const [visaCountrySearch, setVisaCountrySearch] = useState<string>("");
+
+  const renderCountryFlag = (flag?: string) => {
+    if (!flag) return <span>🌐</span>;
+    if (flag.startsWith("http://") || flag.startsWith("https://") || flag.startsWith("data:")) {
+      return <img src={flag} alt="" className="w-4 h-3 object-cover rounded shrink-0 inline-block" />;
+    }
+    return <span>{flag}</span>;
+  };
+
+  useEffect(() => {
+    fetchDatabaseCountries();
+  }, []);
+
+  const fetchDatabaseCountries = async () => {
+    try {
+      setIsLoadingDbCountries(true);
+      const res = await fetch(`${API_V1_URL}/countries`);
+      const json = await res.json();
+
+      if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        const activeDbCountries = json.data
+          .filter(
+            (c: any) =>
+              c.status !== "Inactive" &&
+              c.name &&
+              !c.name.startsWith("http://") &&
+              !c.name.startsWith("https://") &&
+              !c.name.includes("imagekit")
+          )
+          .map((c: any) => ({
+            name: c.name.trim(),
+            flag: c.flag || "🌐",
+            code: c.code || ""
+          }));
+        setAvailableDbCountries(activeDbCountries.length > 0 ? activeDbCountries : ALL_VISA_DESTINATION_COUNTRIES);
+      } else {
+        setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+      }
+    } catch (err) {
+      console.warn("Could not fetch database countries, using default list:", err);
+      setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+    } finally {
+      setIsLoadingDbCountries(false);
+    }
+  };
+
+  const handleToggleVisaCountry = (countryName: string) => {
+    setFormData((prev) => {
+      const current = prev.supportedVisaCountries || [];
+      const updated = current.includes(countryName)
+        ? current.filter((c) => c !== countryName)
+        : [...current, countryName];
+      return { ...prev, supportedVisaCountries: updated };
+    });
+    if (errors.supportedVisaCountries) {
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy.supportedVisaCountries;
+        return copy;
+      });
+    }
+  };
 
   // Country Dial Codes & Phone Selection State
   const [phoneCountryCode, setPhoneCountryCode] = useState<string>("IN");
@@ -267,6 +337,9 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
       }
     } else if (stepNumber === 2) {
       if (!formData.agencyName.trim()) newErrors.agencyName = "Agency / Business Name is required.";
+      if (!formData.supportedVisaCountries || formData.supportedVisaCountries.length === 0) {
+        newErrors.supportedVisaCountries = "Please select at least 1 supported visa country.";
+      }
     } else if (stepNumber === 4) {
       if (!uploadedFiles.businessCert) {
         newErrors.businessCert = "Business Registration Certificate file upload is required.";
@@ -675,7 +748,8 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                       </label>
                       <input
                         type="password"
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        autoComplete="new-password"
+                        placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
                         className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:bg-white transition ${
@@ -691,7 +765,8 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                       </label>
                       <input
                         type="password"
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        autoComplete="new-password"
+                        placeholder="••••••••"
                         value={formData.confirmPassword}
                         onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                         className={`w-full bg-slate-50 border text-slate-800 text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:bg-white transition ${
@@ -799,6 +874,141 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                         <option value="Corporate Partner">Corporate Partner</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* DYNAMIC SUPPORTED VISA COUNTRIES FROM DATABASE */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                      <div>
+                        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-outfit">
+                          <Globe size={15} className="text-[#2563EB]" />
+                          <span>Supported Visa Destination Countries</span>
+                          <span className="text-[10px] font-mono bg-blue-100 text-[#2563EB] px-2 py-0.5 rounded-full font-bold">
+                            {formData.supportedVisaCountries.length} Selected
+                          </span>
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Select all destination countries from our database for which your agency provides visa processing services.
+                        </p>
+                        {errors.supportedVisaCountries && (
+                          <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1">
+                            <AlertCircle size={12} /> {errors.supportedVisaCountries}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const matched = availableDbCountries.map((c) => c.name).slice(0, 10);
+                            setFormData((prev) => ({ ...prev, supportedVisaCountries: matched }));
+                            triggerToast("Selected popular visa destination countries.");
+                          }}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-blue-100 hover:bg-blue-200 text-[#2563EB] rounded-lg cursor-pointer"
+                        >
+                          Top Popular
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, supportedVisaCountries: availableDbCountries.map((c) => c.name) }));
+                            triggerToast(`Selected all ${availableDbCountries.length} database countries.`);
+                          }}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg cursor-pointer"
+                        >
+                          Select All ({availableDbCountries.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, supportedVisaCountries: [] }));
+                            triggerToast("Cleared country selections.");
+                          }}
+                          className="px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 rounded-lg cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search filter & Selected Pills */}
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search database countries by name..."
+                          value={visaCountrySearch}
+                          onChange={(e) => setVisaCountrySearch(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#0E1A2C] focus:outline-none focus:border-[#2563EB]"
+                        />
+                      </div>
+
+                      <div className="p-2 bg-white border border-slate-200 rounded-xl min-h-[38px] max-h-24 overflow-y-auto flex flex-wrap gap-1.5 items-center [scrollbar-width:thin]">
+                        {formData.supportedVisaCountries.length === 0 ? (
+                          <span className="text-[11px] text-slate-400 italic px-1">No countries selected yet. Click options below to choose.</span>
+                        ) : (
+                          formData.supportedVisaCountries.map((cName) => {
+                            const cObj = availableDbCountries.find((c) => c.name === cName);
+                            return (
+                              <span
+                                key={cName}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 border border-blue-200 text-[#2563EB] text-[11px] font-bold shadow-2xs"
+                              >
+                                {renderCountryFlag(cObj?.flag)}
+                                <span>{cName}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleVisaCountry(cName)}
+                                  className="text-slate-400 hover:text-red-600 transition cursor-pointer ml-0.5"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Choice Grid from Database */}
+                    {isLoadingDbCountries ? (
+                      <div className="p-6 text-center text-slate-500 text-xs flex items-center justify-center gap-2">
+                        <RefreshCw size={14} className="animate-spin text-[#2563EB]" />
+                        <span>Loading active destination countries from database...</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-white [scrollbar-width:thin]">
+                        {availableDbCountries
+                          .filter((c) => c.name.toLowerCase().includes(visaCountrySearch.toLowerCase().trim()))
+                          .map((c) => {
+                            const isChecked = formData.supportedVisaCountries.includes(c.name);
+                            return (
+                              <div
+                                key={c.name}
+                                onClick={() => handleToggleVisaCountry(c.name)}
+                                className={`p-2 rounded-xl border text-[11px] font-semibold flex items-center justify-between cursor-pointer select-none transition ${
+                                  isChecked
+                                    ? "bg-blue-50 border-[#2563EB] text-[#2563EB] font-bold shadow-2xs"
+                                    : "bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 truncate">
+                                  {renderCountryFlag(c.flag)}
+                                  <span className="truncate">{c.name}</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {}}
+                                  className="w-3.5 h-3.5 text-[#2563EB] accent-[#2563EB] rounded cursor-pointer shrink-0 ml-1"
+                                />
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -913,7 +1123,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                         </span>
                         <div className={`flex items-center justify-between bg-white border p-2.5 rounded-xl ${errors[doc.key] ? "border-red-400 ring-2 ring-red-500/10" : "border-slate-200"}`}>
                           <span className={`text-[11px] truncate max-w-[180px] ${uploadedFiles[doc.key] ? "text-emerald-700 font-bold" : "text-slate-500"}`}>
-                            {uploadedFiles[doc.key] ? `âœ“ ${uploadedFiles[doc.key]}` : "No file uploaded"}
+                            {uploadedFiles[doc.key] ? `✓ ${uploadedFiles[doc.key]}` : "No file uploaded"}
                           </span>
                           <label className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] text-[11px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1">
                             <Upload size={12} />
@@ -989,7 +1199,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
 
                     <div>
                       <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                        Bank Account Number <span className="text-red-500">*</span> (9â€“18 Digits)
+                        Bank Account Number <span className="text-red-500">*</span> (9-18 Digits)
                       </label>
                       <input
                         type="text"

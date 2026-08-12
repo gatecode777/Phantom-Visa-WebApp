@@ -44,6 +44,8 @@ export interface IApplication extends Document {
   visaTypeId?: mongoose.Types.ObjectId;
   visaTypeName: string;
   processingSpeed: "standard" | "express" | "vip";
+  assignedAgentId?: string;
+  assignedAgentName?: string;
   entryType: string;
   stayValidity: string;
   personalDetails: {
@@ -105,6 +107,8 @@ const ApplicationSchema: Schema = new Schema(
     visaTypeId: { type: Schema.Types.ObjectId, ref: "VisaType" },
     visaTypeName: { type: String, required: true },
     processingSpeed: { type: String, enum: ["standard", "express", "vip"], default: "express" },
+    assignedAgentId: { type: String, default: "" },
+    assignedAgentName: { type: String, default: "" },
     entryType: { type: String, default: "Single Entry" },
     stayValidity: { type: String, default: "60 Days" },
     personalDetails: {

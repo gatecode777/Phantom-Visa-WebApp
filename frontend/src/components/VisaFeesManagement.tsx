@@ -61,14 +61,14 @@ export interface VisaFeeRecord {
 }
 
 export const PREDEFINED_FEE_STRUCTURE = [
-  { label: "Embassy Fee", amount: "â‚¹6,500" },
-  { label: "Service Fee", amount: "â‚¹1,500" },
-  { label: "Express Charge", amount: "â‚¹1,000" },
-  { label: "Biometrics Fee", amount: "â‚¹850" },
-  { label: "Insurance Fee", amount: "â‚¹750" },
-  { label: "Processing Fee", amount: "â‚¹250" },
-  { label: "Transaction Fee", amount: "â‚¹150" },
-  { label: "Tax (18%)", amount: "â‚¹1,980" }
+  { label: "Embassy Fee", amount: "₹6,500" },
+  { label: "Service Fee", amount: "₹1,500" },
+  { label: "Express Charge", amount: "₹1,000" },
+  { label: "Biometrics Fee", amount: "₹850" },
+  { label: "Insurance Fee", amount: "₹750" },
+  { label: "Processing Fee", amount: "₹250" },
+  { label: "Transaction Fee", amount: "₹150" },
+  { label: "Tax (18%)", amount: "₹1,980" }
 ];
 
 const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
@@ -79,7 +79,7 @@ const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
     category: "Tourist Visa",
     visaType: "Tourist E-Visa",
     entryType: "Single Entry",
-    currency: "INR (â‚¹)",
+    currency: "INR (₹)",
     status: "Active",
     components: {
       embassyFee: "6,500",
@@ -101,9 +101,9 @@ const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
     paymentMethods: ["Credit Card", "Debit Card", "UPI", "Net Banking", "Wallet"],
     refundPolicy: {
       refundable: true,
-      cancellationFee: "â‚¹500",
+      cancellationFee: "₹500",
       refundPercentage: "80%",
-      refundProcessingTime: "3â€“5 Working Days"
+      refundProcessingTime: "3-5 Working Days"
     }
   },
   {
@@ -113,7 +113,7 @@ const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
     category: "Business Visa",
     visaType: "Sticker Visa",
     entryType: "Multiple Entry",
-    currency: "INR (â‚¹)",
+    currency: "INR (₹)",
     status: "Active",
     components: {
       embassyFee: "10,500",
@@ -147,7 +147,7 @@ const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
     category: "Business Visa",
     visaType: "Multiple Entry",
     entryType: "Multiple Entry",
-    currency: "INR (â‚¹)",
+    currency: "INR (₹)",
     status: "Active",
     components: {
       embassyFee: "5,000",
@@ -162,16 +162,16 @@ const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
     totalFee: "8,670",
     discounts: {
       discountType: "Flat",
-      discountAmount: "â‚¹500",
+      discountAmount: "₹500",
       promoCode: "BIZ500",
       expiryDate: "2026-12-31"
     },
     paymentMethods: ["Credit Card", "Debit Card", "UPI", "Wallet"],
     refundPolicy: {
       refundable: true,
-      cancellationFee: "â‚¹300",
+      cancellationFee: "₹300",
       refundPercentage: "90%",
-      refundProcessingTime: "2â€“4 Working Days"
+      refundProcessingTime: "2-4 Working Days"
     }
   }
 ];
@@ -201,7 +201,7 @@ export default function VisaFeesManagement() {
     category: "Tourist Visa",
     visaType: "Tourist E-Visa",
     entryType: "Single Entry",
-    currency: "INR (â‚¹)",
+    currency: "INR (₹)",
     status: "Active" as "Active" | "Inactive",
     embassyFee: "6,500",
     serviceFee: "1,500",
@@ -217,9 +217,9 @@ export default function VisaFeesManagement() {
     expiryDate: "",
     selectedPaymentMethods: ["Credit Card", "Debit Card", "UPI", "Net Banking"],
     refundable: true,
-    cancellationFee: "â‚¹500",
+    cancellationFee: "₹500",
     refundPercentage: "80%",
-    refundProcessingTime: "3â€“5 Working Days"
+    refundProcessingTime: "3-5 Working Days"
   });
 
   // UI Toast Notification
@@ -467,7 +467,7 @@ export default function VisaFeesManagement() {
                 category: "Tourist Visa",
                 visaType: "Tourist E-Visa",
                 entryType: "Single Entry",
-                currency: "INR (â‚¹)",
+                currency: "INR (₹)",
                 status: "Active",
                 embassyFee: "6,500",
                 serviceFee: "1,500",
@@ -483,9 +483,9 @@ export default function VisaFeesManagement() {
                 expiryDate: "",
                 selectedPaymentMethods: ["Credit Card", "Debit Card", "UPI", "Net Banking"],
                 refundable: true,
-                cancellationFee: "â‚¹500",
+                cancellationFee: "₹500",
                 refundPercentage: "80%",
-                refundProcessingTime: "3â€“5 Working Days"
+                refundProcessingTime: "3-5 Working Days"
               });
               setShowAddModal(true);
             }}
@@ -578,7 +578,7 @@ export default function VisaFeesManagement() {
           </div>
           <div className="pt-3 border-t border-slate-100 mt-3 flex justify-between items-center text-xs">
             <span className="text-slate-500 font-extrabold uppercase text-[10px]">Current Total:</span>
-            <strong className="text-[#2563EB] font-mono font-black text-sm">â‚¹13,000</strong>
+            <strong className="text-[#2563EB] font-mono font-black text-sm">₹13,000</strong>
           </div>
         </div>
       </div>
@@ -778,13 +778,13 @@ export default function VisaFeesManagement() {
                       {f.visaType}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-700">
-                      â‚¹{f.components.embassyFee}
+                      ₹{f.components.embassyFee}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-700">
-                      â‚¹{f.components.serviceFee}
+                      ₹{f.components.serviceFee}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-black text-[#2563EB]">
-                      â‚¹{f.totalFee}
+                      ₹{f.totalFee}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">
                       {f.currency}
@@ -848,7 +848,7 @@ export default function VisaFeesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 312 Fee Configurations</div>
+          <div>Showing 1-10 of 312 Fee Configurations</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -964,27 +964,27 @@ export default function VisaFeesManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Embassy Fee</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">â‚¹{activeModalFee.components.embassyFee}</strong>
+                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalFee.components.embassyFee}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Service Fee</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">â‚¹{activeModalFee.components.serviceFee}</strong>
+                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalFee.components.serviceFee}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Express Charge</span>
-                      <strong className="text-blue-600 font-mono font-bold text-sm">â‚¹{activeModalFee.components.expressCharge}</strong>
+                      <strong className="text-blue-600 font-mono font-bold text-sm">₹{activeModalFee.components.expressCharge}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Biometrics Fee</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">â‚¹{activeModalFee.components.biometricsFee}</strong>
+                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalFee.components.biometricsFee}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Insurance Fee</span>
-                      <strong className="text-slate-900 font-mono font-bold text-sm">â‚¹{activeModalFee.components.insuranceFee}</strong>
+                      <strong className="text-slate-900 font-mono font-bold text-sm">₹{activeModalFee.components.insuranceFee}</strong>
                     </div>
                     <div className="bg-blue-50 p-3 rounded-2xl border border-blue-200">
                       <span className="text-[10px] text-[#2563EB] font-extrabold uppercase block">Tax</span>
-                      <strong className="text-[#2563EB] font-mono font-black text-sm">â‚¹{activeModalFee.components.tax}</strong>
+                      <strong className="text-[#2563EB] font-mono font-black text-sm">₹{activeModalFee.components.tax}</strong>
                     </div>
                   </div>
                 </div>
@@ -1003,7 +1003,7 @@ export default function VisaFeesManagement() {
                       </span>
                       <p className="text-xs text-slate-500 font-medium">Includes all embassy charges, service fees, and 18% Tax.</p>
                     </div>
-                    <strong className="text-3xl font-black text-[#2563EB] font-mono">â‚¹{activeModalFee.totalFee}</strong>
+                    <strong className="text-3xl font-black text-[#2563EB] font-mono">₹{activeModalFee.totalFee}</strong>
                   </div>
                 </div>
               )}
@@ -1154,7 +1154,7 @@ export default function VisaFeesManagement() {
                     </label>
                     <input
                       type="text"
-                      placeholder="INR (â‚¹)"
+                      placeholder="INR (₹)"
                       value={formData.currency}
                       onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-mono font-bold"
@@ -1171,7 +1171,7 @@ export default function VisaFeesManagement() {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Embassy Fee (â‚¹)
+                      Embassy Fee (₹)
                     </label>
                     <input
                       type="text"
@@ -1184,7 +1184,7 @@ export default function VisaFeesManagement() {
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Service Fee (â‚¹)
+                      Service Fee (₹)
                     </label>
                     <input
                       type="text"
@@ -1197,7 +1197,7 @@ export default function VisaFeesManagement() {
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Express Charge (â‚¹)
+                      Express Charge (₹)
                     </label>
                     <input
                       type="text"
@@ -1210,7 +1210,7 @@ export default function VisaFeesManagement() {
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Biometrics Fee (â‚¹)
+                      Biometrics Fee (₹)
                     </label>
                     <input
                       type="text"
@@ -1226,7 +1226,7 @@ export default function VisaFeesManagement() {
               {/* DYNAMIC CALCULATED TOTAL BAR */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
                 <span className="font-extrabold text-[#2563EB] text-xs">Calculated Total Application Fee (Incl. Tax):</span>
-                <strong className="text-xl font-black text-[#2563EB] font-mono">â‚¹{calculateTotalFee()}</strong>
+                <strong className="text-xl font-black text-[#2563EB] font-mono">₹{calculateTotalFee()}</strong>
               </div>
 
               {/* SECTION 3: PAYMENT METHODS */}

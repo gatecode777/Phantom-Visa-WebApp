@@ -235,7 +235,9 @@ router.post("/submit", async (req: Request, res: Response) => {
       employmentDetails,
       uploadedDocuments,
       coTravelers,
-      pricing
+      pricing,
+      assignedAgentId,
+      assignedAgentName
     } = req.body;
 
     const errors: Record<string, string> = {};
@@ -336,6 +338,8 @@ router.post("/submit", async (req: Request, res: Response) => {
       categoryName,
       visaTypeName,
       processingSpeed: speed,
+      assignedAgentId: assignedAgentId || "",
+      assignedAgentName: assignedAgentName || "",
       entryType: entryType || "Single Entry",
       stayValidity: stayValidity || "60 Days",
       personalDetails: {

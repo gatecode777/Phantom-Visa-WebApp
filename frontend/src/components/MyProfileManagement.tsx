@@ -199,7 +199,7 @@ export default function MyProfileManagement() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Profile Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Active ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Active 🟢</div>
           <span className="text-[10px] text-emerald-600 font-bold">Identity Verified</span>
         </div>
 
@@ -376,7 +376,7 @@ export default function MyProfileManagement() {
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Two-Factor Auth (2FA)</span>
                 <div className="flex justify-between items-center">
-                  <strong className="text-emerald-700 font-bold">Enabled (Google Authenticator) ðŸŸ¢</strong>
+                  <strong className="text-emerald-700 font-bold">Enabled (Google Authenticator) 🟢</strong>
                   <button onClick={handleToggle2FA} className="text-[10px] text-[#2563EB] hover:underline font-bold">
                     Configure
                   </button>
@@ -423,7 +423,7 @@ export default function MyProfileManagement() {
                       <td className="py-2.5 font-bold text-slate-900">{log.device}</td>
                       <td className="py-2.5 text-center font-mono text-blue-700">{log.ip}</td>
                       <td className="py-2.5 text-center text-slate-600">{log.location}</td>
-                      <td className="py-2.5 text-right font-bold text-emerald-700 text-[10px]">ðŸŸ¢ {log.status}</td>
+                      <td className="py-2.5 text-right font-bold text-emerald-700 text-[10px]">🟢 {log.status}</td>
                     </tr>
                   ))}
                 </tbody>

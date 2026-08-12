@@ -202,7 +202,7 @@ export default function DashboardReportsManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Total Revenue</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹3.84 Cr</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹3.84 Cr</div>
           <span className="text-[10px] text-blue-600 font-bold">Gross Collections</span>
         </div>
 
@@ -358,10 +358,10 @@ export default function DashboardReportsManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  <tr><td className="py-1.5 text-emerald-700">Successful</td><td className="py-1.5 text-center font-mono font-bold">21,840</td><td className="py-1.5 text-right font-mono font-bold text-emerald-700">â‚¹2.84 Cr</td></tr>
-                  <tr><td className="py-1.5 text-amber-700">Pending</td><td className="py-1.5 text-center font-mono font-bold">824</td><td className="py-1.5 text-right font-mono font-bold text-amber-700">â‚¹98.87 L</td></tr>
-                  <tr><td className="py-1.5 text-red-700">Failed</td><td className="py-1.5 text-center font-mono font-bold">580</td><td className="py-1.5 text-right font-mono font-bold text-red-700">â‚¹21.50 L</td></tr>
-                  <tr><td className="py-1.5 text-purple-700">Refunded</td><td className="py-1.5 text-center font-mono font-bold">206</td><td className="py-1.5 text-right font-mono font-bold text-purple-700">â‚¹18.65 L</td></tr>
+                  <tr><td className="py-1.5 text-emerald-700">Successful</td><td className="py-1.5 text-center font-mono font-bold">21,840</td><td className="py-1.5 text-right font-mono font-bold text-emerald-700">₹2.84 Cr</td></tr>
+                  <tr><td className="py-1.5 text-amber-700">Pending</td><td className="py-1.5 text-center font-mono font-bold">824</td><td className="py-1.5 text-right font-mono font-bold text-amber-700">₹98.87 L</td></tr>
+                  <tr><td className="py-1.5 text-red-700">Failed</td><td className="py-1.5 text-center font-mono font-bold">580</td><td className="py-1.5 text-right font-mono font-bold text-red-700">₹21.50 L</td></tr>
+                  <tr><td className="py-1.5 text-purple-700">Refunded</td><td className="py-1.5 text-center font-mono font-bold">206</td><td className="py-1.5 text-right font-mono font-bold text-purple-700">₹18.65 L</td></tr>
                 </tbody>
               </table>
             </div>
@@ -433,7 +433,7 @@ export default function DashboardReportsManagement() {
               {REPORT_GENERATION_WORKFLOW.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>

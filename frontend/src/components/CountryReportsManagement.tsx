@@ -78,11 +78,11 @@ export const COUNTRY_REPORT_FEATURES = [
 ];
 
 const MOCK_COUNTRY_PERFORMANCE: CountryPerformanceRow[] = [
-  { flag: "ðŸ‡¨ðŸ‡¦", country: "Canada", applications: 4200, approved: 3148, rejected: 412, pending: 640, revenue: "â‚¹78.40 L", approvalRate: "88.4%", avgProcessing: "14 Days" },
-  { flag: "ðŸ‡¦ðŸ‡º", country: "Australia", applications: 3850, approved: 2950, rejected: 385, pending: 515, revenue: "â‚¹68.20 L", approvalRate: "88.5%", avgProcessing: "12 Days" },
-  { flag: "ðŸ‡¬ðŸ‡§", country: "United Kingdom", applications: 2940, approved: 2270, rejected: 260, pending: 410, revenue: "â‚¹52.40 L", approvalRate: "89.7%", avgProcessing: "10 Days" },
-  { flag: "ðŸ‡©ðŸ‡ª", country: "Germany", applications: 1920, approved: 1480, rejected: 170, pending: 270, revenue: "â‚¹34.60 L", approvalRate: "89.7%", avgProcessing: "8 Days" },
-  { flag: "ðŸ‡ºðŸ‡¸", country: "United States", applications: 2500, approved: 1850, rejected: 270, pending: 380, revenue: "â‚¹44.80 L", approvalRate: "87.3%", avgProcessing: "15 Days" }
+  { flag: "🇨🇦", country: "Canada", applications: 4200, approved: 3148, rejected: 412, pending: 640, revenue: "₹78.40 L", approvalRate: "88.4%", avgProcessing: "14 Days" },
+  { flag: "🇦🇺", country: "Australia", applications: 3850, approved: 2950, rejected: 385, pending: 515, revenue: "₹68.20 L", approvalRate: "88.5%", avgProcessing: "12 Days" },
+  { flag: "🇬🇧", country: "United Kingdom", applications: 2940, approved: 2270, rejected: 260, pending: 410, revenue: "₹52.40 L", approvalRate: "89.7%", avgProcessing: "10 Days" },
+  { flag: "🇩🇪", country: "Germany", applications: 1920, approved: 1480, rejected: 170, pending: 270, revenue: "₹34.60 L", approvalRate: "89.7%", avgProcessing: "8 Days" },
+  { flag: "🇺🇸", country: "United States", applications: 2500, approved: 1850, rejected: 270, pending: 380, revenue: "₹44.80 L", approvalRate: "87.3%", avgProcessing: "15 Days" }
 ];
 
 export default function CountryReportsManagement() {
@@ -181,7 +181,7 @@ export default function CountryReportsManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-teal-600 block mb-1">Total Revenue</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹3.84 Cr</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹3.84 Cr</div>
           <span className="text-[9px] text-teal-600 font-bold">Gross Earnings</span>
         </div>
 
@@ -337,7 +337,7 @@ export default function CountryReportsManagement() {
               </div>
               <div className="flex justify-between items-center bg-emerald-50/60 p-2 rounded-xl border border-emerald-200">
                 <span>Top Country by Revenue:</span>
-                <strong className="font-bold text-slate-900">Canada (â‚¹78.40 L)</strong>
+                <strong className="font-bold text-slate-900">Canada (₹78.40 L)</strong>
               </div>
               <div className="flex justify-between items-center bg-purple-50/60 p-2 rounded-xl border border-purple-200">
                 <span>Highest Approval Rate:</span>
@@ -403,7 +403,7 @@ export default function CountryReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {COUNTRY_REPORT_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
                   <span>{wf}</span>
                 </div>
               ))}

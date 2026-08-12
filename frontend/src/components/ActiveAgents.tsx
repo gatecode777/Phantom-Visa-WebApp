@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   UserCheck,
@@ -88,7 +88,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "Global Visa Services",
     agencyType: "Travel Agency",
     country: "Canada",
-    flag: "ðŸ‡¨ðŸ‡¦",
+    flag: "🇨🇦",
     assignedApps: 52,
     completedApps: 45,
     pendingApps: 7,
@@ -131,7 +131,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "Visa Experts Ltd",
     agencyType: "Immigration Consultant",
     country: "Australia",
-    flag: "ðŸ‡¦ðŸ‡º",
+    flag: "🇦🇺",
     assignedApps: 38,
     completedApps: 34,
     pendingApps: 4,
@@ -172,7 +172,7 @@ const mockActiveAgents: ActiveAgentRecord[] = [
     agencyName: "World Travel Agency",
     agencyType: "Individual Agent",
     country: "UK",
-    flag: "ðŸ‡¬ðŸ‡§",
+    flag: "🇬🇧",
     assignedApps: 24,
     completedApps: 21,
     pendingApps: 3,
@@ -255,7 +255,7 @@ export default function ActiveAgents() {
               agencyName: item.agencyName || "Visa Agency",
               agencyType: "Travel Agency",
               country: item.country || "India",
-              flag: "ðŸ‡®ðŸ‡³",
+              flag: "🇮🇳",
               assignedApps: 0,
               completedApps: 0,
               activeCases: 0,
@@ -522,11 +522,11 @@ export default function ActiveAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Countries</option>
-              <option value="Canada">ðŸ‡¨ðŸ‡¦ Canada</option>
-              <option value="Australia">ðŸ‡¦ðŸ‡º Australia</option>
-              <option value="UK">ðŸ‡¬ðŸ‡§ UK</option>
-              <option value="India">ðŸ‡®ðŸ‡³ India</option>
-              <option value="USA">ðŸ‡ºðŸ‡¸ USA</option>
+              <option value="Canada">🇨🇦 Canada</option>
+              <option value="Australia">🇦🇺 Australia</option>
+              <option value="UK">🇬🇧 UK</option>
+              <option value="India">🇮🇳 India</option>
+              <option value="USA">🇺🇸 USA</option>
             </select>
           </div>
 
@@ -541,10 +541,10 @@ export default function ActiveAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">â­ Excellent (4.8+)</option>
-              <option value="Good">â­ Good (4.5 - 4.7)</option>
-              <option value="Average">â­ Average (4.0 - 4.4)</option>
-              <option value="Low">â­ Low (&lt; 4.0)</option>
+              <option value="Excellent">⭐ Excellent (4.8+)</option>
+              <option value="Good">⭐ Good (4.5 - 4.7)</option>
+              <option value="Average">⭐ Average (4.0 - 4.4)</option>
+              <option value="Low">⭐ Low (&lt; 4.0)</option>
             </select>
           </div>
         </div>
@@ -736,7 +736,7 @@ export default function ActiveAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}-{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Active Agents</strong>
           </div>
           <div className="flex items-center gap-1">
@@ -799,9 +799,9 @@ export default function ActiveAgents() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewAgent.id}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span>{viewAgent.agencyName}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewAgent.flag}</span> {viewAgent.country}
                     </span>
@@ -822,12 +822,9 @@ export default function ActiveAgents() {
               {[
                 { id: "personal", label: "Personal Information", icon: User },
                 { id: "agency", label: "Agency Information", icon: Building },
-                { id: "performanceSummary", label: "Performance Summary", icon: BarChart2 },
                 { id: "activities", label: "Recent Activities", icon: Clock },
                 { id: "account", label: "Account Information", icon: FileText },
-                { id: "performanceOverview", label: "Performance Overview", icon: Award },
-                { id: "quickActions", label: "Quick Actions", icon: Briefcase },
-                { id: "bulkActions", label: "Bulk Actions", icon: Layers }
+                { id: "performanceOverview", label: "Performance Overview", icon: Award }
               ].map((tab) => {
                 const IconComp = tab.icon;
                 const isActive = modalTab === tab.id;
@@ -983,71 +980,6 @@ export default function ActiveAgents() {
                 </div>
               )}
 
-              {/* 3. PERFORMANCE SUMMARY TAB */}
-              {modalTab === "performanceSummary" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <BarChart2 size={16} className="text-[#2563EB]" />
-                      <span>Performance Summary</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs text-center">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Applications Assigned
-                      </span>
-                      <strong className="text-2xl font-black text-slate-900 font-mono">
-                        {viewAgent.performance.assigned}
-                      </strong>
-                    </div>
-
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 block mb-1">
-                        Applications Completed
-                      </span>
-                      <strong className="text-2xl font-black text-emerald-700 font-mono">
-                        {viewAgent.performance.completed}
-                      </strong>
-                    </div>
-
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block mb-1">
-                        Applications Pending
-                      </span>
-                      <strong className="text-2xl font-black text-amber-700 font-mono">
-                        {viewAgent.performance.pending}
-                      </strong>
-                    </div>
-
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#2563EB] block mb-1">
-                        Approval Rate
-                      </span>
-                      <strong className="text-2xl font-black text-[#2563EB] font-mono">
-                        {viewAgent.performance.approvalRate}
-                      </strong>
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Average Processing Time
-                      </span>
-                      <strong className="text-2xl font-black text-slate-800 font-mono">
-                        {viewAgent.performance.avgProcessingTime}
-                      </strong>
-                    </div>
-
-                    <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block mb-1">
-                        Customer Rating
-                      </span>
-                      <strong className="text-2xl font-black text-amber-600 font-mono flex items-center justify-center gap-1 mt-0.5">
-                        <Star size={20} className="fill-amber-400 text-amber-400" />
-                        <span>{viewAgent.performance.customerRating}</span>
-                      </strong>
-                    </div>
                   </div>
                 </div>
               )}
@@ -1150,7 +1082,7 @@ export default function ActiveAgents() {
                         Total Assigned
                       </span>
                       <strong className="text-2xl font-black text-slate-900 font-mono">
-                        {viewAgent.performance.assigned}
+                        {viewAgent.performance?.assigned ?? viewAgent.assignedApps ?? 0}
                       </strong>
                     </div>
 
@@ -1159,7 +1091,7 @@ export default function ActiveAgents() {
                         Completed
                       </span>
                       <strong className="text-2xl font-black text-emerald-700 font-mono">
-                        {viewAgent.performance.completed}
+                        {viewAgent.performance?.completed ?? viewAgent.completedApps ?? 0}
                       </strong>
                     </div>
 
@@ -1168,7 +1100,7 @@ export default function ActiveAgents() {
                         Pending
                       </span>
                       <strong className="text-2xl font-black text-amber-700 font-mono">
-                        {viewAgent.performance.pending}
+                        {viewAgent.performance?.pending ?? (viewAgent.assignedApps ? Math.max(0, viewAgent.assignedApps - (viewAgent.completedApps || 0)) : 0)}
                       </strong>
                     </div>
 
@@ -1177,7 +1109,7 @@ export default function ActiveAgents() {
                         Approval Rate
                       </span>
                       <strong className="text-2xl font-black text-[#2563EB] font-mono">
-                        {viewAgent.performance.approvalRate}
+                        {viewAgent.performance?.approvalRate ?? "92.5%"}
                       </strong>
                     </div>
 
@@ -1186,7 +1118,7 @@ export default function ActiveAgents() {
                         Avg Processing Time
                       </span>
                       <strong className="text-2xl font-black text-slate-800 font-mono">
-                        {viewAgent.performance.avgProcessingTime}
+                        {viewAgent.performance?.avgProcessingTime ?? "4.5 Days"}
                       </strong>
                     </div>
 
@@ -1199,162 +1131,6 @@ export default function ActiveAgents() {
                         <span>{viewAgent.rating}</span>
                       </strong>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 7. QUICK ACTIONS TAB */}
-              {modalTab === "quickActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Briefcase size={16} className="text-[#2563EB]" />
-                      <span>Quick Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
-                    <button
-                      onClick={() => triggerToast(`Profile opened for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-[#EEF2FF] border border-slate-200 hover:border-[#2563EB]/50 rounded-xl font-bold text-[#2563EB] flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Profile</span>
-                      <Eye size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Edit agent triggered for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Edit Agent</span>
-                      <Edit3 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Assign applications modal opened for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Assign Applications</span>
-                      <Briefcase size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Filtering assigned cases for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Assigned Applications ({viewAgent.assignedApps})</span>
-                      <Layers size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => setModalTab("performanceOverview")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Performance</span>
-                      <BarChart2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Message sent to ${viewAgent.email}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Message</span>
-                      <MessageSquare size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Notification sent to ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setAgents((prev) => prev.filter((a) => a.id !== viewAgent.id));
-                        triggerToast(`Blocked active agent account for ${viewAgent.name}`);
-                        setViewAgent(null);
-                      }}
-                      className="p-3.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Block Agent</span>
-                      <Lock size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setAgents((prev) => prev.filter((a) => a.id !== viewAgent.id));
-                        triggerToast(`Deleted active agent record for ${viewAgent.name}`);
-                        setViewAgent(null);
-                      }}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Agent</span>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 8. BULK ACTIONS TAB */}
-              {modalTab === "bulkActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Layers size={16} className="text-[#2563EB]" />
-                      <span>Bulk Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => handleSelectAll(true)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Select All Active Agents</span>
-                      <CheckCircle2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("export")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Export Agent List</span>
-                      <Download size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("email")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Email</span>
-                      <Mail size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("notification")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("block")}
-                      className="p-3.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Block Selected</span>
-                      <Lock size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("delete")}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Selected</span>
-                      <Trash2 size={15} />
-                    </button>
                   </div>
                 </div>
               )}

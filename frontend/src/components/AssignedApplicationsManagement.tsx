@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   UserCheck,
   Search,
@@ -471,7 +471,7 @@ export default function AssignedApplicationsManagement() {
               {ASSIGNMENT_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -702,11 +702,11 @@ export default function AssignedApplicationsManagement() {
                         </span>
                       ) : a.status === "Ready for Approval" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Section Completed
+                          🟢 Section Completed
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸ”µ {a.status}
+                          🔵 {a.status}
                         </span>
                       )}
                     </td>
@@ -754,7 +754,7 @@ export default function AssignedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 325 Assigned Applications</div>
+          <div>Showing 1-10 of 325 Assigned Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -878,7 +878,7 @@ export default function AssignedApplicationsManagement() {
                           done ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-200 text-slate-500"
                         }`}>
                           <span>{m.label}</span>
-                          <span>{done ? "âœ“ Completed" : "â³ Pending"}</span>
+                          <span>{done ? "✓ Completed" : "⏳ Pending"}</span>
                         </div>
                       );
                     })}

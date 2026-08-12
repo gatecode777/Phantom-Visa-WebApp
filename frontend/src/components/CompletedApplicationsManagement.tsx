@@ -132,7 +132,7 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     deliveryDate: "01 Aug 2026",
     approvedBy: "Rahul Sharma",
     visaIssueDate: "01 Aug 2026",
-    totalAmountPaid: "â‚¹12,350",
+    totalAmountPaid: "₹12,350",
     paymentMethod: "UPI / Credit Card",
     transactionId: "TXN-9988112",
     paymentDate: "28 Jul 2026",
@@ -167,7 +167,7 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     deliveryDate: "Expected 02 Aug 2026",
     approvedBy: "David Thomas",
     visaIssueDate: "31 Jul 2026",
-    totalAmountPaid: "â‚¹18,930",
+    totalAmountPaid: "₹18,930",
     paymentMethod: "Net Banking",
     transactionId: "TXN-7733441",
     paymentDate: "26 Jul 2026",
@@ -201,7 +201,7 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     deliveryDate: "30 Jul 2026",
     approvedBy: "Sarah Johnston",
     visaIssueDate: "30 Jul 2026",
-    totalAmountPaid: "â‚¹8,670",
+    totalAmountPaid: "₹8,670",
     paymentMethod: "Debit Card",
     transactionId: "TXN-5511223",
     paymentDate: "28 Jul 2026",
@@ -381,7 +381,7 @@ export default function CompletedApplicationsManagement() {
               {COMPLETION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -609,11 +609,11 @@ export default function CompletedApplicationsManagement() {
                     <td className="py-3.5 px-4">
                       {a.deliveryStatus === "Delivered" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          ðŸŸ¢ Delivered
+                          🟢 Delivered
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
-                          ðŸšš In Transit
+                          🚚 In Transit
                         </span>
                       )}
                     </td>
@@ -665,7 +665,7 @@ export default function CompletedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 1,690 Completed Applications</div>
+          <div>Showing 1-10 of 1,690 Completed Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

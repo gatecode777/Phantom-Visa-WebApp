@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useVisa } from "../context/VisaContext";
 import {
   ClipboardList,
@@ -43,6 +43,8 @@ export interface ApplicationRecord {
   passportNumber: string;
   appliedBy: "User" | "Agent";
   agentName?: string;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
   country: string;
   category: string;
   visaType: string;
@@ -125,7 +127,7 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     durationOfStay: "15 Days",
     transactionId: "TXN-9988112",
     paymentMethod: "UPI",
-    amountPaid: "â‚¹12,350",
+    amountPaid: "₹12,350",
     embassyTrackingId: "CAN-EMB-8831",
     embassySubmissionDate: "2026-07-29",
     appointmentDate: "2026-08-05",
@@ -170,7 +172,7 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     durationOfStay: "2 Years",
     transactionId: "TXN-7733441",
     paymentMethod: "Credit Card",
-    amountPaid: "â‚¹18,930",
+    amountPaid: "₹18,930",
     embassyTrackingId: "AUS-SYD-4412",
     embassySubmissionDate: "2026-07-30",
     appointmentDate: "2026-08-02",
@@ -212,7 +214,7 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     durationOfStay: "30 Days",
     transactionId: "TXN-PENDING",
     paymentMethod: "Net Banking",
-    amountPaid: "â‚¹8,670",
+    amountPaid: "₹8,670",
     documents: [
       { name: "Passport Bio Page", status: "Verified" },
       { name: "Company Cover Letter", status: "Verified" },
@@ -234,7 +236,9 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   applicantName: app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : app.travelerName || "Applicant",
   passportNumber: app.passportDetails?.passportNo || app.passportNumber || "N/A",
   appliedBy: app.appliedBy || "User",
-  agentName: app.agentName || "",
+  agentName: app.agentName || app.assignedAgentName || "",
+  assignedAgentId: app.assignedAgentId || "",
+  assignedAgentName: app.assignedAgentName || "",
   country: app.countryName || app.destination || "Australia",
   category: app.categoryName || "Tourist Visa",
   visaType: app.visaTypeName || app.visaType || "Standard Visitor",
@@ -250,7 +254,7 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   address: app.travelDetails?.hostAddress || app.address || "",
   travelDate: app.travelDetails?.travelDate || app.travelDates || "",
   durationOfStay: app.stayValidity || "60 Days",
-  amountPaid: app.pricing?.totalAmount ? `â‚¹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `â‚¹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
+  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
   documents: Array.isArray(app.uploadedDocuments)
     ? app.uploadedDocuments.map((d: any) => ({ name: d.title, status: d.fileUrl ? "Verified" : "Pending" }))
     : []
@@ -776,7 +780,7 @@ export default function AllApplicationsManagement() {
                 </th>
                 <th className="py-3.5 px-4">Application ID</th>
                 <th className="py-3.5 px-4">Applicant</th>
-                <th className="py-3.5 px-4">Applied By</th>
+                <th className="py-3.5 px-4">Agent Assigned</th>
                 <th className="py-3.5 px-4">Country</th>
                 <th className="py-3.5 px-4">Visa Category</th>
                 <th className="py-3.5 px-4">Visa Type</th>
@@ -813,11 +817,14 @@ export default function AllApplicationsManagement() {
                       {a.applicantName}
                       <span className="block text-[10px] text-slate-400 font-mono font-normal">Passport: {a.passportNumber}</span>
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-700">
-                      {a.appliedBy === "Agent" ? (
-                        <span className="text-purple-700 font-bold">Agent ({a.agentName})</span>
+                    <td className="py-3.5 px-4">
+                      {a.assignedAgentName ? (
+                        <div>
+                          <span className="font-bold text-indigo-700">{a.assignedAgentName}</span>
+                          <span className="block text-[10px] font-mono text-slate-400">{a.assignedAgentId}</span>
+                        </div>
                       ) : (
-                        <span className="text-slate-600">Direct User</span>
+                        <span className="text-slate-400 text-[10px] font-semibold italic">Auto-assign / None</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
@@ -834,9 +841,9 @@ export default function AllApplicationsManagement() {
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold">
                       {a.paymentStatus === "Paid" ? (
-                        <span className="text-emerald-600">ðŸŸ¢ Paid</span>
+                        <span className="text-emerald-600">🟢 Paid</span>
                       ) : (
-                        <span className="text-amber-600">ðŸŸ¡ Pending</span>
+                        <span className="text-amber-600">🟡 Pending</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
@@ -896,7 +903,7 @@ export default function AllApplicationsManagement() {
           <div>
             {totalItems === 0
               ? "Showing 0 of 0 Applications"
-              : `Showing ${startIndex + 1}â€“${endIndex} of ${totalItems} Application${totalItems === 1 ? "" : "s"}`}
+              : `Showing ${startIndex + 1}-${endIndex} of ${totalItems} Application${totalItems === 1 ? "" : "s"}`}
           </div>
 
           <div className="flex items-center gap-1 font-mono font-bold">
@@ -982,6 +989,25 @@ export default function AllApplicationsManagement() {
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Destination Country</span><strong className="text-slate-900 font-bold">{activeModalApp.country}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Category &amp; Type</span><strong className="text-slate-900 font-bold">{activeModalApp.category} ({activeModalApp.visaType})</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Priority Speed</span><strong className="text-purple-600 font-bold">{activeModalApp.priority}</strong></div>
+                    {activeModalApp.assignedAgentName ? (
+                      <div className="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-200 col-span-1 sm:col-span-2 lg:col-span-3">
+                        <span className="text-[10px] font-extrabold uppercase text-indigo-500 block mb-1">Assigned Agent</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-[#4848F7] text-white flex items-center justify-center font-black text-xs shrink-0">
+                            {activeModalApp.assignedAgentName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <strong className="text-indigo-800 font-bold text-xs">{activeModalApp.assignedAgentName}</strong>
+                            <span className="block text-[10px] font-mono text-indigo-500">{activeModalApp.assignedAgentId}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Assigned Agent</span>
+                        <span className="text-slate-400 italic text-xs">Auto-assign / None selected</span>
+                      </div>
+                    )}
                   </div>
                   {/* Rejection Reason Banner */}
                   {activeModalApp.status === "Rejected" && activeModalApp.rejectionReason && (

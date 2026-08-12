@@ -352,7 +352,7 @@ export default function FailedPaymentsManagement() {
               {FAILED_PAYMENT_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -584,7 +584,7 @@ export default function FailedPaymentsManagement() {
                       {p.agentName && <span className="block text-[10px] text-slate-400 font-normal">({p.agentName})</span>}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-red-600">
-                      â‚¹{p.amount.toLocaleString()}
+                      ₹{p.amount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">
                       {p.paymentMethod}
@@ -602,7 +602,7 @@ export default function FailedPaymentsManagement() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Failed
+                          🔴 Failed
                         </span>
                       )}
                     </td>
@@ -650,7 +650,7 @@ export default function FailedPaymentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 580 Failed Payments</div>
+          <div>Showing 1-10 of 580 Failed Payments</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -691,7 +691,7 @@ export default function FailedPaymentsManagement() {
                       Transaction {activeModalPayment.txnId}
                     </h3>
                     <span className="font-mono text-xs font-bold text-red-300 bg-red-900/50 px-2 py-0.5 rounded border border-red-700">
-                      â‚¹{activeModalPayment.amount.toLocaleString()} (FAILED)
+                      ₹{activeModalPayment.amount.toLocaleString()} (FAILED)
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">App ID: <strong className="text-blue-300">{activeModalPayment.appId}</strong> &bull; Failure: {activeModalPayment.failureReason}</p>

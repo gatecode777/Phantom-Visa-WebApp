@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Ban,
   Search,
@@ -133,7 +133,7 @@ const MOCK_CANCELLED_APPLICATIONS: CancelledApplicationRecord[] = [
     cancellationReason: "Travel Plans Changed",
     cancellationRemarks: "Applicant postponed trip due to personal emergency.",
     refundEligible: true,
-    refundAmount: "â‚¹8,500",
+    refundAmount: "₹8,500",
     refundStatus: "Pending",
     refundMethod: "Bank Transfer",
     status: "Cancelled",
@@ -167,7 +167,7 @@ const MOCK_CANCELLED_APPLICATIONS: CancelledApplicationRecord[] = [
     cancellationReason: "Duplicate Application",
     cancellationRemarks: "System detected duplicate intake submission under APP-20261002.",
     refundEligible: true,
-    refundAmount: "â‚¹18,930",
+    refundAmount: "₹18,930",
     refundStatus: "Processed",
     refundMethod: "Original Payment Gateway",
     refundTransactionId: "REF-8822114",
@@ -202,7 +202,7 @@ const MOCK_CANCELLED_APPLICATIONS: CancelledApplicationRecord[] = [
     cancellationReason: "Personal Reason",
     cancellationRemarks: "Client decided to travel on existing valid visa.",
     refundEligible: false,
-    refundAmount: "â‚¹0",
+    refundAmount: "₹0",
     refundStatus: "Not Eligible",
     status: "Cancelled",
     dob: "1988-06-25",
@@ -414,7 +414,7 @@ export default function CancelledApplicationsManagement() {
               {CANCELLATION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -635,21 +635,21 @@ export default function CancelledApplicationsManagement() {
                     <td className="py-3.5 px-4">
                       {a.refundStatus === "Processed" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          ðŸŸ¢ Processed
+                          🟢 Processed
                         </span>
                       ) : a.refundStatus === "Pending" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
-                          âŒ› Pending
+                          ⌛ Pending
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
-                          âŒ Not Eligible
+                          ❌ Not Eligible
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                        âœ• Cancelled
+                        ✕ Cancelled
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -698,7 +698,7 @@ export default function CancelledApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 114 Cancelled Applications</div>
+          <div>Showing 1-10 of 114 Cancelled Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
