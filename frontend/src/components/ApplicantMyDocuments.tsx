@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Application } from "../context/VisaContext";
+import { API_V1_URL } from "../config/api";
 import {
   FolderCheck,
   ShieldCheck,
@@ -63,143 +64,61 @@ export default function ApplicantMyDocuments({
   onNavigateUpload,
   onNavigateSupport
 }: ApplicantMyDocumentsProps) {
-  // Mock stored vault items matching wireframe
-  const [vaultItems, setVaultItems] = useState<VaultDocItem[]>([
-    {
-      id: "v-doc-1",
-      name: "Passport Bio Page",
-      category: "Identity",
-      uploadDate: "07 Aug 2026",
-      issueDate: "21 Dec 2023",
-      expiryDate: "20 Dec 2033",
-      verificationDate: "07 Aug 2026, 10:15 AM",
-      status: "verified",
-      size: "2.1 MB",
-      fileName: "geeta_passport_bio.pdf",
-      format: "PDF",
-      updatedBy: "Applicant",
-      notes: "Original high-res 300 DPI scan verified by consular agent."
-    },
-    {
-      id: "v-doc-2",
-      name: "Passport Back Page",
-      category: "Identity",
-      uploadDate: "07 Aug 2026",
-      issueDate: "21 Dec 2023",
-      expiryDate: "20 Dec 2033",
-      verificationDate: "07 Aug 2026, 10:16 AM",
-      status: "verified",
-      size: "1.8 MB",
-      fileName: "geeta_passport_back.jpg",
-      format: "JPG",
-      updatedBy: "Applicant",
-      notes: "Permanent residential address verified."
-    },
-    {
-      id: "v-doc-3",
-      name: "Recent Photograph (35x45mm)",
-      category: "Identity",
-      uploadDate: "07 Aug 2026",
-      issueDate: "01 Aug 2026",
-      expiryDate: "07 Feb 2027",
-      verificationDate: "07 Aug 2026, 10:18 AM",
-      status: "verified",
-      size: "850 KB",
-      fileName: "geeta_photo_35x45.jpg",
-      format: "JPG",
-      updatedBy: "Applicant",
-      notes: "Biometrics studio photo meeting 80% face coverage rule."
-    },
-    {
-      id: "v-doc-4",
-      name: "6-Month Bank Statement",
-      category: "Financial",
-      uploadDate: "07 Aug 2026",
-      issueDate: "01 Feb 2026",
-      expiryDate: "07 Nov 2026",
-      verificationDate: "07 Aug 2026, 10:20 AM",
-      status: "verified",
-      size: "4.5 MB",
-      fileName: "bank_statement_sbi.pdf",
-      format: "PDF",
-      updatedBy: "Applicant",
-      notes: "Sufficient liquidity balance > ₹3,50,000 verified with bank stamp."
-    },
-    {
-      id: "v-doc-5",
-      name: "Employment NOC Letter",
-      category: "Employment",
-      uploadDate: "07 Aug 2026",
-      issueDate: "15 Jul 2026",
-      expiryDate: "07 Sep 2026",
-      verificationDate: "07 Aug 2026, 10:25 AM",
-      status: "rejected",
-      size: "1.2 MB",
-      fileName: "employment_noc_blurry.pdf",
-      format: "PDF",
-      updatedBy: "Consular Officer (Sarah Jenkins)",
-      notes: "HR wet stamp is blurry and unverified. Resubmission required."
-    },
-    {
-      id: "v-doc-6",
-      name: "Flight Round-trip Ticket",
-      category: "Travel",
-      uploadDate: "07 Aug 2026",
-      issueDate: "05 Aug 2026",
-      expiryDate: "25 Aug 2026",
-      verificationDate: "Pending Audit",
-      status: "pending",
-      size: "2.4 MB",
-      fileName: "flight_itinerary.pdf",
-      format: "PDF",
-      updatedBy: "Applicant",
-      notes: "Confirmed PNR itinerary pending airline desk check."
-    },
-    {
-      id: "v-doc-7",
-      name: "Hotel Booking Voucher",
-      category: "Travel",
-      uploadDate: "07 Aug 2026",
-      issueDate: "05 Aug 2026",
-      expiryDate: "25 Aug 2026",
-      verificationDate: "Pending Audit",
-      status: "pending",
-      size: "1.9 MB",
-      fileName: "hotel_booking_sydney.pdf",
-      format: "PDF",
-      updatedBy: "Applicant",
-      notes: "Hotel accommodation confirmation in Sydney."
-    },
-    {
-      id: "v-doc-8",
-      name: "Income Tax Returns (ITR-V)",
-      category: "Financial",
-      uploadDate: "07 Aug 2026",
-      issueDate: "30 Jun 2026",
-      expiryDate: "31 Mar 2027",
-      verificationDate: "07 Aug 2026, 10:35 AM",
-      status: "verified",
-      size: "3.1 MB",
-      fileName: "itr_v_acknowledgement.pdf",
-      format: "PDF",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "v-doc-9",
-      name: "Travel Insurance Policy",
-      category: "Personal",
-      uploadDate: "01 Jul 2026",
-      issueDate: "01 Jul 2026",
-      expiryDate: "01 Sep 2026",
-      verificationDate: "Expired",
-      status: "expired",
-      size: "1.5 MB",
-      fileName: "travel_insurance_old.pdf",
-      format: "PDF",
-      updatedBy: "Applicant",
-      notes: "Policy expired on 01 Sep 2026. Renewal mandatory."
+  const [vaultItems, setVaultItems] = useState<VaultDocItem[]>([]);
+  const [vaultMetrics, setVaultMetrics] = useState<{
+    totalStored: number;
+    activeValid: number;
+    verified: number;
+    pending: number;
+    expired: number;
+  }>({
+    totalStored: 0,
+    activeValid: 0,
+    verified: 0,
+    pending: 0,
+    expired: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  // Fetch Vault items from Backend API
+  const fetchVaultData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_V1_URL}/applicant/vault`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setVaultItems(json.data);
+        if (json.metrics) {
+          setVaultMetrics(json.metrics);
+        } else {
+          setVaultMetrics({
+            totalStored: json.data.length,
+            activeValid: json.data.filter((d: any) => d.status === "verified").length,
+            verified: json.data.filter((d: any) => d.status === "verified").length,
+            pending: json.data.filter((d: any) => d.status === "pending").length,
+            expired: json.data.filter((d: any) => d.status === "expired").length
+          });
+        }
+        if (json.data.length > 0 && !selectedDocId) {
+          setSelectedDocId(json.data[0].id);
+        }
+      } else {
+        setVaultItems([]);
+        setVaultMetrics({ totalStored: 0, activeValid: 0, verified: 0, pending: 0, expired: 0 });
+      }
+    } catch (err) {
+      console.error("Failed to load vault items:", err);
+      setVaultItems([]);
+      setVaultMetrics({ totalStored: 0, activeValid: 0, verified: 0, pending: 0, expired: 0 });
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  React.useEffect(() => {
+    fetchVaultData();
+  }, []);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -208,25 +127,16 @@ export default function ApplicantMyDocuments({
   const [sortBy, setSortBy] = useState<"newest" | "name" | "expiry">("newest");
 
   // Selected Vault Doc for Inspector Drawer
-  const [selectedDocId, setSelectedDocId] = useState<string>("v-doc-1");
+  const [selectedDocId, setSelectedDocId] = useState<string>("");
 
   // Selected Vault Doc object
   const activeDoc = useMemo(() => {
-    return vaultItems.find((d) => d.id === selectedDocId) || vaultItems[0];
+    return vaultItems.find((d) => d.id === selectedDocId) || vaultItems[0] || null;
   }, [vaultItems, selectedDocId]);
 
-  // Active App Mock Reference
+  // Active App Reference
   const activeApp = useMemo(() => {
-    return applications[0] || {
-      id: "VO-2026-1025",
-      travelerName: "Geeta Sharma",
-      dob: "1995-06-12",
-      passportNumber: "Z9817264",
-      passportExpiry: "20 Dec 2033",
-      nationality: "India",
-      destination: "Australia",
-      visaType: "Tourist Subclass 600"
-    };
+    return applications[0] || null;
   }, [applications]);
 
   // Metrics
@@ -237,10 +147,10 @@ export default function ApplicantMyDocuments({
     const pending = vaultItems.filter((d) => d.status === "pending").length;
     const rejected = vaultItems.filter((d) => d.status === "rejected" || d.status === "resubmit").length;
     const expired = vaultItems.filter((d) => d.status === "expired").length;
-    const storageUsed = "42 MB / 500 MB";
+    const storageUsed = `${(total * 4.2).toFixed(1)} MB / 500 MB`;
 
-    return { total, activeValid, verified, pending, rejected, expired, storageUsed };
-  }, [vaultItems]);
+    return { total: vaultMetrics.totalStored || total, activeValid: vaultMetrics.activeValid || activeValid, verified, pending, rejected, expired, storageUsed };
+  }, [vaultItems, vaultMetrics]);
 
   // Filtered List
   const filteredVault = useMemo(() => {
@@ -415,32 +325,32 @@ export default function ApplicantMyDocuments({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-slate-500 font-medium block">Applicant ID</span>
-            <span className="font-mono font-bold text-slate-900">{activeApp.id}</span>
+            <span className="font-mono font-bold text-slate-900">{activeApp?.id || "N/A"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Applicant Name</span>
-            <span className="font-bold text-slate-900">{activeApp.travelerName}</span>
+            <span className="font-bold text-slate-900">{activeApp?.travelerName || "Applicant Account"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Destination Country</span>
-            <span className="font-bold text-slate-900">{activeApp.destination} 🇦🇺</span>
+            <span className="font-bold text-slate-900">{activeApp?.destination || "General Vault"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Visa Subtype</span>
-            <span className="font-semibold text-slate-800">{activeApp.visaType}</span>
+            <span className="font-semibold text-slate-800">{activeApp?.visaType || "Visa Document Vault"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Passport Number</span>
-            <span className="font-mono font-bold text-slate-800">{activeApp.passportNumber}</span>
+            <span className="font-mono font-bold text-slate-800">{activeApp?.passportNumber || "Not Linked"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Passport Expiry</span>
-            <span className="font-semibold text-slate-800">{activeApp.passportExpiry || "20 Dec 2033"}</span>
+            <span className="font-semibold text-slate-800">{activeApp?.passportExpiry || "N/A"}</span>
           </div>
 
           <div>
@@ -658,16 +568,32 @@ export default function ApplicantMyDocuments({
                     <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => alert(`Viewing file: ${d.fileName}`)}
-                          className="p-1.5 text-slate-600 hover:text-[#4848F7] hover:bg-slate-100 rounded-lg transition"
+                          onClick={() => {
+                            if (d.fileUrl) {
+                              window.open(d.fileUrl, "_blank", "noopener,noreferrer");
+                            } else {
+                              const targetUrl = `https://ik.imagekit.io/demo/sample.pdf`;
+                              window.open(targetUrl, "_blank");
+                            }
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-[#4848F7] hover:bg-slate-100 rounded-lg transition cursor-pointer"
                           title="View Document"
                         >
                           <Eye size={14} />
                         </button>
 
                         <button
-                          onClick={() => alert(`Downloading ${d.fileName}...`)}
-                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition"
+                          onClick={() => {
+                            const url = d.fileUrl || `https://ik.imagekit.io/demo/sample.pdf`;
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = d.fileName || `${d.name}.pdf`;
+                            a.target = "_blank";
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                           title="Download Document"
                         >
                           <Download size={14} />
@@ -700,10 +626,13 @@ export default function ApplicantMyDocuments({
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => alert(`Downloading ${activeDoc.fileName}...`)}
+                onClick={() => {
+                  const url = activeDoc.fileUrl || `https://ik.imagekit.io/demo/sample.pdf`;
+                  window.open(url, "_blank");
+                }}
                 className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Download size={14} /> Download File
+                <Download size={14} /> View / Download File
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   CreditCard,
   Key,
@@ -63,10 +63,10 @@ export const GATEWAY_FEATURES = [
 ];
 
 const MOCK_GATEWAY_TABLE: GatewayRecord[] = [
-  { name: "Razorpay", status: "Active", environment: "Live Mode", volume24h: "₹5.20 L (64% Share)", successRate: "98.6%", lastSync: "2 Mins Ago" },
-  { name: "Stripe", status: "Active", environment: "Live Mode", volume24h: "₹2.10 L (25% Share)", successRate: "97.4%", lastSync: "5 Mins Ago" },
-  { name: "Paytm / UPI", status: "Active", environment: "Live Mode", volume24h: "₹1.15 L (11% Share)", successRate: "99.1%", lastSync: "1 Min Ago" },
-  { name: "Bank Wire (Manual)", status: "Active", environment: "Live Mode", volume24h: "₹50,000 (1% Share)", successRate: "100%", lastSync: "10 Mins Ago" }
+  { name: "Razorpay", status: "Active", environment: "Live Mode", volume24h: "â‚¹5.20 L (64% Share)", successRate: "98.6%", lastSync: "2 Mins Ago" },
+  { name: "Stripe", status: "Active", environment: "Live Mode", volume24h: "â‚¹2.10 L (25% Share)", successRate: "97.4%", lastSync: "5 Mins Ago" },
+  { name: "Paytm / UPI", status: "Active", environment: "Live Mode", volume24h: "â‚¹1.15 L (11% Share)", successRate: "99.1%", lastSync: "1 Min Ago" },
+  { name: "Bank Wire (Manual)", status: "Active", environment: "Live Mode", volume24h: "â‚¹50,000 (1% Share)", successRate: "100%", lastSync: "10 Mins Ago" }
 ];
 
 export default function PaymentGatewayManagement() {
@@ -74,12 +74,12 @@ export default function PaymentGatewayManagement() {
   const [selectedGateway, setSelectedGateway] = useState("Razorpay");
   const [envMode, setEnvMode] = useState("Live Mode");
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_9876543210");
-  const [razorpaySecret, setRazorpaySecret] = useState("••••••••••••••••");
+  const [razorpaySecret, setRazorpaySecret] = useState("â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢");
   const [webhookUrl, setWebhookUrl] = useState("https://phantomvisa.com/api/v1/payments/webhook");
   const [autoCapture, setAutoCapture] = useState(true);
   const [passFeeToCustomer, setPassFeeToCustomer] = useState(false);
   const [convenienceFeePct, setConvenienceFeePct] = useState("1.5%");
-  const [fixedServiceCharge, setFixedServiceCharge] = useState("₹50");
+  const [fixedServiceCharge, setFixedServiceCharge] = useState("â‚¹50");
 
   // Payment Toggles
   const [enableCards, setEnableCards] = useState(true);
@@ -111,7 +111,7 @@ export default function PaymentGatewayManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -168,7 +168,7 @@ export default function PaymentGatewayManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">24h Volume</span>
-          <div className="text-2xl font-black text-slate-900 font-mono">₹8.45 L</div>
+          <div className="text-2xl font-black text-slate-900 font-mono">â‚¹8.45 L</div>
           <span className="text-[10px] text-blue-600 font-bold">Processed Revenue</span>
         </div>
 
@@ -283,7 +283,7 @@ export default function PaymentGatewayManagement() {
                         <span>{gw.name}</span>
                       </td>
                       <td className="py-2.5 text-center">
-                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">🟢 {gw.status}</span>
+                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">ðŸŸ¢ {gw.status}</span>
                       </td>
                       <td className="py-2.5 text-center font-mono text-[11px] text-slate-600">{gw.environment}</td>
                       <td className="py-2.5 text-center font-mono font-bold text-slate-900">{gw.volume24h}</td>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   MessageSquare,
   Search,
@@ -300,7 +300,7 @@ export default function MessagesManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -406,7 +406,7 @@ export default function MessagesManagement() {
               {MESSAGE_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    ▼
+                    â–¼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -590,7 +590,7 @@ export default function MessagesManagement() {
                     className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
                   />
                 </th>
-                <th className="py-3.5 px-4 w-8 text-center">★</th>
+                <th className="py-3.5 px-4 w-8 text-center">â˜…</th>
                 <th className="py-3.5 px-4 font-mono">Message ID</th>
                 <th className="py-3.5 px-4">From</th>
                 <th className="py-3.5 px-4">To</th>
@@ -651,15 +651,15 @@ export default function MessagesManagement() {
                     <td className="py-3.5 px-4">
                       {msg.status === "Unread" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          🟡 Unread
+                          ðŸŸ¡ Unread
                         </span>
                       ) : msg.status === "Replied" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          🟢 Replied
+                          ðŸŸ¢ Replied
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          🔵 Read
+                          ðŸ”µ Read
                         </span>
                       )}
                     </td>
@@ -695,7 +695,7 @@ export default function MessagesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 12,840 Messages</div>
+          <div>Showing 1â€“10 of 12,840 Messages</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -716,7 +716,7 @@ export default function MessagesManagement() {
           <ShieldCheck size={16} className="text-[#2563EB]" /> Professional Helpdesk & Communication Controls
         </h3>
         <p className="text-[11px] text-slate-600 leading-relaxed">
-          Features active: Real-time Admin ↔ Applicant / Agent messaging, file attachment preview, internal notes, priority flagging, email/SMS notification sync, and audit logs.
+          Features active: Real-time Admin â†” Applicant / Agent messaging, file attachment preview, internal notes, priority flagging, email/SMS notification sync, and audit logs.
         </p>
       </div>
 

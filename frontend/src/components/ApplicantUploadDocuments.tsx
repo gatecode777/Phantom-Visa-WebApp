@@ -61,166 +61,68 @@ export default function ApplicantUploadDocuments({
   onNavigateApply,
   onNavigateSupport
 }: ApplicantUploadDocumentsProps) {
-  // Select active application (or fallback mock)
+  // Select active application
   const [selectedAppId, setSelectedAppId] = useState<string>(applications[0]?.id || "VO-2026-1025");
 
   const activeApp = useMemo(() => {
-    return applications.find((a) => a.id === selectedAppId) || {
-      id: "VO-2026-1025",
-      travelerName: "Geeta Sharma",
-      dob: "1995-06-12",
-      passportNumber: "Z9817264",
-      passportExpiry: "2033-12-20",
-      nationality: "India",
-      destination: "Australia",
-      visaType: "Tourist Subclass 600",
-      travelDates: "10 Aug 2026 to 25 Aug 2026",
-      status: "Submitted" as const,
-      fees: 16500,
-      submissionDate: "07 Aug 2026",
-      verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "needs_review" as const, sponsorLetter: "pending" as const },
-      checklist: { employed: true, sponsored: false }
-    };
+    return applications.find((a) => a.id === selectedAppId || a.applicationId === selectedAppId) || applications[0] || null;
   }, [applications, selectedAppId]);
 
-  // Document items mock list
-  const [docItems, setDocItems] = useState<DocItem[]>([
-    {
-      id: "doc-1",
-      name: "Passport Bio Page",
-      category: "Identity",
-      required: true,
-      format: "PDF / JPG",
-      maxSize: "5 MB",
-      fileName: "geeta_passport_bio.pdf",
-      size: "2.1 MB",
-      status: "verified" as const, // verified, pending, rejected, resubmit, not_uploaded
-      uploadedAt: "07 Aug 2026, 10:15 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-2",
-      name: "Passport Back Page",
-      category: "Identity",
-      required: true,
-      format: "JPG / PNG",
-      maxSize: "5 MB",
-      fileName: "geeta_passport_back.jpg",
-      size: "1.8 MB",
-      status: "verified" as const,
-      uploadedAt: "07 Aug 2026, 10:16 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-3",
-      name: "Recent Photograph",
-      category: "Identity",
-      required: true,
-      format: "JPG / PNG",
-      maxSize: "2 MB",
-      fileName: "geeta_photo_35x45.jpg",
-      size: "850 KB",
-      status: "verified" as const,
-      uploadedAt: "07 Aug 2026, 10:18 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-4",
-      name: "6-Month Bank Statement",
-      category: "Financial",
-      required: true,
-      format: "PDF",
-      maxSize: "10 MB",
-      fileName: "bank_statement_sbi.pdf",
-      size: "4.5 MB",
-      status: "verified" as const,
-      uploadedAt: "07 Aug 2026, 10:20 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-5",
-      name: "Employment NOC Letter",
-      category: "Employment",
-      required: true,
-      format: "PDF",
-      maxSize: "5 MB",
-      fileName: "employment_noc_blurry.pdf",
-      size: "1.2 MB",
-      status: "rejected" as const,
-      rejectionReason: "NOC letter HR wet stamp is blurry and unverified. Please upload a clear original scan on official company letterhead.",
-      uploadedAt: "07 Aug 2026, 10:25 AM",
-      updatedBy: "Consular Officer (Sarah Jenkins)"
-    },
-    {
-      id: "doc-6",
-      name: "Flight Round-trip Ticket",
-      category: "Travel",
-      required: false,
-      format: "PDF",
-      maxSize: "5 MB",
-      fileName: "flight_itinerary.pdf",
-      size: "2.4 MB",
-      status: "pending" as const,
-      uploadedAt: "07 Aug 2026, 10:30 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-7",
-      name: "Hotel Booking Voucher",
-      category: "Travel",
-      required: false,
-      format: "PDF",
-      maxSize: "5 MB",
-      fileName: "hotel_booking_sydney.pdf",
-      size: "1.9 MB",
-      status: "pending" as const,
-      uploadedAt: "07 Aug 2026, 10:32 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-8",
-      name: "Income Tax Returns (ITR)",
-      category: "Financial",
-      required: false,
-      format: "PDF",
-      maxSize: "10 MB",
-      fileName: "itr_v_acknowledgement.pdf",
-      size: "3.1 MB",
-      status: "verified" as const,
-      uploadedAt: "07 Aug 2026, 10:35 AM",
-      updatedBy: "Applicant"
-    },
-    {
-      id: "doc-9",
-      name: "Salary Slips (Last 3 Months)",
-      category: "Employment",
-      required: false,
-      format: "PDF",
-      maxSize: "5 MB",
-      fileName: "",
-      size: "",
-      status: "not_uploaded" as const,
-      uploadedAt: "-",
-      updatedBy: "-"
-    },
-    {
-      id: "doc-10",
-      name: "Cover Letter & Travel Plan",
-      category: "Travel",
-      required: false,
-      format: "PDF / DOCX",
-      maxSize: "5 MB",
-      fileName: "",
-      size: "",
-      status: "not_uploaded" as const,
-      uploadedAt: "-",
-      updatedBy: "-"
+  // Construct dynamic document list from active application
+  const [docItems, setDocItems] = useState<DocItem[]>([]);
+
+  React.useEffect(() => {
+    if (!activeApp) {
+      setDocItems([]);
+      return;
     }
-  ]);
+    const rawDocs = (activeApp as any).uploadedDocuments || [];
+    if (rawDocs.length > 0) {
+      const items: DocItem[] = rawDocs.map((d: any, idx: number) => {
+        const statusNorm = (d.status || "not_uploaded").toLowerCase();
+        let displayStatus: DocStatus = "not_uploaded";
+        if (statusNorm === "verified") displayStatus = "verified";
+        else if (statusNorm === "rejected") displayStatus = "rejected";
+        else if (statusNorm === "needs_review") displayStatus = "resubmit";
+        else if (statusNorm === "pending" || statusNorm === "uploaded") displayStatus = d.fileUrl ? "pending" : "not_uploaded";
+
+        return {
+          id: d._id || d.requirementId || `doc-${idx + 1}`,
+          name: d.title,
+          category: d.documentType?.includes("Bank") ? "Financial" : d.documentType?.includes("Letter") ? "Employment" : "Identity",
+          required: d.isMandatory !== false,
+          format: d.format || "PDF / JPG",
+          maxSize: d.fileSize || "5 MB",
+          fileName: d.fileName || (d.fileUrl ? `${d.title.toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf` : ""),
+          size: d.fileSize || (d.fileUrl ? "2.1 MB" : ""),
+          status: displayStatus,
+          rejectionReason: d.rejectionReason || "",
+          uploadedAt: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString("en-GB") : "-",
+          updatedBy: d.verifiedBy || "Applicant"
+        };
+      });
+      setDocItems(items);
+      if (items.length > 0 && !selectedDocId) {
+        setSelectedDocId(items[0].id);
+      }
+    } else {
+      // Clean unuploaded requirement slots for active visa application
+      const defaultSlots: DocItem[] = [
+        { id: "doc-1", name: "Valid Passport (Min 6 months validity)", category: "Identity", required: true, format: "PDF / JPG", maxSize: "5 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" },
+        { id: "doc-2", name: "Recent Passport Size Photograph", category: "Identity", required: true, format: "JPG / PNG", maxSize: "2 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" },
+        { id: "doc-3", name: "6-Month Official Bank Statement", category: "Financial", required: true, format: "PDF", maxSize: "10 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" },
+        { id: "doc-4", name: "Employment NOC & Leave Sanction Letter", category: "Employment", required: true, format: "PDF", maxSize: "5 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" },
+        { id: "doc-5", name: "Confirmed Flight Round-trip Itinerary", category: "Travel", required: false, format: "PDF", maxSize: "5 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" },
+        { id: "doc-6", name: "Hotel Accommodation Confirmation Voucher", category: "Travel", required: false, format: "PDF", maxSize: "5 MB", fileName: "", size: "", status: "not_uploaded", uploadedAt: "-", updatedBy: "-" }
+      ];
+      setDocItems(defaultSlots);
+      setSelectedDocId("doc-1");
+    }
+  }, [activeApp]);
 
   // Upload Form Dropzone State
   const [selectedCategory, setSelectedCategory] = useState("Identity");
-  const [selectedDocId, setSelectedDocId] = useState("doc-5");
+  const [selectedDocId, setSelectedDocId] = useState("doc-4");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -229,42 +131,56 @@ export default function ApplicantUploadDocuments({
   const metrics = useMemo(() => {
     const total = docItems.length;
     const uploaded = docItems.filter((d) => d.status !== "not_uploaded").length;
-    const pending = docItems.filter((d) => d.status === "not_uploaded").length;
+    const pending = docItems.filter((d) => d.status === "not_uploaded" || d.status === "pending").length;
     const verified = docItems.filter((d) => d.status === "verified").length;
     const rejected = docItems.filter((d) => d.status === "rejected" || d.status === "resubmit").length;
-    const completionRate = Math.round((uploaded / total) * 100);
+    const completionRate = total > 0 ? Math.round((uploaded / total) * 100) : 0;
 
     return { total, uploaded, pending, verified, rejected, completionRate };
   }, [docItems]);
 
-  // Handle Mock Upload
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  // Check if all mandatory documents are uploaded
+  const allMandatoryUploaded = useMemo(() => {
+    const mandatoryDocs = docItems.filter((d) => d.required);
+    if (mandatoryDocs.length === 0) return true;
+    return mandatoryDocs.every((d) => d.status === "verified" || d.status === "pending");
+  }, [docItems]);
+
+  // Handle Document Upload Submit
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDocId) return;
 
     setIsUploading(true);
-    setTimeout(() => {
-      setDocItems((prev) =>
-        prev.map((item) => {
-          if (item.id === selectedDocId) {
-            return {
-              ...item,
-              fileName: uploadFile ? uploadFile.name : `reuploaded_${item.name.toLowerCase().replace(/ /g, "_")}.pdf`,
-              size: uploadFile ? `${(uploadFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.5 MB",
-              status: "pending",
-              uploadedAt: "Just now",
-              updatedBy: "Applicant"
-            };
-          }
-          return item;
-        })
-      );
+    const targetDoc = docItems.find((d) => d.id === selectedDocId);
 
+    try {
+      // Simulate/Trigger API upload
+      setTimeout(() => {
+        setDocItems((prev) =>
+          prev.map((item) => {
+            if (item.id === selectedDocId) {
+              return {
+                ...item,
+                fileName: uploadFile ? uploadFile.name : `${item.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}_updated.pdf`,
+                size: uploadFile ? `${(uploadFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.5 MB",
+                status: "pending",
+                uploadedAt: "Just now",
+                updatedBy: "Applicant"
+              };
+            }
+            return item;
+          })
+        );
+
+        setIsUploading(false);
+        setUploadSuccess(true);
+        setUploadFile(null);
+        setTimeout(() => setUploadSuccess(false), 4000);
+      }, 1000);
+    } catch (err) {
       setIsUploading(false);
-      setUploadSuccess(true);
-      setUploadFile(null);
-      setTimeout(() => setUploadSuccess(false), 4000);
-    }, 1200);
+    }
   };
 
   // Rejected document reference
@@ -429,39 +345,39 @@ export default function ApplicantUploadDocuments({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-slate-500 font-medium block">Application ID</span>
-            <span className="font-mono font-bold text-slate-900 text-sm">{activeApp.id}</span>
+            <span className="font-mono font-bold text-slate-900 text-sm">{activeApp?.id || activeApp?.applicationId || "N/A"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Applicant Legal Name</span>
-            <span className="font-bold text-slate-900">{activeApp.travelerName}</span>
+            <span className="font-bold text-slate-900">{activeApp?.travelerName || "Applicant"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Destination Country</span>
-            <span className="font-bold text-slate-900">{activeApp.destination} 🇦🇺</span>
+            <span className="font-bold text-slate-900">{activeApp?.destination || "Target Destination"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Visa Subcategory</span>
-            <span className="font-semibold text-slate-800">{activeApp.visaType}</span>
+            <span className="font-semibold text-slate-800">{activeApp?.visaType || "Visa Application"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Passport Number</span>
-            <span className="font-mono font-bold text-slate-800">{activeApp.passportNumber}</span>
+            <span className="font-mono font-bold text-slate-800">{activeApp?.passportNumber || "Not Linked"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Application Status</span>
             <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-              Under Verification
+              {activeApp?.status || "Under Verification"}
             </span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Last Updated Date</span>
-            <span className="font-semibold text-slate-800">{activeApp.submissionDate}</span>
+            <span className="font-semibold text-slate-800">{activeApp?.submissionDate || "-"}</span>
           </div>
 
           <div>
@@ -677,8 +593,11 @@ export default function ApplicantUploadDocuments({
                         {d.fileName ? (
                           <>
                             <button
-                              onClick={() => alert(`Viewing document: ${d.fileName}`)}
-                              className="p-1.5 text-slate-600 hover:text-[#4848F7] hover:bg-slate-100 rounded-lg transition"
+                              onClick={() => {
+                                const targetUrl = (d as any).fileUrl || `https://ik.imagekit.io/demo/sample.pdf`;
+                                window.open(targetUrl, "_blank", "noopener,noreferrer");
+                              }}
+                              className="p-1.5 text-slate-600 hover:text-[#4848F7] hover:bg-slate-100 rounded-lg transition cursor-pointer"
                               title="View Document"
                             >
                               <Eye size={14} />
@@ -803,15 +722,28 @@ export default function ApplicantUploadDocuments({
       <div className="bg-slate-900 text-white rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
         <div>
           <h4 className="text-sm font-extrabold text-white">Ready for Final Consular Verification?</h4>
-          <p className="text-xs text-slate-400 mt-0.5">Submit your verified documents package to embassy processing team.</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {allMandatoryUploaded
+              ? "All mandatory requirements fulfilled! Submit your document package to the consular team."
+              : "Upload or re-upload all mandatory document requirements to enable final submission."}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => alert("Submitting documents for consular verification...")}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            onClick={() => {
+              if (!allMandatoryUploaded) return;
+              alert("Document package submitted for final consular verification successfully!");
+            }}
+            disabled={!allMandatoryUploaded}
+            className={`font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 ${
+              allMandatoryUploaded
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-75"
+            }`}
           >
-            Submit for Final Verification
+            <ShieldCheck size={16} />
+            <span>{allMandatoryUploaded ? "Submit for Final Verification" : "Mandatory Docs Pending"}</span>
           </button>
         </div>
       </div>

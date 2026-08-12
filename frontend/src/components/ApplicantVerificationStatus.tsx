@@ -55,93 +55,51 @@ export default function ApplicantVerificationStatus({
   onNavigateUpload,
   onNavigateSupport
 }: ApplicantVerificationStatusProps) {
-  // Mock verification records matching wireframe
-  const [verificationItems, setVerificationItems] = useState<VerificationDocRecord[]>([
-    {
-      id: "v-rec-1",
-      name: "Passport Bio Page",
-      category: "Identity",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "AI System",
-      verificationDate: "07 Aug 2026, 10:15 AM",
-      status: "verified",
-      remarks: "High-resolution 300 DPI scan verified. Full border visible.",
-      aiMatchScore: 99,
-      ocrData: { passportNo: "Z9817264", dob: "12 Jun 1995", nameMatch: true }
-    },
-    {
-      id: "v-rec-2",
-      name: "Passport Back Page",
-      category: "Identity",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "AI System",
-      verificationDate: "07 Aug 2026, 10:16 AM",
-      status: "verified",
-      remarks: "Address details matched with application records.",
-      aiMatchScore: 98,
-      ocrData: { nameMatch: true }
-    },
-    {
-      id: "v-rec-3",
-      name: "Recent Photograph (35x45mm)",
-      category: "Identity",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "Agent Sarah Jenkins",
-      verificationDate: "07 Aug 2026, 10:20 AM",
-      status: "verified",
-      remarks: "Biometrics criteria 35x45mm white background verified.",
-      aiMatchScore: 96,
-      ocrData: {}
-    },
-    {
-      id: "v-rec-4",
-      name: "6-Month Bank Statement",
-      category: "Financial",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "Agent Sarah Jenkins",
-      verificationDate: "07 Aug 2026, 10:25 AM",
-      status: "verified",
-      remarks: "Opening and closing balance verified (> ₹3,50,000 threshold).",
-      aiMatchScore: 94,
-      ocrData: {}
-    },
-    {
-      id: "v-rec-5",
-      name: "Employment NOC Letter",
-      category: "Employment",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "Agent Sarah Jenkins",
-      verificationDate: "07 Aug 2026, 10:30 AM",
-      status: "rejected",
-      remarks: "Refusal Clause 4.2: HR wet stamp is blurry and unverified. Resubmission required.",
-      aiMatchScore: 60,
-      ocrData: {}
-    },
-    {
-      id: "v-rec-6",
-      name: "Flight Round-trip Ticket",
-      category: "Travel",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "AI System",
-      verificationDate: "Pending Agent Audit",
-      status: "pending",
-      remarks: "Flight PNR code pending airline database check.",
-      aiMatchScore: 90,
-      ocrData: {}
-    },
-    {
-      id: "v-rec-7",
-      name: "Hotel Booking Voucher",
-      category: "Travel",
-      submissionDate: "07 Aug 2026",
-      verifiedBy: "AI System",
-      verificationDate: "Pending Agent Audit",
-      status: "pending",
-      remarks: "Hotel confirmation code pending hotel desk verification.",
-      aiMatchScore: 88,
-      ocrData: {}
+  // Active App Reference
+  const activeApp = useMemo(() => {
+    return applications[0] || {
+      id: "VO-2026-1025",
+      applicationId: "VO-2026-1025",
+      travelerName: "Geeta Sharma",
+      dob: "1995-06-12",
+      passportNumber: "Z9817264",
+      destination: "Australia",
+      visaType: "Tourist Subclass 600",
+      uploadedDocuments: []
+    };
+  }, [applications]);
+
+  // Dynamically derive verification audit records from active application documents
+  const verificationItems = useMemo<VerificationDocRecord[]>(() => {
+    const rawDocs = (activeApp as any).uploadedDocuments || [];
+    if (rawDocs.length > 0) {
+      return rawDocs.map((d: any, idx: number) => {
+        const statusNorm = (d.status || "pending").toLowerCase();
+        let auditStatus: AuditStatus = "pending";
+        if (statusNorm === "verified") auditStatus = "verified";
+        else if (statusNorm === "rejected") auditStatus = "rejected";
+        else if (statusNorm === "needs_review") auditStatus = "resubmit";
+
+        const submissionDate = d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString("en-GB") : "07 Aug 2026";
+        const verificationDate = d.verificationDate || (auditStatus === "verified" ? `${submissionDate}, 10:15 AM` : "Pending Audit");
+
+        return {
+          id: d._id || d.requirementId || `v-rec-${idx + 1}`,
+          name: d.title,
+          category: d.documentType?.includes("Bank") ? "Financial" : d.documentType?.includes("Letter") ? "Employment" : "Identity",
+          submissionDate,
+          verifiedBy: (d.verifiedBy as any) || (auditStatus === "verified" ? "AI System" : "Agent Sarah Jenkins"),
+          verificationDate,
+          status: auditStatus,
+          remarks: d.rejectionReason || (auditStatus === "verified" ? "Original high-resolution scan verified meeting consular biometrics standard." : "Pending auditor manual check."),
+          aiMatchScore: d.aiMatchScore || (auditStatus === "verified" ? 98 : 75),
+          ocrData: d.ocrData || { passportNo: (activeApp as any).passportDetails?.passportNo || "Z9817264", dob: (activeApp as any).personalDetails?.dob || "12 Jun 1995", nameMatch: true }
+        };
+      });
     }
-  ]);
+
+    return [];
+  }, [activeApp]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,23 +108,11 @@ export default function ApplicantVerificationStatus({
   const [sortBy, setSortBy] = useState<"newest" | "name" | "score">("newest");
 
   // Selected Record for Inspector
-  const [selectedRecId, setSelectedRecId] = useState<string>("v-rec-1");
+  const [selectedRecId, setSelectedRecId] = useState<string>("");
 
   const activeRec = useMemo(() => {
-    return verificationItems.find((r) => r.id === selectedRecId) || verificationItems[0];
+    return verificationItems.find((r) => r.id === selectedRecId) || verificationItems[0] || null;
   }, [verificationItems, selectedRecId]);
-
-  // Active App Reference
-  const activeApp = useMemo(() => {
-    return applications[0] || {
-      id: "VO-2026-1025",
-      travelerName: "Geeta Sharma",
-      dob: "1995-06-12",
-      passportNumber: "Z9817264",
-      destination: "Australia",
-      visaType: "Tourist Subclass 600"
-    };
-  }, [applications]);
 
   // Metrics
   const metrics = useMemo(() => {
@@ -355,32 +301,32 @@ export default function ApplicantVerificationStatus({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-slate-500 font-medium block">Application ID</span>
-            <span className="font-mono font-bold text-slate-900">{activeApp.id}</span>
+            <span className="font-mono font-bold text-slate-900">{activeApp?.id || activeApp?.applicationId || "N/A"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Applicant Name</span>
-            <span className="font-bold text-slate-900">{activeApp.travelerName}</span>
+            <span className="font-bold text-slate-900">{activeApp?.travelerName || "Applicant"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Destination Country</span>
-            <span className="font-bold text-slate-900">{activeApp.destination} 🇦🇺</span>
+            <span className="font-bold text-slate-900">{activeApp?.destination || "Target Country"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Assigned Verifier</span>
-            <span className="font-semibold text-slate-800">Agent Desk #2 (Sarah Jenkins)</span>
+            <span className="font-semibold text-slate-800">Consular Verification Desk</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Visa Subtype</span>
-            <span className="font-semibold text-slate-800">{activeApp.visaType}</span>
+            <span className="font-semibold text-slate-800">{activeApp?.visaType || "Visa Application"}</span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Passport Number</span>
-            <span className="font-mono font-bold text-slate-800">{activeApp.passportNumber}</span>
+            <span className="font-mono font-bold text-slate-800">{activeApp?.passportNumber || "Not Linked"}</span>
           </div>
 
           <div>

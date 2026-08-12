@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Globe,
   Search,
@@ -78,7 +78,7 @@ export default function CountriesManagement() {
   const [formData, setFormData] = useState({
     name: "",
     code: "",
-    flag: "🌐",
+    flag: "ðŸŒ",
     continent: "Asia",
     capital: "",
     currency: "USD ($)",
@@ -204,7 +204,7 @@ export default function CountriesManagement() {
     setFormData({
       name: "",
       code: "",
-      flag: "🌐",
+      flag: "ðŸŒ",
       continent: "Asia",
       capital: "",
       currency: "USD ($)",
@@ -227,7 +227,7 @@ export default function CountriesManagement() {
     setFormData({
       name: c.name,
       code: c.code,
-      flag: c.flag || "🌐",
+      flag: c.flag || "ðŸŒ",
       continent: c.continent || "Asia",
       capital: c.capital || "",
       currency: c.currency || "USD ($)",
@@ -318,7 +318,7 @@ export default function CountriesManagement() {
       const payload = {
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase(),
-        flag: formData.flag.trim() || "🌐",
+        flag: formData.flag.trim() || "ðŸŒ",
         continent: formData.continent,
         capital: formData.capital.trim(),
         currency: formData.currency,
@@ -409,7 +409,7 @@ export default function CountriesManagement() {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
           <CheckCircle2 size={16} className="text-emerald-400" />
           <span>{toastMsg}</span>
         </div>
@@ -591,7 +591,7 @@ export default function CountriesManagement() {
                           className="w-8 h-6 object-cover rounded shadow-xs border border-slate-200"
                         />
                       ) : (
-                        <span className="text-lg">{c.flag || "🌐"}</span>
+                        <span className="text-lg">{c.flag || "ðŸŒ"}</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
@@ -617,7 +617,7 @@ export default function CountriesManagement() {
                       {c.processingTime || "15 Days"}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
-                      ₹{(c.startingFee || 8500).toLocaleString("en-IN")}
+                      â‚¹{(c.startingFee || 8500).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
@@ -739,7 +739,7 @@ export default function CountriesManagement() {
                           />
                           <button
                             type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, flag: "🌐" }))}
+                            onClick={() => setFormData((prev) => ({ ...prev, flag: "ðŸŒ" }))}
                             className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 text-[9px] hover:bg-red-600"
                             title="Remove image"
                           >
@@ -749,7 +749,7 @@ export default function CountriesManagement() {
                       ) : (
                         <input
                           type="text"
-                          placeholder="🇨🇦 or Emoji"
+                          placeholder="ðŸ‡¨ðŸ‡¦ or Emoji"
                           value={formData.flag}
                           onChange={(e) => setFormData((prev) => ({ ...prev, flag: e.target.value }))}
                           className="w-16 bg-slate-50 border border-slate-200 text-slate-800 text-center text-sm py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
@@ -861,7 +861,7 @@ export default function CountriesManagement() {
 
                   <div>
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-                      Starting Visa Fee (₹) <span className="text-red-500">*</span>
+                      Starting Visa Fee (â‚¹) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1076,7 +1076,7 @@ export default function CountriesManagement() {
             <div className="space-y-3 text-xs text-slate-700">
               <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl">
                 <div><span className="text-slate-400">Processing Time:</span> <strong>{viewCountry.processingTime}</strong></div>
-                <div><span className="text-slate-400">Starting Fee:</span> <strong>₹{(viewCountry.startingFee || 8500).toLocaleString("en-IN")}</strong></div>
+                <div><span className="text-slate-400">Starting Fee:</span> <strong>â‚¹{(viewCountry.startingFee || 8500).toLocaleString("en-IN")}</strong></div>
                 <div><span className="text-slate-400">Currency:</span> <strong>{viewCountry.currency || "USD ($)"}</strong></div>
                 <div><span className="text-slate-400">Time Zone:</span> <strong>{viewCountry.timeZone || "GMT+0"}</strong></div>
               </div>
@@ -1117,7 +1117,7 @@ export default function CountriesManagement() {
                   {viewCountry.requiredDocuments && viewCountry.requiredDocuments.length > 0 ? (
                     viewCountry.requiredDocuments.map((d) => (
                       <span key={d} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-semibold text-[11px]">
-                        ✓ {d}
+                        âœ“ {d}
                       </span>
                     ))
                   ) : (

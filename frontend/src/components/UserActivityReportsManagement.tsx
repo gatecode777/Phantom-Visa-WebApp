@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Users,
   Search,
@@ -122,7 +122,7 @@ export default function UserActivityReportsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -390,9 +390,9 @@ export default function UserActivityReportsManagement() {
                     <td className="py-2 font-mono text-[11px] text-slate-500">{log.ipAddress}</td>
                     <td className="py-2 text-center font-bold">
                       {log.status === "Success" ? (
-                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">🟢 Success</span>
+                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">ðŸŸ¢ Success</span>
                       ) : (
-                        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">🔴 Failed</span>
+                        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">ðŸ”´ Failed</span>
                       )}
                     </td>
                   </tr>
@@ -414,7 +414,7 @@ export default function UserActivityReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {USER_ACTIVITY_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
                   <span>{wf}</span>
                 </div>
               ))}

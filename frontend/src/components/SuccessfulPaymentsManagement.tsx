@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   CheckCircle2,
   Search,
@@ -257,7 +257,7 @@ export default function SuccessfulPaymentsManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -301,19 +301,19 @@ export default function SuccessfulPaymentsManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Today's Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹8,45,500</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹8,45,500</div>
             <span className="text-[10px] text-blue-600 font-bold">Daily Collection</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">This Month's Revenue</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹2,84,75,000</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹2,84,75,000</div>
             <span className="text-[10px] text-purple-600 font-bold">Monthly Collection</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Avg Transaction Value</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹11,250</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹11,250</div>
             <span className="text-[10px] text-amber-600 font-bold">Per Order Average</span>
           </div>
 
@@ -336,7 +336,7 @@ export default function SuccessfulPaymentsManagement() {
               {SUCCESSFUL_PAYMENT_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    ▼
+                    â–¼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -545,7 +545,7 @@ export default function SuccessfulPaymentsManagement() {
                       {p.agentName && <span className="block text-[10px] text-slate-400 font-normal">({p.agentName})</span>}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-emerald-600">
-                      ₹{p.amount.toLocaleString()}
+                      â‚¹{p.amount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">
                       {p.paymentMethod}
@@ -558,7 +558,7 @@ export default function SuccessfulPaymentsManagement() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                        🟢 Successful
+                        ðŸŸ¢ Successful
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -605,7 +605,7 @@ export default function SuccessfulPaymentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 21,840 Successful Payments</div>
+          <div>Showing 1â€“10 of 21,840 Successful Payments</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -631,19 +631,19 @@ export default function SuccessfulPaymentsManagement() {
           <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-700">
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-extrabold uppercase">Today's Revenue</span>
-              <strong className="text-emerald-600 font-mono text-base font-bold">₹8,45,500</strong>
+              <strong className="text-emerald-600 font-mono text-base font-bold">â‚¹8,45,500</strong>
             </div>
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-extrabold uppercase">Weekly Revenue</span>
-              <strong className="text-[#2563EB] font-mono text-base font-bold">₹64,20,000</strong>
+              <strong className="text-[#2563EB] font-mono text-base font-bold">â‚¹64,20,000</strong>
             </div>
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-extrabold uppercase">Monthly Revenue</span>
-              <strong className="text-purple-700 font-mono text-base font-bold">₹2,84,75,000</strong>
+              <strong className="text-purple-700 font-mono text-base font-bold">â‚¹2,84,75,000</strong>
             </div>
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-extrabold uppercase">Top Country Collection</span>
-              <strong className="text-slate-900 font-mono text-base font-bold">Canada (₹1.2 Cr)</strong>
+              <strong className="text-slate-900 font-mono text-base font-bold">Canada (â‚¹1.2 Cr)</strong>
             </div>
           </div>
         </div>
@@ -675,7 +675,7 @@ export default function SuccessfulPaymentsManagement() {
                       Payment Receipt {activeModalPayment.receiptNo}
                     </h3>
                     <span className="font-mono text-xs font-bold text-emerald-300 bg-emerald-900/50 px-2 py-0.5 rounded border border-emerald-700">
-                      ₹{activeModalPayment.amount.toLocaleString()} (CLEARED)
+                      â‚¹{activeModalPayment.amount.toLocaleString()} (CLEARED)
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">App ID: <strong className="text-blue-300">{activeModalPayment.appId}</strong> &bull; Applicant: {activeModalPayment.applicantName} ({activeModalPayment.passportNumber})</p>
@@ -748,23 +748,23 @@ export default function SuccessfulPaymentsManagement() {
                     <div className="space-y-2 text-xs font-medium text-slate-700">
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Visa Application Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.visaAppFee.toLocaleString()}</span>
+                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.visaAppFee.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Service Charge</span>
-                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.serviceCharge.toLocaleString()}</span>
+                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.serviceCharge.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Processing Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.processingFee.toLocaleString()}</span>
+                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.processingFee.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Tax (18% GST)</span>
-                        <span className="font-mono font-bold">₹{activeModalPayment.breakdown.taxGst.toLocaleString()}</span>
+                        <span className="font-mono font-bold">â‚¹{activeModalPayment.breakdown.taxGst.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
                         <span>Total Amount Paid</span>
-                        <span className="font-mono text-emerald-600">₹{activeModalPayment.amount.toLocaleString()}</span>
+                        <span className="font-mono text-emerald-600">â‚¹{activeModalPayment.amount.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

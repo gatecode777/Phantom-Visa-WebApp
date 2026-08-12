@@ -22,6 +22,10 @@
   --foreground: #F8F9FA;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   background-color: #09111E;
   color: #F8F9FA;

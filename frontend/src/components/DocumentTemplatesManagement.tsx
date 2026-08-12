@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_V1_URL } from "../config/api";
 import {
   FileText,
   Search,
@@ -43,6 +44,7 @@ import {
 } from "lucide-react";
 
 export interface DocumentTemplateRecord {
+  _id?: string;
   id: string;
   templateId: string;
   title: string;
@@ -62,7 +64,7 @@ export interface DocumentTemplateRecord {
   description: string;
   templateBody: string;
   placeholderFields: string[];
-  lastUpdated: string;
+  lastUpdated?: string;
   actionNotes?: { id: string; author: string; text: string; date: string }[];
 }
 
@@ -84,59 +86,6 @@ export const TEMPLATE_CATEGORIES = [
   "Other"
 ];
 
-const MOCK_TEMPLATES: DocumentTemplateRecord[] = [
-  {
-    id: "1",
-    templateId: "TMP-101",
-    title: "Canada Tourist Visa Personal Cover Letter",
-    category: "Cover Letter",
-    country: "Canada",
-    fileFormat: "DOCX",
-    fileSize: "120 KB",
-    downloadsCount: 1420,
-    status: "Active",
-    description: "Standard personal cover letter format required for Canadian tourist visa applications.",
-    templateBody: `To,\nThe High Commission of Canada / Visa Officer,\n\nSubject: Application for Visitor Visa (Subclass V-1) for {APPLICANT_NAME} (Passport No: {PASSPORT_NUMBER})\n\nRespected Sir/Madam,\n\nI am writing to formally submit my application for a Canadian Tourist Visa. I plan to visit Canada from {TRAVEL_START_DATE} to {TRAVEL_END_DATE} for sightseeing and holiday purposes.\n\nMy travel itinerary and funds are enclosed herein. I assure you that I will comply with all visa regulations and return to my home country before the expiry of my authorized stay.\n\nThanking you,\n{APPLICANT_NAME}\nContact: {APPLICANT_PHONE}`,
-    placeholderFields: ["{APPLICANT_NAME}", "{PASSPORT_NUMBER}", "{TRAVEL_START_DATE}", "{TRAVEL_END_DATE}", "{APPLICANT_PHONE}"],
-    lastUpdated: "01 Aug 2026",
-    actionNotes: [
-      { id: "n1", author: "Admin Vibhu", text: "Updated for 2026 IRCC regulations.", date: "01 Aug 2026 10:00 AM" }
-    ]
-  },
-  {
-    id: "2",
-    templateId: "TMP-102",
-    title: "Schengen Visa Financial Sponsorship Affidavit",
-    category: "Sponsorship Letter",
-    country: "Schengen / UK",
-    fileFormat: "PDF",
-    fileSize: "340 KB",
-    downloadsCount: 980,
-    status: "Active",
-    description: "Official financial declaration by sponsor taking responsibility for travel & living expenses.",
-    templateBody: `AFFIDAVIT OF FINANCIAL SPONSORSHIP\n\nI, {SPONSOR_NAME}, residing at {SPONSOR_ADDRESS}, do hereby state that I am willing and able to financially support my {RELATIONSHIP}, {APPLICANT_NAME}, during their stay in the Schengen Area from {TRAVEL_START_DATE} to {TRAVEL_END_DATE}.\n\nAll financial obligations including accommodation, travel, medical insurance, and living expenses will be fully covered by me.\n\nDeclared on: {DATE}\nSponsor Signature: ______________`,
-    placeholderFields: ["{SPONSOR_NAME}", "{SPONSOR_ADDRESS}", "{RELATIONSHIP}", "{APPLICANT_NAME}", "{TRAVEL_START_DATE}", "{TRAVEL_END_DATE}", "{DATE}"],
-    lastUpdated: "25 Jul 2026",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    templateId: "TMP-103",
-    title: "Employer No Objection Certificate (NOC) & Leave Sanction",
-    category: "NOC / Leave Letter",
-    country: "Global",
-    fileFormat: "DOCX",
-    fileSize: "95 KB",
-    downloadsCount: 2150,
-    status: "Active",
-    description: "Universal employer leave approval letter confirming employment & approved vacation dates.",
-    templateBody: `NO OBJECTION CERTIFICATE\n\nDate: {DATE}\n\nTo Whom It May Concern,\n\nThis is to certify that {APPLICANT_NAME} is employed with {COMPANY_NAME} as a {DESIGNATION} since {EMPLOYMENT_START_DATE}.\n\nWe have no objection to {APPLICANT_NAME} traveling abroad from {LEAVE_START_DATE} to {LEAVE_END_DATE} for personal vacation. The employee will resume duties on {RESUMPTION_DATE}.\n\nFor {COMPANY_NAME},\nAuthorized Signatory`,
-    placeholderFields: ["{DATE}", "{APPLICANT_NAME}", "{COMPANY_NAME}", "{DESIGNATION}", "{EMPLOYMENT_START_DATE}", "{LEAVE_START_DATE}", "{LEAVE_END_DATE}", "{RESUMPTION_DATE}"],
-    lastUpdated: "20 Jul 2026",
-    actionNotes: []
-  }
-];
-
 export default function DocumentTemplatesManagement() {
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -145,8 +94,9 @@ export default function DocumentTemplatesManagement() {
   const [formatFilter, setFormatFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  // Records State
-  const [templatesList, setTemplatesList] = useState<DocumentTemplateRecord[]>(MOCK_TEMPLATES);
+  // Records & Loading State
+  const [templatesList, setTemplatesList] = useState<DocumentTemplateRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details / Edit Modal State
@@ -169,6 +119,42 @@ export default function DocumentTemplatesManagement() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  // Fetch Templates from Backend API
+  const fetchTemplates = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_V1_URL}/visa/templates`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const formatted: DocumentTemplateRecord[] = json.data.map((t: any) => ({
+          _id: t._id,
+          id: t._id || t.templateId,
+          templateId: t.templateId,
+          title: t.title,
+          category: t.category,
+          country: t.country || "Global",
+          fileFormat: t.fileFormat || "DOCX",
+          fileSize: t.fileSize || "120 KB",
+          downloadsCount: t.downloadsCount || 0,
+          status: t.status || "Active",
+          description: t.description || "",
+          templateBody: t.templateBody || "",
+          placeholderFields: t.placeholderFields || [],
+          lastUpdated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString("en-GB") : "Recently"
+        }));
+        setTemplatesList(formatted);
+      }
+    } catch (err) {
+      console.error("Failed to fetch templates:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
   // Filter Logic
   const filteredTemplates = templatesList.filter((tmp) => {
     const q = searchQuery.toLowerCase();
@@ -185,6 +171,62 @@ export default function DocumentTemplatesManagement() {
 
     return matchesQuery && matchesCategory && matchesCountry && matchesFormat && matchesStatus;
   });
+
+  // Handle Add Template Submit
+  const handleAddTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newBody.trim()) {
+      triggerToast("Please provide both title and template body text.");
+      return;
+    }
+
+    try {
+      const payload = {
+        title: newTitle.trim(),
+        category: newCategory,
+        country: newCountry,
+        fileFormat: newFormat,
+        description: newDescription.trim(),
+        templateBody: newBody.trim(),
+        placeholderFields: Array.from(newBody.match(/\{[A-Z0-9_]+\}/g) || [])
+      };
+
+      const res = await fetch(`${API_V1_URL}/visa/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("New Document Template created successfully in MongoDB!");
+        setIsAddModalOpen(false);
+        setNewTitle("");
+        setNewBody("");
+        setNewDescription("");
+        fetchTemplates();
+      }
+    } catch (err) {
+      triggerToast("Failed to create template.");
+    }
+  };
+
+  // Handle Delete Template
+  const handleDeleteTemplate = async (id: string, mongoId?: string) => {
+    const targetId = mongoId || id;
+    try {
+      const res = await fetch(`${API_V1_URL}/visa/templates/${targetId}`, {
+        method: "DELETE"
+      });
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("Document Template deleted successfully!");
+        setTemplatesList((prev) => prev.filter((t) => t.id !== id && t._id !== targetId));
+      }
+    } catch (err) {
+      triggerToast("Failed to delete template.");
+    }
+  };
 
   // Selection Logic
   const handleSelectAll = () => {
@@ -246,7 +288,7 @@ export default function DocumentTemplatesManagement() {
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
             <CheckCircle2 size={18} />
           </div>
@@ -515,7 +557,7 @@ export default function DocumentTemplatesManagement() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                        🟢 Active
+                        ðŸŸ¢ Active
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -562,7 +604,7 @@ export default function DocumentTemplatesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1–10 of 48 Document Templates</div>
+          <div>Showing 1â€“10 of 48 Document Templates</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

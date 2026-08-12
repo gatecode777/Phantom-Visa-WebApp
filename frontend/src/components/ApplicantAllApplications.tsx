@@ -265,8 +265,17 @@ export default function ApplicantAllApplications({
         return matchesQuery && matchesStatus && matchesVisaType && matchesCountry;
       })
       .sort((a, b) => {
-        if (sortBy === "newest") return b.id.localeCompare(a.id);
-        if (sortBy === "oldest") return a.id.localeCompare(b.id);
+        const timeA = new Date(a.submissionDate || "2000-01-01").getTime();
+        const timeB = new Date(b.submissionDate || "2000-01-01").getTime();
+
+        if (sortBy === "newest") {
+          if (timeA !== timeB) return timeB - timeA;
+          return b.id.localeCompare(a.id);
+        }
+        if (sortBy === "oldest") {
+          if (timeA !== timeB) return timeA - timeB;
+          return a.id.localeCompare(b.id);
+        }
         return a.status.localeCompare(b.status);
       });
   }, [applications, searchQuery, statusFilter, visaTypeFilter, countryFilter, sortBy]);
@@ -304,9 +313,9 @@ export default function ApplicantAllApplications({
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 2: TOP METRIC CARDS GRID (7 CARDS FROM WIREFRAME) */}
+      {/* SECTION 2: TOP METRIC CARDS GRID (5 CARDS) */}
       {/* ============================================================ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Card 1: Total */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Applications</p>
@@ -323,16 +332,7 @@ export default function ApplicantAllApplications({
           </span>
         </div>
 
-        {/* Card 3: Action Required */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-red-500">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Action Required</p>
-          <p className="text-2xl font-black text-red-600 mt-1">{String(metrics.actionRequired).padStart(2, "0")}</p>
-          <span className="text-[10px] text-red-600 font-semibold flex items-center gap-1">
-            <AlertTriangle size={10} /> Upload docs pending
-          </span>
-        </div>
-
-        {/* Card 4: Approved Visas */}
+        {/* Card 3: Approved Visas */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-emerald-500">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Approved Visas</p>
           <p className="text-2xl font-black text-emerald-600 mt-1">{String(metrics.approved).padStart(2, "0")}</p>
@@ -341,25 +341,18 @@ export default function ApplicantAllApplications({
           </span>
         </div>
 
-        {/* Card 5: Rejected */}
+        {/* Card 4: Rejected */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Rejected</p>
           <p className="text-2xl font-black text-slate-700 mt-1">{String(metrics.rejected).padStart(2, "0")}</p>
           <span className="text-[10px] text-slate-400 font-medium">Consular decisions</span>
         </div>
 
-        {/* Card 6: Avg Processing Time */}
+        {/* Card 5: Avg Processing Time */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Avg Processing</p>
           <p className="text-lg font-black text-indigo-600 mt-1.5">{metrics.avgDays}</p>
           <span className="text-[10px] text-slate-400 font-medium">Standard turnaround</span>
-        </div>
-
-        {/* Card 7: Drafts */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Drafts</p>
-          <p className="text-2xl font-black text-slate-600 mt-1">{String(metrics.drafts).padStart(2, "0")}</p>
-          <span className="text-[10px] text-slate-400 font-medium">Saved forms</span>
         </div>
       </div>
 
@@ -462,6 +455,20 @@ export default function ApplicantAllApplications({
         </div>
       )}
 
+      {/* REJECTION REASON BANNER */}
+      {activeApp.status === "Rejected" && activeApp.reason && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
+            <AlertTriangle size={18} className="text-red-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[11px] font-extrabold uppercase text-red-500 tracking-wide mb-1">Application Rejected — Admin Decision</p>
+            <p className="text-xs text-red-800 font-medium leading-relaxed">{activeApp.reason}</p>
+            <p className="mt-2 text-[11px] text-red-400">Please contact support or submit a revised application addressing the above concern.</p>
+          </div>
+        </div>
+      )}
+
       {/* ============================================================ */}
       {/* SECTION 4: SEARCH, MULTI-FILTER & SORT CONTROL BAR */}
       {/* ============================================================ */}
@@ -496,11 +503,11 @@ export default function ApplicantAllApplications({
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7]"
             >
               <option value="all">All Statuses</option>
+              <option value="Submitted">Submitted</option>
               <option value="under_review">Under Review</option>
-              <option value="action_required">Action Required</option>
               <option value="Approved">Approved</option>
               <option value="Rejected">Rejected</option>
-              <option value="Draft">Draft</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
 
             {/* Visa Type Filter */}

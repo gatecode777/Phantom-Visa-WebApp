@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -1126,7 +1126,7 @@ export default function AgentPortal() {
                   const amt = parseFloat(topupAmount);
                   if (amt > 0) {
                     addFunds(amt);
-                    triggerToast(`Added ₹${formatINR(amt)} to agency wallet balance!`);
+                    triggerToast(`Added â‚¹${formatINR(amt)} to agency wallet balance!`);
                     setShowAddFundsModal(false);
                   }
                 }}

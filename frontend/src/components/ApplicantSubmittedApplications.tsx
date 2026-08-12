@@ -199,7 +199,14 @@ export default function ApplicantSubmittedApplications({
         return matchesQ && matchesCountry && matchesStage;
       })
       .sort((a, b) => {
-        if (sortBy === "newest") return b.id.localeCompare(a.id);
+        const timeA = new Date(a.submissionDate || "2000-01-01").getTime();
+        const timeB = new Date(b.submissionDate || "2000-01-01").getTime();
+
+        if (sortBy === "newest") {
+          if (timeA !== timeB) return timeB - timeA;
+          return b.id.localeCompare(a.id);
+        }
+        if (timeA !== timeB) return timeA - timeB;
         return a.id.localeCompare(b.id);
       });
   }, [submittedApps, searchQuery, countryFilter, stageFilter, sortBy]);
