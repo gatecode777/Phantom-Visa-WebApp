@@ -50,12 +50,12 @@ export interface UpcomingAppointmentRecord {
   appliedBy: "Applicant" | "Agent";
   agentName?: string;
   appointmentType:
-    | "Biometrics"
-    | "Embassy Interview"
-    | "Document Verification"
-    | "Medical Examination"
-    | "Passport Submission"
-    | "VFS Collection";
+  | "Biometrics"
+  | "Embassy Interview"
+  | "Document Verification"
+  | "Medical Examination"
+  | "Passport Submission"
+  | "VFS Collection";
   country: string;
   dateOnly: string;
   timeOnly: string;
@@ -601,19 +601,19 @@ export default function UpcomingAppointmentsManagement() {
                     <td className="py-3.5 px-4">
                       {apt.status === "Confirmed" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Confirmed
+                          Confirmed
                         </span>
                       ) : apt.status === "Scheduled" ? (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸŸ¢ Scheduled
+                          Scheduled
                         </span>
                       ) : apt.status === "Rescheduled" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ  Rescheduled
+                          Rescheduled
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-purple-200">
-                          ðŸŸ¡ Reminder Pending
+                          Reminder Pending
                         </span>
                       )}
                     </td>
@@ -725,11 +725,10 @@ export default function UpcomingAppointmentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

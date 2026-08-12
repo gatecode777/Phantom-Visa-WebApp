@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   FileText,
   Search,
@@ -597,15 +597,15 @@ export default function InvoicesManagement() {
                     <td className="py-3.5 px-4">
                       {inv.status === "Paid" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Paid
+                          Paid
                         </span>
                       ) : inv.status === "Pending" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Pending
+                          Pending
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Cancelled
+                          Cancelled
                         </span>
                       )}
                     </td>
@@ -724,11 +724,10 @@ export default function InvoicesManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

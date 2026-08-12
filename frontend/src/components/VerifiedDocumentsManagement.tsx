@@ -47,14 +47,14 @@ export interface VerifiedDocumentRecord {
   applicantName: string;
   passportNumber: string;
   documentType:
-    | "Passport"
-    | "Passport Photograph"
-    | "Bank Statement"
-    | "Travel Insurance"
-    | "Medical Certificate"
-    | "Police Clearance Certificate (PCC)"
-    | "Invitation Letter"
-    | "Other";
+  | "Passport"
+  | "Passport Photograph"
+  | "Bank Statement"
+  | "Travel Insurance"
+  | "Medical Certificate"
+  | "Police Clearance Certificate (PCC)"
+  | "Invitation Letter"
+  | "Other";
   documentName: string;
   fileFormat: "PDF" | "JPG" | "PNG";
   fileSize: string;
@@ -335,10 +335,10 @@ export default function VerifiedDocumentsManagement() {
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] font-semibold text-slate-600">
               <span className="text-slate-900 font-bold block mb-1">Status Indicators:</span>
               <div className="grid grid-cols-2 gap-1 text-[10px]">
-                <div className="flex items-center gap-1 text-emerald-700">ðŸŸ¢ Verified</div>
-                <div className="flex items-center gap-1 text-amber-700">âš ï¸ Expiring Soon</div>
-                <div className="flex items-center gap-1 text-red-700">ðŸ”´ Expired</div>
-                <div className="flex items-center gap-1 text-blue-700">ðŸ”„ Re-verification</div>
+                <div className="flex items-center gap-1 text-emerald-700">Verified</div>
+                <div className="flex items-center gap-1 text-amber-700">Expiring Soon</div>
+                <div className="flex items-center gap-1 text-red-700">Expired</div>
+                <div className="flex items-center gap-1 text-blue-700">Re-verification</div>
               </div>
             </div>
           </div>
@@ -541,15 +541,15 @@ export default function VerifiedDocumentsManagement() {
                     <td className="py-3.5 px-4">
                       {d.status === "Expiring Soon" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          âš ï¸ Expiring Soon
+                          Expiring Soon
                         </span>
                       ) : d.status === "Expired" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Expired
+                          Expired
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Verified
+                          Verified
                         </span>
                       )}
                     </td>
@@ -651,11 +651,10 @@ export default function VerifiedDocumentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

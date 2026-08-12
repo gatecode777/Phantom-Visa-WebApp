@@ -48,11 +48,11 @@ export interface AppointmentRecord {
   appliedBy: "Applicant" | "Agent";
   agentName?: string;
   appointmentType:
-    | "Biometric Submission"
-    | "Embassy Interview"
-    | "Document Verification"
-    | "Medical Examination"
-    | "VAC / VFS Collection";
+  | "Biometric Submission"
+  | "Embassy Interview"
+  | "Document Verification"
+  | "Medical Examination"
+  | "VAC / VFS Collection";
   country: string;
   dateTime: string;
   dateOnly: string;
@@ -606,19 +606,19 @@ export default function AllAppointmentsManagement() {
                     <td className="py-3.5 px-4">
                       {apt.status === "Scheduled" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Scheduled
+                          Scheduled
                         </span>
                       ) : apt.status === "Completed" ? (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸ”µ Completed
+                          Completed
                         </span>
                       ) : apt.status === "Rescheduled" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ  Rescheduled
+                          Rescheduled
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Cancelled
+                          Cancelled
                         </span>
                       )}
                     </td>
@@ -730,11 +730,10 @@ export default function AllAppointmentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
                         ? "bg-[#2563EB] text-white shadow-sm"
                         : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

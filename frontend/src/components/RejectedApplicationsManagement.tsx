@@ -1,21 +1,16 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   XCircle,
   Search,
   Filter,
-  RefreshCw,
   Eye,
-  Edit3,
-  PlusCircle,
   Trash2,
   CheckCircle2,
   AlertCircle,
-  Globe,
   FileText,
   Download,
   Check,
   X,
-  TrendingUp,
   Sparkles,
   User,
   CreditCard,
@@ -25,22 +20,24 @@ import {
   Send,
   Printer,
   ShieldCheck,
-  ArrowRight,
-  MessageSquare,
   Tag,
-  CheckSquare,
   AlertTriangle,
-  UserPlus,
   Mail,
   Phone,
   Ban,
   RotateCcw,
-  FileX
+  FileX,
+  ExternalLink,
+  ShieldAlert,
+  HelpCircle,
+  RefreshCw,
+  FileCheck
 } from "lucide-react";
 
 export interface RejectedApplicationRecord {
   id: string;
   appId: string;
+  refusalCode: string;
   applicantName: string;
   passportNumber: string;
   appliedBy: "Applicant" | "Agent";
@@ -49,153 +46,249 @@ export interface RejectedApplicationRecord {
   category: string;
   visaType: string;
   rejectionReason:
-    | "Incomplete Documents"
-    | "Eligibility Criteria"
-    | "Invalid Information"
-    | "Payment Failure"
-    | "Passport Issues"
-    | "Background Verification"
-    | "Embassy Decision"
-    | "Other";
+    | "Insufficient Financial Proof"
+    | "Incomplete / Fraudulent Documents"
+    | "Travel Purpose Unclear"
+    | "Past Overstay History"
+    | "Security & Background Check"
+    | "Embassy Discretion";
   rejectedBy: string;
   rejectedDate: string;
+  rejectedTime: string;
   reApplyAllowed: boolean;
-  coolingPeriodDays?: number;
+  appealEligibility: "Eligible for Appeal" | "Non-Appealable" | "Appeal Under Review" | "Re-Application Submitted";
+  coolingPeriodDays: number;
   detailedRemarks: string;
-  status: "Rejected" | "Allowing Re-Application" | "Permanently Rejected";
-  // Detail fields
+  amountPaid: string;
+  transactionId: string;
+  status: "Rejected" | "Allowing Re-Application" | "Permanently Refused";
+  // Deep detail fields
+  firstName?: string;
+  lastName?: string;
   dob?: string;
   gender?: string;
+  maritalStatus?: string;
   nationality?: string;
+  residenceCountry?: string;
   email?: string;
   phone?: string;
+  address?: string;
+  cityState?: string;
+  passportIssueDate?: string;
+  passportExpiryDate?: string;
+  passportIssuingAuthority?: string;
+  passportPlaceOfIssue?: string;
   travelDate?: string;
-  communicationHistory: {
-    rejectionEmailSent: boolean;
-    smsSent: boolean;
-    inAppNotified: boolean;
-    applicantResponse?: string;
-  };
+  expectedDepartureDate?: string;
+  durationOfStay?: string;
+  purposeOfVisit?: string;
+  portOfEntry?: string;
+  accommodationDetails?: string;
+  occupation?: string;
+  employerName?: string;
+  annualIncome?: string;
+  sponsorType?: string;
+  embassyRefId?: string;
+  uploadedDocs: { name: string; status: "Rejected" | "Incomplete" | "Verified"; reason?: string }[];
   actionNotes?: { id: string; author: string; text: string; date: string }[];
 }
 
 export const RECOMMENDED_REJECTED_TABS = [
   "Overview",
-  "Applicant Details",
-  "Visa Details",
-  "Rejection Details",
+  "Official Refusal Letter",
+  "Applicant & Passport",
+  "Visa & Travel",
+  "Refusal Grounds & Risk Analysis",
   "Uploaded Documents",
-  "Communication History",
-  "Activity Logs",
-  "Action Notes"
+  "Payment & Invoice",
+  "Appeal & Re-Application",
+  "Consular Audit Log & Notes"
 ];
 
 export const REJECTION_WORKFLOW_STEPS = [
-  "Application Submitted",
-  "Document Verification",
-  "Application Review",
-  "Rejected",
-  "Applicant Notified",
-  "Re-Application (Optional)"
+  "Consular Refusal Decision Issued",
+  "Refusal Grounds & Code Categorized",
+  "Official Refusal Letter Generated",
+  "Applicant Notified with Grounds",
+  "Appeal / Review Request Evaluated",
+  "Re-Application / Closed Archive"
 ];
 
 const MOCK_REJECTED_APPLICATIONS: RejectedApplicationRecord[] = [
   {
     id: "1",
-    appId: "APP-20261501",
+    appId: "APP-20269001",
+    refusalCode: "SEC-214B-FIN",
     applicantName: "Geeta Bisht",
+    firstName: "Geeta",
+    lastName: "Bisht",
     passportNumber: "Z9876543",
     appliedBy: "Applicant",
     country: "Canada",
     category: "Tourist",
-    visaType: "eVisa",
-    rejectionReason: "Incomplete Documents",
-    rejectedBy: "Rahul Sharma",
+    visaType: "V-1 Visitor Visa",
+    rejectionReason: "Insufficient Financial Proof",
+    rejectedBy: "Rahul Sharma (Consular Officer)",
     rejectedDate: "01 Aug 2026",
+    rejectedTime: "11:30 AM",
     reApplyAllowed: true,
+    appealEligibility: "Eligible for Appeal",
     coolingPeriodDays: 15,
-    detailedRemarks: "Failed to submit bank statement for the last 6 months despite two reminders.",
+    detailedRemarks: "Applicant failed to submit certified bank statement for the last 6 months showing sufficient liquidity for the duration of stay in Canada.",
+    amountPaid: "₹12,350",
+    transactionId: "TXN-9988112",
     status: "Rejected",
     dob: "1994-08-12",
     gender: "Female",
+    maritalStatus: "Single",
     nationality: "Indian",
+    residenceCountry: "India",
     email: "geeta.bisht@gmail.com",
     phone: "+91 98123 45678",
+    address: "B-42, South Extension Part II",
+    cityState: "New Delhi, Delhi",
+    passportIssueDate: "15 Jan 2020",
+    passportExpiryDate: "14 Jan 2030",
+    passportIssuingAuthority: "Passport Office New Delhi",
+    passportPlaceOfIssue: "New Delhi",
     travelDate: "2026-09-20",
-    communicationHistory: {
-      rejectionEmailSent: true,
-      smsSent: true,
-      inAppNotified: true,
-      applicantResponse: "Acknowledged. Will re-apply with complete bank statement."
-    },
+    expectedDepartureDate: "2026-10-15",
+    durationOfStay: "25 Days",
+    purposeOfVisit: "Tourism & Sightseeing",
+    portOfEntry: "Toronto Pearson Intl (YYZ)",
+    accommodationDetails: "Marriott Downtown Toronto",
+    occupation: "Senior Product Designer",
+    employerName: "TechCorp Global",
+    annualIncome: "₹6,50,000 INR",
+    sponsorType: "Self Sponsored",
+    embassyRefId: "CAN-REF-88190",
+    uploadedDocs: [
+      { name: "Certified Bank Statement 6 Months", status: "Rejected", reason: "Insufficient closing balance under $5,000 CAD" },
+      { name: "Passport Bio Page Copy", status: "Verified" },
+      { name: "Flight Itinerary Reservation", status: "Verified" },
+      { name: "Hotel Booking Voucher", status: "Verified" }
+    ],
     actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Rejection notice issued due to document non-compliance.", date: "01 Aug 2026 11:30 AM" }
+      { id: "n1", author: "Rahul Sharma", text: "Refusal notice generated under Section 214(b). Applicant allowed to re-apply with updated financial proof after 15 days.", date: "01 Aug 2026 11:30 AM" }
     ]
   },
   {
     id: "2",
-    appId: "APP-20261502",
+    appId: "APP-20269002",
+    refusalCode: "SUB-500-GTE",
     applicantName: "Bikram Suman",
+    firstName: "Bikram",
+    lastName: "Suman",
     passportNumber: "K4567890",
     appliedBy: "Agent",
     agentName: "Apex Travels",
     country: "Australia",
     category: "Student",
-    visaType: "Sticker Visa",
-    rejectionReason: "Eligibility Criteria",
-    rejectedBy: "David Thomas",
+    visaType: "Subclass 500 Student Visa",
+    rejectionReason: "Travel Purpose Unclear",
+    rejectedBy: "David Thomas (Consular Officer)",
     rejectedDate: "31 Jul 2026",
-    reApplyAllowed: false,
+    rejectedTime: "03:45 PM",
+    reApplyAllowed: fontBoolean(false),
+    appealEligibility: "Non-Appealable",
     coolingPeriodDays: 90,
-    detailedRemarks: "Did not satisfy genuine student criteria and academic gap requirement.",
-    status: "Permanently Rejected",
+    detailedRemarks: "Applicant failed to satisfy Genuine Student (GS) criteria. Unexplained 5-year academic gap without relevant work experience.",
+    amountPaid: "₹18,930",
+    transactionId: "TXN-7733441",
+    status: "Permanently Refused",
     dob: "1988-06-25",
     gender: "Male",
+    maritalStatus: "Married",
     nationality: "Indian",
+    residenceCountry: "India",
     email: "bikram.s@techsolutions.com",
     phone: "+91 99887 76655",
+    address: "H.No 108, Sector 15",
+    cityState: "Gurugram, Haryana",
+    passportIssueDate: "05 Jun 2019",
+    passportExpiryDate: "04 Jun 2029",
+    passportIssuingAuthority: "Passport Office Gurgaon",
+    passportPlaceOfIssue: "Gurgaon",
     travelDate: "2026-10-01",
-    communicationHistory: {
-      rejectionEmailSent: true,
-      smsSent: true,
-      inAppNotified: true
-    },
+    expectedDepartureDate: "2028-07-30",
+    durationOfStay: "24 Months",
+    purposeOfVisit: "Higher Education",
+    portOfEntry: "Sydney Kingsford Smith (SYD)",
+    accommodationDetails: "University Campus Residence",
+    occupation: "Manager",
+    employerName: "Self Employed",
+    annualIncome: "₹5,00,000 INR",
+    sponsorType: "Self Sponsored",
+    embassyRefId: "AUS-REF-55102",
+    uploadedDocs: [
+      { name: "Statement of Purpose (SOP)", status: "Rejected", reason: "GS requirement not met" },
+      { name: "Academic Degree Certificates", status: "Incomplete", reason: "5-year gap unverified" },
+      { name: "Financial Guarantee Letter", status: "Verified" }
+    ],
     actionNotes: [
-      { id: "n2", author: "David Thomas", text: "Permanent refusal logged under Subclass 500 rules.", date: "31 Jul 2026 03:45 PM" }
+      { id: "n2", author: "David Thomas", text: "Permanent refusal logged under Subclass 500 GTE provisions. Appeal non-admissible.", date: "31 Jul 2026 03:45 PM" }
     ]
   },
   {
     id: "3",
-    appId: "APP-20261503",
+    appId: "APP-20269003",
+    refusalCode: "UAE-DOC-INV",
     applicantName: "Rahul Sharma",
+    firstName: "Rahul",
+    lastName: "Sharma",
     passportNumber: "M1234567",
     appliedBy: "Applicant",
     country: "UAE",
     category: "Business",
-    visaType: "Multiple Entry",
-    rejectionReason: "Payment Failure",
-    rejectedBy: "Sarah Johnston",
+    visaType: "30 Days Multiple Entry",
+    rejectionReason: "Incomplete / Fraudulent Documents",
+    rejectedBy: "Sarah Johnston (Consular Officer)",
     rejectedDate: "30 Jul 2026",
+    rejectedTime: "01:20 PM",
     reApplyAllowed: true,
+    appealEligibility: "Re-Application Submitted",
     coolingPeriodDays: 0,
-    detailedRemarks: "Embassy submission fee transaction was reversed by bank.",
+    detailedRemarks: "Company trade license provided was unverified by Dubai Chamber of Commerce.",
+    amountPaid: "₹8,670",
+    transactionId: "TXN-5511223",
     status: "Allowing Re-Application",
     dob: "1999-02-15",
     gender: "Male",
+    maritalStatus: "Single",
     nationality: "Indian",
+    residenceCountry: "India",
     email: "rahul.sharma@outlook.com",
     phone: "+91 91234 56789",
+    address: "Flat 301, Sunshine Heights",
+    cityState: "Mumbai, Maharashtra",
+    passportIssueDate: "10 Mar 2021",
+    passportExpiryDate: "09 Mar 2031",
+    passportIssuingAuthority: "Passport Office Mumbai",
+    passportPlaceOfIssue: "Mumbai",
     travelDate: "2026-08-12",
-    communicationHistory: {
-      rejectionEmailSent: true,
-      smsSent: false,
-      inAppNotified: true
-    },
+    expectedDepartureDate: "2026-08-25",
+    durationOfStay: "13 Days",
+    purposeOfVisit: "Business Conference",
+    portOfEntry: "Dubai Intl Airport (DXB)",
+    accommodationDetails: "Grand Hyatt Dubai",
+    occupation: "Business Executive",
+    employerName: "Apex Consultants",
+    annualIncome: "₹14,00,000 INR",
+    sponsorType: "Company Sponsored",
+    embassyRefId: "UAE-REF-11982",
+    uploadedDocs: [
+      { name: "Trade License Document", status: "Rejected", reason: "Unverified registration number" },
+      { name: "Passport Bio Copy", status: "Verified" }
+    ],
     actionNotes: [
-      { id: "n3", author: "Sarah Johnston", text: "Applicant can re-apply immediately upon fee payment.", date: "30 Jul 2026 01:20 PM" }
+      { id: "n3", author: "Sarah Johnston", text: "Applicant advised to resubmit with verified Dubai Chamber certificate.", date: "30 Jul 2026 01:20 PM" }
     ]
   }
 ];
+
+function fontBoolean(val: boolean) {
+  return val;
+}
 
 export default function RejectedApplicationsManagement() {
   // Search & Filter States
@@ -204,6 +297,7 @@ export default function RejectedApplicationsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [appliedByFilter, setAppliedByFilter] = useState("All");
+  const [appealFilter, setAppealFilter] = useState("All");
 
   // Records State
   const [rejectedList, setRejectedList] = useState<RejectedApplicationRecord[]>(MOCK_REJECTED_APPLICATIONS);
@@ -212,6 +306,9 @@ export default function RejectedApplicationsManagement() {
   // Centered Details Modal State
   const [activeModalApp, setActiveModalApp] = useState<RejectedApplicationRecord | null>(null);
   const [modalTab, setModalTab] = useState<string>("Overview");
+
+  // Note Input inside Modal
+  const [newNoteText, setNewNoteText] = useState("");
 
   // UI Toast Notification
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -225,6 +322,7 @@ export default function RejectedApplicationsManagement() {
     const q = searchQuery.toLowerCase();
     const matchesQuery =
       app.appId.toLowerCase().includes(q) ||
+      app.refusalCode.toLowerCase().includes(q) ||
       app.applicantName.toLowerCase().includes(q) ||
       app.passportNumber.toLowerCase().includes(q) ||
       app.rejectedBy.toLowerCase().includes(q) ||
@@ -234,8 +332,9 @@ export default function RejectedApplicationsManagement() {
     const matchesCountry = countryFilter === "All" || app.country === countryFilter;
     const matchesCategory = categoryFilter === "All" || app.category === categoryFilter;
     const matchesAppliedBy = appliedByFilter === "All" || app.appliedBy === appliedByFilter;
+    const matchesAppeal = appealFilter === "All" || app.appealEligibility === appealFilter;
 
-    return matchesQuery && matchesReason && matchesCountry && matchesCategory && matchesAppliedBy;
+    return matchesQuery && matchesReason && matchesCountry && matchesCategory && matchesAppliedBy && matchesAppeal;
   });
 
   // Selection Logic
@@ -252,135 +351,162 @@ export default function RejectedApplicationsManagement() {
   };
 
   // Actions
-  const handleToggleReApply = (app: RejectedApplicationRecord) => {
-    const nextAllowed = !app.reApplyAllowed;
+  const handleInviteReapplication = (app: RejectedApplicationRecord) => {
     setRejectedList((prev) =>
-      prev.map((a) =>
-        a.id === app.id
-          ? {
-              ...a,
-              reApplyAllowed: nextAllowed,
-              status: nextAllowed ? "Allowing Re-Application" : "Permanently Rejected"
-            }
-          : a
-      )
+      prev.map((a) => (a.id === app.id ? { ...a, status: "Allowing Re-Application" } : a))
     );
-    triggerToast(`Re-application permission for ${app.appId} set to: ${nextAllowed ? "Allowed" : "Not Allowed"}`);
+    triggerToast(`Re-application invite link sent to ${app.applicantName} (${app.email})`);
     if (activeModalApp?.id === app.id) {
-      setActiveModalApp((prev) =>
-        prev
-          ? {
-              ...prev,
-              reApplyAllowed: nextAllowed,
-              status: nextAllowed ? "Allowing Re-Application" : "Permanently Rejected"
-            }
-          : null
-      );
+      setActiveModalApp((prev) => (prev ? { ...prev, status: "Allowing Re-Application" } : null));
+    }
+  };
+
+  const handleReopenAppeal = (app: RejectedApplicationRecord) => {
+    setRejectedList((prev) =>
+      prev.map((a) => (a.id === app.id ? { ...a, appealEligibility: "Appeal Under Review" } : a))
+    );
+    triggerToast(`Application ${app.appId} re-opened for consular appeal review.`);
+    if (activeModalApp?.id === app.id) {
+      setActiveModalApp((prev) => (prev ? { ...prev, appealEligibility: "Appeal Under Review" } : null));
     }
   };
 
   const handleDeleteRecord = (app: RejectedApplicationRecord) => {
     setRejectedList((prev) => prev.filter((a) => a.id !== app.id));
-    triggerToast(`Rejected record ${app.appId} deleted.`);
+    triggerToast(`Refusal record ${app.appId} removed.`);
     if (activeModalApp?.id === app.id) setActiveModalApp(null);
   };
 
-  const handleSendRejectionEmail = (app: RejectedApplicationRecord) => {
-    triggerToast(`Rejection email re-sent to ${app.applicantName} (${app.email}).`);
+  const handleBulkReappInvite = () => {
+    setRejectedList((prev) =>
+      prev.map((a) => (selectedIds.includes(a.id) ? { ...a, status: "Allowing Re-Application" } : a))
+    );
+    triggerToast(`Re-application invites sent to ${selectedIds.length} applicants.`);
+    setSelectedIds([]);
   };
 
-  const handleBulkEnableReApply = () => {
+  const handleAddNote = () => {
+    if (!newNoteText || !activeModalApp) return;
+    const noteObj = {
+      id: Date.now().toString(),
+      author: "Consular Officer (Vibhu)",
+      text: newNoteText,
+      date: new Date().toLocaleString()
+    };
+    const updatedNotes = [...(activeModalApp.actionNotes || []), noteObj];
+    setActiveModalApp({ ...activeModalApp, actionNotes: updatedNotes });
     setRejectedList((prev) =>
-      prev.map((a) => (selectedIds.includes(a.id) ? { ...a, reApplyAllowed: true, status: "Allowing Re-Application" } : a))
+      prev.map((a) => (a.id === activeModalApp.id ? { ...a, actionNotes: updatedNotes } : a))
     );
-    triggerToast(`Re-application enabled for ${selectedIds.length} items.`);
-    setSelectedIds([]);
+    setNewNoteText("");
+    triggerToast("Refusal audit note added successfully.");
   };
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
-          <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
-            <CheckCircle2 size={18} />
+        <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-red-500/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
+          <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
+            <XCircle size={18} />
           </div>
           <span className="text-xs font-semibold">{toastMsg}</span>
         </div>
       )}
 
       {/* HEADER SECTION */}
-      <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-6 rounded-3xl shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-700">
+      <div className="bg-gradient-to-r from-[#991B1B] via-[#DC2626] to-[#EF4444] text-white p-6 rounded-3xl shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-red-700">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
-            <XCircle size={15} />
+          <div className="flex items-center gap-2 text-xs font-mono text-red-200 mb-1">
+            <ShieldAlert size={15} />
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Refusal Audit & Re-application Control Desk
+              Consular Visa Refusal & Appeal Registry
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
             Rejected Applications
           </h1>
-          <p className="text-xs text-blue-100 font-medium mt-1">
-            View and manage all visa applications that have been rejected, along with rejection reasons and applicant notifications.
+          <p className="text-xs text-red-100 font-medium mt-1">
+            Audit consular refusal decisions, issue official refusal notices, analyze rejection grounds, and process re-application invites.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => triggerToast("Generating batch PDF package of all official refusal letters...")}
+            className="px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 border border-white/20"
+          >
+            <Download size={14} /> Batch Refusal Letters
+          </button>
+          <button
+            onClick={() => triggerToast("Launching re-application assistance workflow...")}
+            className="px-4 py-2 bg-slate-900/40 hover:bg-slate-900/60 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 border border-white/20"
+          >
+            <RotateCcw size={14} /> Re-Application Portal
+          </button>
         </div>
       </div>
 
-      {/* TOP STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
+      {/* TOP STATISTICS CARDS & RIGHT LIFECYCLE CARD (FROM WIREFRAME) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* LEFT CARDS: 6 METRICS */}
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+        {/* LEFT CARDS: 7 METRICS */}
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Rejected</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">207</div>
-            <span className="text-[10px] text-red-600 font-bold">Refusal Log</span>
+            <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Refused Visas</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">412</div>
+            <span className="text-[10px] text-red-600 font-bold">Consular Refusals</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected Today</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">12</div>
-            <span className="text-[10px] text-red-600 font-bold">Daily Refusals</span>
+            <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejections Today</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">3</div>
+            <span className="text-[10px] text-red-600 font-bold">Today's Refusals</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Document Issues</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">96</div>
-            <span className="text-[10px] text-amber-600 font-bold">Incomplete / Deficient</span>
+            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Insufficient Funds</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">185</div>
+            <span className="text-[10px] text-amber-600 font-bold">Financial Ground</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Eligibility Issues</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">74</div>
-            <span className="text-[10px] text-purple-600 font-bold">Criteria Non-Match</span>
+            <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Incomplete Docs</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">120</div>
+            <span className="text-[10px] text-purple-600 font-bold">Document Ground</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Payment Issues</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">22</div>
-            <span className="text-[10px] text-blue-600 font-bold">Transaction Reversed</span>
+            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Purpose Unclear</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">75</div>
+            <span className="text-[10px] text-blue-600 font-bold">GTE / Purpose Ground</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Re-Applications Pending</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">25</div>
-            <span className="text-[10px] text-emerald-600 font-bold">Re-Intake Allowed</span>
+            <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Eligible for Appeal</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">210</div>
+            <span className="text-[10px] text-emerald-600 font-bold">Appeal Window Open</span>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition sm:col-span-2">
+            <span className="text-[10px] font-extrabold uppercase text-emerald-700 block mb-1">Re-Applied & Approved</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">68 Cases</div>
+            <span className="text-[10px] text-emerald-700 font-bold">Successful Appeals</span>
           </div>
         </div>
 
-        {/* RIGHT CARD: RECOMMENDED TABS & WORKFLOW FLOW (FROM WIREFRAME) */}
+        {/* RIGHT CARD: REFUSAL & APPEAL WORKFLOW (FROM WIREFRAME) */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex flex-col justify-between space-y-4">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-              <Sparkles size={16} className="text-[#2563EB]" /> Rejection Workflow
+              <Sparkles size={16} className="text-red-600" /> Refusal & Appeal Workflow Steps
             </h3>
-            <div className="space-y-1 text-[11px] text-slate-700 font-medium">
+            <div className="space-y-1.5 text-[11px] text-slate-700 font-medium">
               {REJECTION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
-                    â–¼
+                  <div className="w-5 h-5 rounded-full bg-red-50 text-red-700 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono border border-red-200">
+                    {idx + 1}
                   </div>
-                  <span>{step}</span>
+                  <span className="font-semibold text-slate-800">{step}</span>
                 </div>
               ))}
             </div>
@@ -392,10 +518,10 @@ export default function RejectedApplicationsManagement() {
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-            <Filter size={16} className="text-[#2563EB]" /> Search & Rejection Filters
+            <Filter size={16} className="text-red-600" /> Search & Refusal Audit Filters
           </h3>
           <span className="text-xs text-slate-500 font-mono font-bold">
-            Showing {filteredApps.length} of {rejectedList.length} Rejected Applications
+            Showing {filteredApps.length} of {rejectedList.length} Refused Applications
           </span>
         </div>
 
@@ -403,36 +529,36 @@ export default function RejectedApplicationsManagement() {
           {/* SEARCH KEYWORD */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Search By (ID, Applicant, Passport, Officer)
+              Search (ID, Refusal Code, Applicant, Passport)
             </label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="APP-20261501, Geeta..."
+                placeholder="SEC-214B..., Geeta..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-red-600"
               />
             </div>
           </div>
 
-          {/* REJECTION REASON */}
+          {/* PRIMARY REFUSAL GROUND */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Rejection Reason
+              Primary Refusal Ground
             </label>
             <select
               value={rejectionReasonFilter}
               onChange={(e) => setRejectionReasonFilter(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
             >
-              <option value="All">All Reasons</option>
-              <option value="Incomplete Documents">Incomplete Documents</option>
-              <option value="Eligibility Criteria">Eligibility Criteria</option>
-              <option value="Invalid Information">Invalid Information</option>
-              <option value="Payment Failure">Payment Failure</option>
-              <option value="Passport Issues">Passport Issues</option>
+              <option value="All">All Refusal Grounds</option>
+              <option value="Insufficient Financial Proof">Insufficient Financial Proof</option>
+              <option value="Incomplete / Fraudulent Documents">Incomplete Documents</option>
+              <option value="Travel Purpose Unclear">Travel Purpose Unclear</option>
+              <option value="Past Overstay History">Past Overstay History</option>
+              <option value="Security & Background Check">Security Clearance</option>
             </select>
           </div>
 
@@ -453,27 +579,28 @@ export default function RejectedApplicationsManagement() {
             </select>
           </div>
 
-          {/* CATEGORY */}
+          {/* APPEAL ELIGIBILITY */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Visa Category
+              Appeal Eligibility
             </label>
             <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={appealFilter}
+              onChange={(e) => setAppealFilter(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
             >
-              <option value="All">All Categories</option>
-              <option value="Tourist">Tourist</option>
-              <option value="Business">Business</option>
-              <option value="Student">Student</option>
+              <option value="All">All Appeal States</option>
+              <option value="Eligible for Appeal">Eligible for Appeal</option>
+              <option value="Non-Appealable">Non-Appealable</option>
+              <option value="Appeal Under Review">Appeal Under Review</option>
+              <option value="Re-Application Submitted">Re-Application Submitted</option>
             </select>
           </div>
 
           {/* APPLIED BY */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Applied By
+              Applied By Channel
             </label>
             <select
               value={appliedByFilter}
@@ -490,32 +617,32 @@ export default function RejectedApplicationsManagement() {
 
       {/* CONTEXTUAL BULK ACTIONS TOOLBAR */}
       {selectedIds.length > 0 && (
-        <div className="bg-[#0E1A2C] border border-[#2563EB]/40 text-white p-3.5 rounded-2xl shadow-xl mb-4 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+        <div className="bg-[#0E1A2C] border border-red-500/40 text-white p-3.5 rounded-2xl shadow-xl mb-4 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="w-6 h-6 rounded-lg bg-[#2563EB] text-white flex items-center justify-center font-mono font-bold text-xs">
+            <span className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center font-mono font-bold text-xs">
               {selectedIds.length}
             </span>
-            <span>Rejected Applications Selected</span>
+            <span>Refused Applications Selected</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={handleBulkEnableReApply}
+              onClick={handleBulkReappInvite}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
             >
-              <RotateCcw size={14} /> Enable Re-Application
+              <RotateCcw size={14} /> Send Re-Application Invites
             </button>
             <button
-              onClick={() => triggerToast(`Sending notifications to ${selectedIds.length} applicants.`)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
+              onClick={() => triggerToast(`Generating refusal notices for ${selectedIds.length} selected items.`)}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
             >
-              <Send size={14} /> Send Rejection Mail
+              <FileX size={14} /> Generate Refusal Letters
             </button>
             <button
-              onClick={() => triggerToast(`Exporting data for ${selectedIds.length} items.`)}
-              className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
+              onClick={() => triggerToast(`Exporting refusal audit data for ${selectedIds.length} items.`)}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
             >
-              <Download size={14} /> Export Report
+              <Download size={14} /> Export Summary
             </button>
           </div>
         </div>
@@ -532,17 +659,19 @@ export default function RejectedApplicationsManagement() {
                     type="checkbox"
                     checked={selectedIds.length === filteredApps.length && filteredApps.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
+                    className="rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer"
                   />
                 </th>
                 <th className="py-3.5 px-4">Application ID</th>
+                <th className="py-3.5 px-4">Refusal Code</th>
                 <th className="py-3.5 px-4">Applicant</th>
-                <th className="py-3.5 px-4">Country</th>
-                <th className="py-3.5 px-4">Visa Category</th>
-                <th className="py-3.5 px-4">Rejection Reason</th>
-                <th className="py-3.5 px-4">Rejected By</th>
-                <th className="py-3.5 px-4 font-mono">Rejected Date</th>
-                <th className="py-3.5 px-4">Re-Apply</th>
+                <th className="py-3.5 px-4">Applied By</th>
+                <th className="py-3.5 px-4">Country & Category</th>
+                <th className="py-3.5 px-4 font-mono">Refusal Date</th>
+                <th className="py-3.5 px-4">Primary Refusal Ground</th>
+                <th className="py-3.5 px-4">Appeal Eligibility</th>
+                <th className="py-3.5 px-4 font-mono text-center">Refusal Notice</th>
+                <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -550,9 +679,9 @@ export default function RejectedApplicationsManagement() {
             <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
               {filteredApps.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
-                    <XCircle size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                    <p className="font-bold text-slate-600">No rejected applications found matching your filters.</p>
+                  <td colSpan={12} className="py-12 text-center text-slate-400">
+                    <FileX size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="font-bold text-slate-600">No refused applications found matching your filters.</p>
                   </td>
                 </tr>
               ) : (
@@ -563,40 +692,63 @@ export default function RejectedApplicationsManagement() {
                         type="checkbox"
                         checked={selectedIds.includes(a.id)}
                         onChange={() => handleToggleSelect(a.id)}
-                        className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
+                        className="rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer"
                       />
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">
                       {a.appId}
                     </td>
+                    <td className="py-3.5 px-4 font-mono font-black text-red-700">
+                      {a.refusalCode}
+                    </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {a.applicantName}
+                      <span className="block text-[10px] text-slate-400 font-mono font-normal">Passport: {a.passportNumber}</span>
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-700">
+                      {a.appliedBy === "Agent" ? (
+                        <span className="text-purple-700 font-bold">Agent ({a.agentName})</span>
+                      ) : (
+                        <span className="text-slate-600">Self</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {a.country}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-700">
-                      {a.category}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-red-700">
-                      {a.rejectionReason}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-[#2563EB]">
-                      {a.rejectedBy}
+                      <span className="block text-[10px] text-slate-500 font-normal">{a.category} &bull; {a.visaType}</span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">
-                      {a.rejectedDate}
+                      {a.rejectedDate} ({a.rejectedTime})
                     </td>
-                    <td className="py-3.5 px-4">
-                      {a.reApplyAllowed ? (
+                    <td className="py-3.5 px-4 font-semibold text-red-700">
+                      {a.rejectionReason}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-xs">
+                      {a.appealEligibility === "Eligible for Appeal" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          âœ… Allowed
+                          <CheckCircle2 size={11} /> Eligible (15d)
+                        </span>
+                      ) : a.appealEligibility === "Appeal Under Review" ? (
+                        <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">
+                          <RefreshCw size={11} /> Under Review
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded text-[10px] font-bold border border-red-200">
-                          âŒ Not Allowed
+                        <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
+                          <Ban size={11} /> Non-Appealable
                         </span>
                       )}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        onClick={() => triggerToast(`Downloading Official Refusal Letter for ${a.applicantName} (${a.refusalCode})...`)}
+                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Download size={12} /> Refusal PDF
+                      </button>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
+                        <XCircle size={11} /> Refused
+                      </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -606,23 +758,23 @@ export default function RejectedApplicationsManagement() {
                             setModalTab("Overview");
                           }}
                           className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="View Rejection Details"
+                          title="View Details & Refusal Grounds"
                         >
                           <Eye size={15} />
                         </button>
                         <button
-                          onClick={() => handleToggleReApply(a)}
+                          onClick={() => handleInviteReapplication(a)}
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
-                          title="Toggle Re-Apply Permission"
+                          title="Invite Re-Application"
                         >
                           <RotateCcw size={15} />
                         </button>
                         <button
-                          onClick={() => handleSendRejectionEmail(a)}
+                          onClick={() => handleReopenAppeal(a)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="Send Email"
+                          title="Re-Open Appeal Review"
                         >
-                          <Send size={15} />
+                          <RefreshCw size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteRecord(a)}
@@ -642,12 +794,12 @@ export default function RejectedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 207 Rejected Applications</div>
+          <div>Showing 1 to 10 of 412 Refused Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
             </button>
-            <button className="px-3 py-1 bg-[#2563EB] text-white rounded-lg">1</button>
+            <button className="px-3 py-1 bg-red-600 text-white rounded-lg">1</button>
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">2</button>
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">3</button>
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">
@@ -657,15 +809,15 @@ export default function RejectedApplicationsManagement() {
         </div>
       </div>
 
-      {/* CENTERED POPUP DETAILS MODAL (8 RECOMMENDED TABS FROM WIREFRAME CATALOG) */}
+      {/* CENTERED POPUP DETAILS MODAL (9 RECOMMENDED TABS FROM WIREFRAME) */}
       {activeModalApp && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+          <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
             {/* MODAL HEADER */}
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-600 flex items-center justify-center font-bold text-lg text-white">
-                  <XCircle size={20} />
+                  <ShieldAlert size={20} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -673,10 +825,15 @@ export default function RejectedApplicationsManagement() {
                       {activeModalApp.applicantName}
                     </h3>
                     <span className="font-mono text-xs font-bold text-red-300 bg-red-900/50 px-2 py-0.5 rounded border border-red-700">
-                      {activeModalApp.appId} (REJECTED)
+                      {activeModalApp.refusalCode}
+                    </span>
+                    <span className="text-[10px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full uppercase">
+                      REFUSED
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">{activeModalApp.country} &bull; Reason: <strong className="text-red-300">{activeModalApp.rejectionReason}</strong> &bull; Rejected By: {activeModalApp.rejectedBy}</p>
+                  <p className="text-xs text-slate-400">
+                    App ID: <strong className="text-blue-300 font-mono">{activeModalApp.appId}</strong> &bull; {activeModalApp.country} &bull; {activeModalApp.category} ({activeModalApp.visaType})
+                  </p>
                 </div>
               </div>
 
@@ -698,7 +855,7 @@ export default function RejectedApplicationsManagement() {
                     onClick={() => setModalTab(tab)}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
                       active
-                        ? "bg-[#2563EB] text-white shadow-sm"
+                        ? "bg-red-600 text-white shadow-sm"
                         : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
                     }`}
                   >
@@ -710,13 +867,32 @@ export default function RejectedApplicationsManagement() {
 
             {/* MODAL BODY */}
             <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
+              
               {/* TAB 1: OVERVIEW */}
               {modalTab === "Overview" && (
                 <div className="space-y-6 animate-in fade-in duration-150">
+                  {/* 6-STAGE REFUSAL LIFECYCLE STEPPER */}
+                  <div className="bg-red-50/50 border border-red-200 rounded-3xl p-4">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-3 flex items-center gap-2">
+                      <Sparkles size={16} className="text-red-600" /> Refusal & Appeal Lifecycle Progress
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center">
+                      {REJECTION_WORKFLOW_STEPS.map((stepName, sIdx) => (
+                        <div key={sIdx} className="bg-white p-2.5 rounded-2xl border border-red-200 flex flex-col items-center">
+                          <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs mb-1">
+                            <XCircle size={14} />
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-800 leading-tight">{stepName}</span>
+                          <span className="text-[9px] text-red-700 font-bold mt-1">Refused</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* OVERVIEW TILES */}
                   <div>
                     <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
-                      Rejection Audit Summary
+                      Core Refusal Overview
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
@@ -724,49 +900,340 @@ export default function RejectedApplicationsManagement() {
                         <strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.appId}</strong>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Rejection Reason</span>
-                        <strong className="text-red-700 font-bold">{activeModalApp.rejectionReason}</strong>
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Refusal Clause Code</span>
+                        <strong className="text-red-700 font-mono font-black">{activeModalApp.refusalCode}</strong>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Rejected By</span>
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Rejecting Consular Officer</span>
                         <strong className="text-slate-900 font-bold">{activeModalApp.rejectedBy}</strong>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Re-Application Status</span>
-                        <strong className="text-emerald-700 font-bold">{activeModalApp.reApplyAllowed ? "Allowed" : "Not Allowed"}</strong>
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Primary Refusal Ground</span>
+                        <strong className="text-red-700 font-bold">{activeModalApp.rejectionReason}</strong>
                       </div>
                     </div>
                   </div>
 
-                  {/* DETAILED REMARKS CARD */}
-                  <div className="bg-red-50/50 border border-red-200 rounded-3xl p-5 space-y-2">
+                  {/* CONSULAR EVALUATION REMARKS */}
+                  <div className="bg-red-50/60 border border-red-200 rounded-3xl p-5 space-y-2">
                     <h4 className="text-xs font-extrabold text-red-900 uppercase tracking-wider font-outfit flex items-center gap-2">
-                      <AlertTriangle size={16} className="text-red-600" /> Officer Detailed Remarks
+                      <ShieldAlert size={16} className="text-red-600" /> Consular Officer Detailed Remarks
                     </h4>
-                    <p className="text-slate-800 text-xs font-medium leading-relaxed bg-white p-3.5 rounded-2xl border border-red-100">
-                      {activeModalApp.detailedRemarks}
+                    <p className="text-xs text-red-950 font-medium leading-relaxed bg-white p-3.5 rounded-2xl border border-red-200">
+                      "{activeModalApp.detailedRemarks}"
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* TAB 2: OFFICIAL REFUSAL LETTER */}
+              {modalTab === "Official Refusal Letter" && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 text-white p-6 rounded-3xl shadow-xl border border-red-500/30 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-red-500/20 border border-red-400/40 flex items-center justify-center text-red-400">
+                          <FileX size={22} />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-black font-outfit text-white">
+                            OFFICIAL CONSULAR REFUSAL NOTICE ({activeModalApp.country.toUpperCase()})
+                          </h4>
+                          <span className="text-xs text-red-300 font-mono">Refusal Ref: {activeModalApp.refusalCode}</span>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 bg-red-600 text-white font-black rounded-full text-xs uppercase font-mono">
+                        REFUSED
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 font-sans text-xs text-slate-200">
+                      <p>
+                        This official notification serves to inform applicant <strong>{activeModalApp.applicantName}</strong> (Passport: <span className="font-mono text-red-300">{activeModalApp.passportNumber}</span>) that visa application <strong>{activeModalApp.appId}</strong> has been refused by the Consular Authority of {activeModalApp.country}.
+                      </p>
+                      <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 text-xs">
+                        <strong className="text-red-400 block mb-1">REASON FOR REFUSAL:</strong>
+                        <span className="text-slate-300">{activeModalApp.rejectionReason} — {activeModalApp.detailedRemarks}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                      <span className="text-slate-400 text-xs font-mono">Decision Date: {activeModalApp.rejectedDate}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => triggerToast(`Printing Refusal Notice for ${activeModalApp.refusalCode}...`)}
+                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                        >
+                          <Printer size={13} /> Print Notice
+                        </button>
+                        <button
+                          onClick={() => triggerToast(`Downloading Official PDF Refusal Notice (${activeModalApp.refusalCode})...`)}
+                          className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                        >
+                          <Download size={13} /> Download PDF
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: APPLICANT & PASSPORT */}
+              {modalTab === "Applicant & Passport" && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                      Personal Identity Profile
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Full Name</span>
+                        <strong className="text-slate-900">{activeModalApp.applicantName}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Date of Birth</span>
+                        <strong className="text-slate-900">{activeModalApp.dob || "1994-08-12"}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Gender & Status</span>
+                        <strong className="text-slate-900">{activeModalApp.gender || "Female"} &bull; {activeModalApp.maritalStatus || "Single"}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Nationality</span>
+                        <strong className="text-slate-900">{activeModalApp.nationality || "Indian"}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Contact Email</span>
+                        <strong className="text-[#2563EB]">{activeModalApp.email || "applicant@domain.com"}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Mobile Number</span>
+                        <strong className="text-slate-900">{activeModalApp.phone || "+91 98123 45678"}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                      Passport Credentials
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Passport Number</span>
+                        <strong className="text-slate-900 font-mono font-bold">{activeModalApp.passportNumber}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Issue Date</span>
+                        <strong className="text-slate-900 font-mono">{activeModalApp.passportIssueDate || "15 Jan 2020"}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Expiry Date</span>
+                        <strong className="text-slate-900 font-mono">{activeModalApp.passportExpiryDate || "14 Jan 2030"}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: VISA & TRAVEL */}
+              {modalTab === "Visa & Travel" && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Destination Country</span>
+                      <strong className="text-slate-900 font-bold">{activeModalApp.country}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Visa Category</span>
+                      <strong className="text-slate-900">{activeModalApp.category}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Intended Travel Date</span>
+                      <strong className="text-[#2563EB] font-mono">{activeModalApp.travelDate || "2026-09-20"}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Port of Entry</span>
+                      <strong className="text-slate-900">{activeModalApp.portOfEntry || "Toronto Pearson Intl (YYZ)"}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: REFUSAL GROUNDS & RISK ANALYSIS */}
+              {modalTab === "Refusal Grounds & Risk Analysis" && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div className="bg-red-50/40 border border-red-200 rounded-3xl p-5 space-y-4">
+                    <div className="flex items-center gap-3 border-b border-red-200 pb-3">
+                      <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center font-bold">
+                        <ShieldAlert size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black font-outfit text-slate-900">
+                          CONSULAR RISK ANALYSIS & REFUSAL BREAKDOWN
+                        </h4>
+                        <span className="text-xs font-mono font-bold text-red-700">Refusal Clause: {activeModalApp.refusalCode}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="bg-white p-3 rounded-2xl border border-red-200">
+                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Risk Assessment Score</span>
+                        <strong className="text-red-700 text-sm font-bold">High Risk Tier</strong>
+                      </div>
+                      <div className="bg-white p-3 rounded-2xl border border-red-200">
+                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Primary Failure Point</span>
+                        <strong className="text-slate-900">{activeModalApp.rejectionReason}</strong>
+                      </div>
+                      <div className="bg-white p-3 rounded-2xl border border-red-200">
+                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Cooling-Off Period</span>
+                        <strong className="text-slate-900 font-mono">{activeModalApp.coolingPeriodDays} Days</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: UPLOADED DOCUMENTS */}
+              {modalTab === "Uploaded Documents" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Uploaded Documents Evaluation Checklist
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {activeModalApp.uploadedDocs.map((doc, idx) => (
+                      <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          {doc.status === "Verified" ? (
+                            <CheckCircle2 size={18} className="text-emerald-600" />
+                          ) : (
+                            <XCircle size={18} className="text-red-600" />
+                          )}
+                          <div>
+                            <span className="font-bold text-slate-900 block">{doc.name}</span>
+                            {doc.reason ? (
+                              <span className="text-[10px] text-red-600 font-semibold">{doc.reason}</span>
+                            ) : (
+                              <span className="text-[10px] text-emerald-600 font-mono">Verified</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 7: PAYMENT & INVOICE */}
+              {modalTab === "Payment & Invoice" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Consular Application Fee Invoice (Non-Refundable)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Total Amount Paid</span>
+                      <strong className="text-slate-900 text-sm font-black font-mono">{activeModalApp.amountPaid}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Transaction Reference ID</span>
+                      <strong className="text-slate-900 font-mono">{activeModalApp.transactionId}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Fee Policy</span>
+                      <strong className="text-slate-700">Consular Fee Non-Refundable</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 8: APPEAL & RE-APPLICATION */}
+              {modalTab === "Appeal & Re-Application" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                      <div>
+                        <h4 className="text-sm font-black font-outfit text-slate-900">
+                          RE-APPLICATION & APPEAL ELIGIBILITY STATUS
+                        </h4>
+                        <span className="text-xs font-mono font-bold text-emerald-700">{activeModalApp.appealEligibility}</span>
+                      </div>
+                      <button
+                        onClick={() => handleInviteReapplication(activeModalApp)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RotateCcw size={14} /> Send Re-Application Portal Link
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Applicants whose primary refusal ground is document non-compliance or insufficient proof can re-submit an updated application with verified documents.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 9: CONSULAR AUDIT LOG & NOTES */}
+              {modalTab === "Consular Audit Log & Notes" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Consular Officer Refusal Audit Trail
+                  </h4>
+                  <div className="space-y-2">
+                    {activeModalApp.actionNotes?.map((n) => (
+                      <div key={n.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-slate-900">{n.author}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{n.date}</span>
+                        </div>
+                        <p className="text-xs text-slate-600">{n.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ADD NOTE FORM */}
+                  <div className="pt-3 border-t border-slate-200 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add an audit note..."
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-red-600"
+                    />
+                    <button
+                      onClick={handleAddNote}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                      Add Note
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* MODAL FOOTER */}
             <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleToggleReApply(activeModalApp)}
+                  onClick={() => handleInviteReapplication(activeModalApp)}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <RotateCcw size={15} /> Toggle Re-Apply Permission
+                  <RotateCcw size={15} /> Invite Re-Application
                 </button>
                 <button
-                  onClick={() => handleSendRejectionEmail(activeModalApp)}
+                  onClick={() => handleReopenAppeal(activeModalApp)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <Send size={15} /> Re-send Rejection Email
+                  <RefreshCw size={15} /> Re-Open Appeal Review
                 </button>
               </div>
+
+              <button
+                onClick={() => setActiveModalApp(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Close Modal
+              </button>
             </div>
           </div>
         </div>

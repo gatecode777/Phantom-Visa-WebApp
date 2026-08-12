@@ -58,11 +58,11 @@ export interface DocumentRecord {
   uploadDate: string;
   uploadDateTime: string;
   verificationStatus:
-    | "Verified"
-    | "Pending"
-    | "Rejected"
-    | "Expired"
-    | "Re-upload Requested";
+  | "Verified"
+  | "Pending"
+  | "Rejected"
+  | "Expired"
+  | "Re-upload Requested";
   verifiedBy?: string;
   verificationDate?: string;
   expiryDate?: string;
@@ -391,70 +391,65 @@ export default function AllDocumentsManagement() {
           {/* Card 1: Total Documents */}
           <div
             onClick={() => setStatusFilter("All")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{totalDocsCount}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">
-              {statusFilter === "All" ? "Showing all âœ“" : "Click for all docs"}
+              {statusFilter === "All" ? "Showing all (Active)" : "Click for all docs"}
             </span>
           </div>
 
           {/* Card 2: Verified Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Verified" ? "All" : "Verified")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Verified" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Verified" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Verified Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{verifiedDocsCount}</div>
             <span className="text-[10px] text-emerald-600 font-bold">
-              {statusFilter === "Verified" ? "Showing verified âœ“" : "Click to filter verified"}
+              {statusFilter === "Verified" ? "Showing verified (Active)" : "Click to filter verified"}
             </span>
           </div>
 
           {/* Card 3: Pending Verification */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Pending" ? "All" : "Pending")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Pending" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Pending" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Verification</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{pendingDocsCount}</div>
             <span className="text-[10px] text-amber-600 font-bold">
-              {statusFilter === "Pending" ? "Showing pending âœ“" : "Click to filter pending"}
+              {statusFilter === "Pending" ? "Showing pending (Active)" : "Click to filter pending"}
             </span>
           </div>
 
           {/* Card 4: Rejected Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Rejected" ? "All" : "Rejected")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Rejected" ? "border-red-500 ring-2 ring-red-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Rejected" ? "border-red-500 ring-2 ring-red-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{rejectedDocsCount}</div>
             <span className="text-[10px] text-red-600 font-bold">
-              {statusFilter === "Rejected" ? "Showing rejected âœ“" : "Click to filter rejected"}
+              {statusFilter === "Rejected" ? "Showing rejected (Active)" : "Click to filter rejected"}
             </span>
           </div>
 
           {/* Card 5: Expired Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Expired" ? "All" : "Expired")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Expired" ? "border-purple-500 ring-2 ring-purple-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Expired" ? "border-purple-500 ring-2 ring-purple-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Expired Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{expiredDocsCount}</div>
             <span className="text-[10px] text-purple-600 font-bold">
-              {statusFilter === "Expired" ? "Showing expired âœ“" : "Click to filter expired"}
+              {statusFilter === "Expired" ? "Showing expired (Active)" : "Click to filter expired"}
             </span>
           </div>
 
@@ -706,15 +701,15 @@ export default function AllDocumentsManagement() {
                     <td className="py-3.5 px-4">
                       {d.verificationStatus === "Verified" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Verified
+                          Verified
                         </span>
                       ) : d.verificationStatus === "Rejected" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          ðŸ”´ Rejected
+                          Rejected
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Pending
+                          Pending
                         </span>
                       )}
                     </td>
@@ -738,11 +733,10 @@ export default function AllDocumentsManagement() {
                               <button
                                 onClick={() => handleVerifyDocument(d)}
                                 disabled={isDocVerified}
-                                className={`p-1.5 rounded-lg transition ${
-                                  isDocVerified
-                                    ? "text-emerald-300 opacity-40 cursor-not-allowed bg-emerald-50/50"
-                                    : "text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                                }`}
+                                className={`p-1.5 rounded-lg transition ${isDocVerified
+                                  ? "text-emerald-300 opacity-40 cursor-not-allowed bg-emerald-50/50"
+                                  : "text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                                  }`}
                                 title={isDocVerified ? "Already Verified ✓" : "Verify Document"}
                               >
                                 <CheckCircle2 size={15} />
@@ -750,11 +744,10 @@ export default function AllDocumentsManagement() {
                               <button
                                 onClick={() => handleRejectDocument(d)}
                                 disabled={isDocRejected}
-                                className={`p-1.5 rounded-lg transition ${
-                                  isDocRejected
-                                    ? "text-red-300 opacity-40 cursor-not-allowed bg-red-50/50"
-                                    : "text-red-600 hover:bg-red-50 cursor-pointer"
-                                }`}
+                                className={`p-1.5 rounded-lg transition ${isDocRejected
+                                  ? "text-red-300 opacity-40 cursor-not-allowed bg-red-50/50"
+                                  : "text-red-600 hover:bg-red-50 cursor-pointer"
+                                  }`}
                                 title={isDocRejected ? "Already Rejected ✕" : "Reject Document"}
                               >
                                 <XCircle size={15} />
@@ -850,11 +843,10 @@ export default function AllDocumentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>
@@ -1116,22 +1108,20 @@ export default function AllDocumentsManagement() {
                       <button
                         onClick={() => handleVerifyDocument(activeModalDoc)}
                         disabled={isModalDocVerified}
-                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${
-                          isModalDocVerified
-                            ? "bg-emerald-600/50 opacity-60 cursor-not-allowed shadow-none"
-                            : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer shadow-sm"
-                        }`}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${isModalDocVerified
+                          ? "bg-emerald-600/50 opacity-60 cursor-not-allowed shadow-none"
+                          : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer shadow-sm"
+                          }`}
                       >
                         <CheckCircle2 size={15} /> {isModalDocVerified ? "Verified ✓" : "Verify Document"}
                       </button>
                       <button
                         onClick={() => handleRejectDocument(activeModalDoc)}
                         disabled={isModalDocRejected}
-                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${
-                          isModalDocRejected
-                            ? "bg-red-600/50 opacity-60 cursor-not-allowed shadow-none"
-                            : "bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm"
-                        }`}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${isModalDocRejected
+                          ? "bg-red-600/50 opacity-60 cursor-not-allowed shadow-none"
+                          : "bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm"
+                          }`}
                       >
                         <XCircle size={15} /> {isModalDocRejected ? "Rejected ✕" : "Reject Document"}
                       </button>

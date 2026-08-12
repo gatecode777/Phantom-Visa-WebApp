@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
@@ -75,7 +75,7 @@ export interface ApplicantRecord {
   timeline?: Array<{ title: string; time: string; completed: boolean }>;
 }
 
-const mockApplicants: ApplicantRecord[] = [
+export const mockApplicants: ApplicantRecord[] = [
   {
     id: "APP-1025",
     name: "Geeta Bisht",
@@ -83,7 +83,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "geeta@email.com",
     mobile: "+91 9876543210",
     country: "Canada",
-    flag: "ðŸ‡¨ðŸ‡¦",
+    flag: "🇨🇦",
     totalApplications: 2,
     status: "Active",
     registeredOn: "20 Jul 2026",
@@ -128,7 +128,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "rahul@email.com",
     mobile: "+91 9812345678",
     country: "Australia",
-    flag: "ðŸ‡¦ðŸ‡º",
+    flag: "🇦🇺",
     totalApplications: 1,
     status: "Active",
     registeredOn: "19 Jul 2026",
@@ -172,7 +172,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "priya@email.com",
     mobile: "+91 9765432109",
     country: "UK",
-    flag: "ðŸ‡¬ðŸ‡§",
+    flag: "🇬🇧",
     totalApplications: 3,
     status: "Blocked",
     registeredOn: "18 Jul 2026",
@@ -215,7 +215,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "animesh@email.com",
     mobile: "+91 9654321098",
     country: "USA",
-    flag: "ðŸ‡ºðŸ‡¸",
+    flag: "🇺🇸",
     totalApplications: 1,
     status: "Active",
     registeredOn: "17 Jul 2026",
@@ -258,7 +258,7 @@ const mockApplicants: ApplicantRecord[] = [
     email: "bhavani@email.com",
     mobile: "+91 9543210987",
     country: "Germany",
-    flag: "ðŸ‡©ðŸ‡ª",
+    flag: "🇩🇪",
     totalApplications: 2,
     status: "Inactive",
     registeredOn: "15 Jul 2026",
@@ -293,7 +293,11 @@ const mockApplicants: ApplicantRecord[] = [
   }
 ];
 
-export default function AllApplicants() {
+interface AllApplicantsProps {
+  onSelectApplicant?: (applicant: ApplicantRecord) => void;
+}
+
+export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps = {}) {
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -906,6 +910,7 @@ export default function AllApplicants() {
                             onClick={() => {
                               setViewApplicant(app);
                               setActiveTab("personal");
+                              if (onSelectApplicant) onSelectApplicant(app);
                             }}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-[#EEF2FF] text-[#4848F7] border border-slate-200 transition cursor-pointer"
                             title="View Applicant Details"

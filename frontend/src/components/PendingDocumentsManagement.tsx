@@ -51,12 +51,12 @@ export interface PendingDocumentRecord {
   reminderSentCount: number;
   emailStatus: "Delivered" | "Sent" | "Opened" | "Bounced";
   status:
-    | "Pending Upload"
-    | "Additional Documents Requested"
-    | "Re-uploaded"
-    | "Overdue"
-    | "Documents Verified"
-    | "Ready for Verification";
+  | "Pending Upload"
+  | "Additional Documents Requested"
+  | "Re-uploaded"
+  | "Overdue"
+  | "Documents Verified"
+  | "Ready for Verification";
   // Detail fields
   dob?: string;
   email?: string;
@@ -322,18 +322,18 @@ export default function PendingDocumentsManagement() {
         prev.map((a) =>
           a.id === editingApp.id
             ? {
-                ...a,
-                applicantName: formData.applicantName,
-                passportNumber: formData.passportNumber,
-                appliedBy: formData.appliedBy,
-                agentName: formData.agentName,
-                country: formData.country,
-                category: formData.category,
-                visaType: formData.visaType,
-                missingDocs: missingDocsArray,
-                deadline: formData.deadline,
-                status: formData.status
-              }
+              ...a,
+              applicantName: formData.applicantName,
+              passportNumber: formData.passportNumber,
+              appliedBy: formData.appliedBy,
+              agentName: formData.agentName,
+              country: formData.country,
+              category: formData.category,
+              visaType: formData.visaType,
+              missingDocs: missingDocsArray,
+              deadline: formData.deadline,
+              status: formData.status
+            }
             : a
         )
       );
@@ -648,7 +648,7 @@ export default function PendingDocumentsManagement() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Pending Upload
+                          Pending Upload
                         </span>
                       )}
                     </td>
@@ -757,11 +757,10 @@ export default function PendingDocumentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
                         ? "bg-[#2563EB] text-white shadow-sm"
                         : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

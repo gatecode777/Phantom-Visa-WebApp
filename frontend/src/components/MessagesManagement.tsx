@@ -341,11 +341,10 @@ export default function MessagesManagement() {
             <button
               key={tab}
               onClick={() => setActiveSubmenu(tab)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 shrink-0 ${
-                active
+              className={`px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 shrink-0 ${active
                   ? "bg-[#2563EB] text-white shadow-md"
                   : "bg-slate-50 text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-              }`}
+                }`}
             >
               <span>{tab}</span>
             </button>
@@ -651,15 +650,15 @@ export default function MessagesManagement() {
                     <td className="py-3.5 px-4">
                       {msg.status === "Unread" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          ðŸŸ¡ Unread
+                          Unread
                         </span>
                       ) : msg.status === "Replied" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          ðŸŸ¢ Replied
+                          Replied
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          ðŸ”µ Read
+                          Read
                         </span>
                       )}
                     </td>
