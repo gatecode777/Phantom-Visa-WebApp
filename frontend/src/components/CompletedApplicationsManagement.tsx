@@ -124,10 +124,11 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     handlingOfficer: "Rahul Sharma",
     deliveryStatus: "Delivered & Confirmed",
     deliveryMethod: "Digital Delivery (Email)",
-    trackingWaybill: "BD-99182341",
-    courierPartner: "BlueDart Express",
-    deliveryDate: "01 Aug 2026 04:30 PM",
-    amountPaid: "₹12,350",
+    deliveryDate: "01 Aug 2026",
+    approvedBy: "Rahul Sharma",
+    visaIssueDate: "01 Aug 2026",
+    totalAmountPaid: "₹12,350",
+    paymentMethod: "UPI / Credit Card",
     transactionId: "TXN-9988112",
     status: "Completed",
     rating: 5,
@@ -181,10 +182,11 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     handlingOfficer: "David Thomas",
     deliveryStatus: "Passport Delivered",
     deliveryMethod: "Express Courier (BlueDart)",
-    trackingWaybill: "BD-77441199",
-    courierPartner: "BlueDart Express",
-    deliveryDate: "01 Aug 2026 02:15 PM",
-    amountPaid: "₹18,930",
+    deliveryDate: "Expected 02 Aug 2026",
+    approvedBy: "David Thomas",
+    visaIssueDate: "31 Jul 2026",
+    totalAmountPaid: "₹18,930",
+    paymentMethod: "Net Banking",
     transactionId: "TXN-7733441",
     status: "Completed",
     rating: 5,
@@ -235,10 +237,11 @@ const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
     handlingOfficer: "Sarah Johnston",
     deliveryStatus: "E-Visa Sent & Opened",
     deliveryMethod: "Digital Delivery (Email)",
-    trackingWaybill: "DHL-5544112",
-    courierPartner: "DHL Express",
-    deliveryDate: "30 Jul 2026 03:45 PM",
-    amountPaid: "₹8,670",
+    deliveryDate: "30 Jul 2026",
+    approvedBy: "Sarah Johnston",
+    visaIssueDate: "30 Jul 2026",
+    totalAmountPaid: "₹8,670",
+    paymentMethod: "Debit Card",
     transactionId: "TXN-5511223",
     status: "Archived",
     rating: 4,
@@ -488,8 +491,8 @@ export default function CompletedApplicationsManagement() {
             <div className="space-y-1.5 text-[11px] text-slate-700 font-medium">
               {COMPLETION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono border border-slate-200">
-                    {idx + 1}
+                  <div className="w-4 h-4 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[9px] shrink-0">
+                    ▼
                   </div>
                   <span className="font-semibold text-slate-800">{step}</span>
                 </div>
@@ -694,18 +697,16 @@ export default function CompletedApplicationsManagement() {
                     <td className="py-3.5 px-4 font-mono text-slate-500">
                       {a.completedDate} ({a.completedTime})
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-xs">
-                      <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                        <CheckCircle2 size={11} /> {a.deliveryStatus}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => triggerToast(`Downloading Complete Dossier Archive for ${a.applicantName} (${a.dossierRef})...`)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition cursor-pointer"
-                      >
-                        <Download size={12} /> Dossier PDF
-                      </button>
+                    <td className="py-3.5 px-4">
+                      {a.deliveryStatus === "Delivered" ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
+                          🟢 Delivered
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
+                          🚚 In Transit
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {a.status === "Archived" ? (
@@ -762,7 +763,7 @@ export default function CompletedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1 to 10 of 8,940 Completed Applications</div>
+          <div>Showing 1-10 of 1,690 Completed Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

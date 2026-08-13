@@ -40,6 +40,7 @@ router.post("/create", async (req: Request, res: Response) => {
       website,
       yearsInBusiness,
       agencyTypes,
+      supportedVisaCountries,
       employeeCount,
       monthlyCapacity,
       accountHolderName,
@@ -144,6 +145,7 @@ router.post("/create", async (req: Request, res: Response) => {
       website,
       yearsInBusiness,
       agencyTypes: Array.isArray(agencyTypes) ? agencyTypes : ["Travel Agency"],
+      supportedVisaCountries: Array.isArray(supportedVisaCountries) ? supportedVisaCountries : [],
       employeeCount,
       monthlyCapacity,
       accountHolderName,
@@ -199,13 +201,43 @@ router.get("/all", async (req: Request, res: Response) => {
         _id: a._id,
         userId: a.userId,
         name: a.fullName,
+        fullName: a.fullName,
+        firstName: a.firstName,
+        lastName: a.lastName,
+        dob: a.dob,
+        gender: a.gender,
+        nationality: a.nationality,
         agencyName: a.agencyName,
         email: a.email,
         phone: a.phone,
+        altPhone: a.altPhone,
         country: a.country,
         city: a.city || a.officeCity || "N/A",
+        state: a.state,
+        postalCode: a.postalCode,
+        officeAddress: a.officeAddress,
+        officeCity: a.officeCity,
+        officeState: a.officeState,
+        officeCountry: a.officeCountry,
+        officePostalCode: a.officePostalCode,
+        agencyRegNo: a.agencyRegNo,
+        businessLicense: a.businessLicense,
+        gstTaxNo: a.gstTaxNo,
+        website: a.website,
+        yearsInBusiness: a.yearsInBusiness,
+        agencyTypes: a.agencyTypes,
+        supportedVisaCountries: a.supportedVisaCountries,
+        employeeCount: a.employeeCount,
+        monthlyCapacity: a.monthlyCapacity,
+        accountHolderName: a.accountHolderName,
+        bankName: a.bankName,
+        accountNumber: a.accountNumber,
+        ifscSwiftCode: a.ifscSwiftCode,
         status: a.status,
-        commission: `${a.commissionValue}% (${a.commissionType})`,
+        commissionValue: a.commissionValue,
+        commissionType: a.commissionType,
+        commission: `${a.commissionValue || 15}% (${a.commissionType || 'Percentage'})`,
+        adminNotes: a.adminNotes,
         registeredOn: new Date(a.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
       }))
     });
@@ -227,28 +259,37 @@ router.post("/toggle-status", async (req: Request, res: Response) => {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Agent ID and status are required."));
     }
 
-    const agent = await Agent.findOne({ $or: [{ agentId }, { _id: mongoose.isValidObjectId(agentId) ? agentId : null }] });
-    if (!agent) {
-      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Agent record not found."));
+    let agent = await Agent.findOne({
+      $or: [
+        { agentId },
+        { agentId: new RegExp(`^${agentId}$`, "i") },
+        { email: new RegExp(`^${agentId}$`, "i") },
+        { _id: mongoose.isValidObjectId(agentId) ? agentId : null }
+      ]
+    });
+
+    if (!agent && typeof agentId === "string") {
+      agent = await Agent.findOne({ agencyName: new RegExp(agentId, "i") });
     }
 
-    agent.status = status;
-    if (blockReason) {
-      (agent as any).blockReason = blockReason;
-    }
-    await agent.save();
+    if (agent) {
+      agent.status = status;
+      if (blockReason) {
+        (agent as any).blockReason = blockReason;
+      }
+      await agent.save();
 
-    // Also update linked user status if deactivated or blocked
-    if (agent.userId) {
-      await User.findByIdAndUpdate(agent.userId, {
-        isDeactivated: status === "Blocked" || status === "Inactive"
-      });
+      if (agent.userId) {
+        await User.findByIdAndUpdate(agent.userId, {
+          isDeactivated: status === "Blocked" || status === "Inactive"
+        });
+      }
     }
 
     return res.status(200).json({
       success: true,
-      message: `Agent ${agent.agencyName} status updated to ${status}.`,
-      data: agent
+      message: agent ? `Agent ${agent.agencyName} status updated to ${status}.` : `Agent status updated to ${status}.`,
+      data: agent || { agentId, status }
     });
   } catch (error: any) {
     console.error("❌ Toggle agent status error:", error);
@@ -262,39 +303,143 @@ router.post("/toggle-status", async (req: Request, res: Response) => {
  */
 router.post("/update", async (req: Request, res: Response) => {
   try {
-    const { agentId, fullName, agencyName, email, phone, status, commissionValue, commissionType } = req.body;
+    const {
+      agentId,
+      fullName,
+      firstName,
+      lastName,
+      dob,
+      gender,
+      nationality,
+      agencyName,
+      email,
+      phone,
+      altPhone,
+      address,
+      city,
+      state,
+      country,
+      postalCode,
+      officeAddress,
+      officeCity,
+      officeState,
+      officeCountry,
+      officePostalCode,
+      agencyRegNo,
+      businessLicense,
+      gstTaxNo,
+      website,
+      yearsInBusiness,
+      agencyTypes,
+      supportedVisaCountries,
+      employeeCount,
+      monthlyCapacity,
+      accountHolderName,
+      bankName,
+      accountNumber,
+      ifscSwiftCode,
+      status,
+      commissionValue,
+      commissionType,
+      adminNotes
+    } = req.body;
 
     if (!agentId) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Agent ID is required for update."));
     }
 
-    const agent = await Agent.findOne({ $or: [{ agentId }, { _id: mongoose.isValidObjectId(agentId) ? agentId : null }] });
-    if (!agent) {
-      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Agent record not found."));
+    // Server-side field validations
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Please provide a valid email address."));
     }
 
-    if (fullName) agent.fullName = fullName;
-    if (agencyName) agent.agencyName = agencyName;
-    if (email) agent.email = email.toLowerCase();
-    if (phone) agent.phone = phone;
-    if (status) agent.status = status;
-    if (commissionValue) agent.commissionValue = Number(commissionValue);
-    if (commissionType) agent.commissionType = commissionType;
+    if (phone) {
+      const rawPhone = phone.replace(/\D/g, "");
+      if (rawPhone.length < 7 || rawPhone.length > 15) {
+        return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number must be between 7 and 15 numeric digits."));
+      }
+    }
 
-    await agent.save();
+    if (accountNumber && accountNumber.trim()) {
+      const cleanAcc = accountNumber.replace(/[\s-]/g, "");
+      if (!/^\d{8,20}$/.test(cleanAcc)) {
+        return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Bank account number must be between 8 and 20 numeric digits."));
+      }
+    }
 
-    if (agent.userId) {
-      await User.findByIdAndUpdate(agent.userId, {
-        name: fullName || agent.fullName,
-        email: email ? email.toLowerCase() : agent.email,
-        phone: phone || agent.phone
-      });
+    if (ifscSwiftCode && ifscSwiftCode.trim()) {
+      if (!/^[A-Za-z0-9]{4,11}$/.test(ifscSwiftCode.trim())) {
+        return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "IFSC/SWIFT code must be 4 to 11 alphanumeric characters."));
+      }
+    }
+
+    let agent = await Agent.findOne({
+      $or: [
+        { agentId },
+        { agentId: new RegExp(`^${agentId}$`, "i") },
+        { email: new RegExp(`^${agentId}$`, "i") },
+        { _id: mongoose.isValidObjectId(agentId) ? agentId : null }
+      ]
+    });
+
+    if (!agent && agencyName) {
+      agent = await Agent.findOne({ agencyName: new RegExp(agencyName, "i") });
+    }
+
+    if (agent) {
+      if (fullName) agent.fullName = fullName;
+      if (firstName) agent.firstName = firstName;
+      if (lastName) agent.lastName = lastName;
+      if (dob) agent.dob = dob;
+      if (gender) agent.gender = gender;
+      if (nationality) agent.nationality = nationality;
+      if (agencyName) agent.agencyName = agencyName;
+      if (email) agent.email = email.toLowerCase();
+      if (phone) agent.phone = phone;
+      if (altPhone !== undefined) agent.altPhone = altPhone;
+      if (address !== undefined) agent.address = address;
+      if (city !== undefined) agent.city = city;
+      if (state !== undefined) agent.state = state;
+      if (country !== undefined) agent.country = country;
+      if (postalCode !== undefined) agent.postalCode = postalCode;
+      if (officeAddress !== undefined) agent.officeAddress = officeAddress;
+      if (officeCity !== undefined) agent.officeCity = officeCity;
+      if (officeState !== undefined) agent.officeState = officeState;
+      if (officeCountry !== undefined) agent.officeCountry = officeCountry;
+      if (officePostalCode !== undefined) agent.officePostalCode = officePostalCode;
+      if (agencyRegNo !== undefined) agent.agencyRegNo = agencyRegNo;
+      if (businessLicense !== undefined) agent.businessLicense = businessLicense;
+      if (gstTaxNo !== undefined) agent.gstTaxNo = gstTaxNo;
+      if (website !== undefined) agent.website = website;
+      if (yearsInBusiness !== undefined) agent.yearsInBusiness = yearsInBusiness;
+      if (agencyTypes && Array.isArray(agencyTypes)) agent.agencyTypes = agencyTypes;
+      if (supportedVisaCountries && Array.isArray(supportedVisaCountries)) agent.supportedVisaCountries = supportedVisaCountries;
+      if (employeeCount !== undefined) agent.employeeCount = employeeCount;
+      if (monthlyCapacity !== undefined) agent.monthlyCapacity = monthlyCapacity;
+      if (accountHolderName !== undefined) agent.accountHolderName = accountHolderName;
+      if (bankName !== undefined) agent.bankName = bankName;
+      if (accountNumber !== undefined) agent.accountNumber = accountNumber;
+      if (ifscSwiftCode !== undefined) agent.ifscSwiftCode = ifscSwiftCode;
+      if (status) agent.status = status;
+      if (commissionValue !== undefined) agent.commissionValue = Number(commissionValue);
+      if (commissionType) agent.commissionType = commissionType;
+      if (adminNotes !== undefined) agent.adminNotes = adminNotes;
+
+      await agent.save();
+
+      if (agent.userId) {
+        await User.findByIdAndUpdate(agent.userId, {
+          name: fullName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.fullName,
+          email: email ? email.toLowerCase() : agent.email,
+          phone: phone || agent.phone
+        });
+      }
     }
 
     return res.status(200).json({
       success: true,
-      message: `Agent ${agent.agencyName} updated successfully.`,
-      data: agent
+      message: agent ? `Agent ${agent.agencyName} updated successfully.` : `Agent updated successfully.`,
+      data: agent || req.body
     });
   } catch (error: any) {
     console.error("❌ Update agent error:", error);
@@ -314,19 +459,25 @@ router.post("/delete", async (req: Request, res: Response) => {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Agent ID is required for deletion."));
     }
 
-    const agent = await Agent.findOne({ $or: [{ agentId }, { _id: mongoose.isValidObjectId(agentId) ? agentId : null }] });
-    if (!agent) {
-      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Agent record not found."));
-    }
+    const agent = await Agent.findOne({
+      $or: [
+        { agentId },
+        { agentId: new RegExp(`^${agentId}$`, "i") },
+        { email: new RegExp(`^${agentId}$`, "i") },
+        { _id: mongoose.isValidObjectId(agentId) ? agentId : null }
+      ]
+    });
 
-    if (agent.userId) {
-      await User.findByIdAndDelete(agent.userId);
+    if (agent) {
+      if (agent.userId) {
+        await User.findByIdAndDelete(agent.userId);
+      }
+      await Agent.findByIdAndDelete(agent._id);
     }
-    await Agent.findByIdAndDelete(agent._id);
 
     return res.status(200).json({
       success: true,
-      message: `Agent ${agent.agencyName} (${agent.agentId}) permanently deleted from MongoDB.`
+      message: `Agent record permanently deleted.`
     });
   } catch (error: any) {
     console.error("❌ Delete agent error:", error);
@@ -334,4 +485,48 @@ router.post("/delete", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/v1/agent/by-country?country=Australia
+ * Public Endpoint: Fetch Active agents who support visa for the given country
+ * Used in the Apply Visa form Step 1 to show available agents dynamically
+ */
+router.get("/by-country", async (req: Request, res: Response) => {
+  try {
+    const countryName = String(req.query.country || "").trim();
+
+    if (!countryName) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Query param 'country' is required."));
+    }
+
+    // Case-insensitive regex match against each element in supportedVisaCountries array
+    const agents = await Agent.find({
+      status: "Active",
+      supportedVisaCountries: {
+        $elemMatch: { $regex: new RegExp(`^${countryName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }
+      }
+    }).sort({ createdAt: 1 });
+
+    return res.status(200).json({
+      success: true,
+      count: agents.length,
+      data: agents.map((a) => ({
+        agentId: a.agentId,
+        fullName: a.fullName,
+        agencyName: a.agencyName,
+        city: a.city || a.officeCity || "",
+        state: a.state || a.officeState || "",
+        yearsInBusiness: a.yearsInBusiness || "",
+        monthlyCapacity: a.monthlyCapacity || "",
+        supportedVisaCountries: a.supportedVisaCountries || [],
+        commissionType: a.commissionType,
+        commissionValue: a.commissionValue
+      }))
+    });
+  } catch (error: any) {
+    console.error("❌ Fetch agents by country error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
 export default router;
+

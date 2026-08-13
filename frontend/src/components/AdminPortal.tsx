@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useVisa, Application, VisaStatus, formatINR } from "../context/VisaContext";
@@ -253,10 +253,6 @@ export default function AdminPortal() {
       icon: CreditCard,
       children: [
         "All Transactions",
-        "Successful Payments",
-        "Pending Payments",
-        "Failed Payments",
-        "Refund Requests",
         "Invoices"
       ]
     },
@@ -507,7 +503,7 @@ export default function AdminPortal() {
               <div>
                 <h1 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
                   <span>Welcome back, Geeta</span>
-                  <span className="text-xl">ðŸ‘‹</span>
+                  <span className="text-xl">👋</span>
                 </h1>
               </div>
 
@@ -546,7 +542,7 @@ export default function AdminPortal() {
                   {/* Total Revenue */}
                   <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition">
                     <p className="text-xs font-semibold text-slate-500">Total Revenue</p>
-                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">â‚¹28,75,400</h3>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">₹28,75,400</h3>
                   </div>
                 </div>
               </div>
@@ -558,7 +554,7 @@ export default function AdminPortal() {
 
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      âš¡ +14.5% vs 30d
+                      ⚡ +14.5% vs 30d
                     </span>
                     <select
                       value={timeRange}
@@ -807,7 +803,7 @@ export default function AdminPortal() {
                       },
                       {
                         title: "Payment Received",
-                        desc: "â‚¹23,000 - By Rahul Kumawat",
+                        desc: "₹23,000 - By Rahul Kumawat",
                         time: "30 min. ago"
                       },
                       {
@@ -854,10 +850,10 @@ export default function AdminPortal() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {[
-                        { flag: "ðŸ‡¨ðŸ‡¦", name: "Canada", apps: 432, pct: "34.64%" },
-                        { flag: "ðŸ‡¦ðŸ‡º", name: "Australia", apps: 321, pct: "25.72%" },
-                        { flag: "ðŸ‡ºðŸ‡¸", name: "United States", apps: 218, pct: "17.47%" },
-                        { flag: "ðŸ‡¬ðŸ‡§", name: "United Kingdom", apps: 156, pct: "12.50%" },
+                        { flag: "🇨🇦", name: "Canada", apps: 432, pct: "34.64%" },
+                        { flag: "🇦🇺", name: "Australia", apps: 321, pct: "25.72%" },
+                        { flag: "🇺🇸", name: "United States", apps: 218, pct: "17.47%" },
+                        { flag: "🇬🇧", name: "United Kingdom", apps: 156, pct: "12.50%" },
                         { flag: "ðŸŒ", name: "Others", apps: 121, pct: "09.70%" }
                       ].map((row, i) => (
                         <tr key={i} className="hover:bg-slate-50 transition">
@@ -867,7 +863,7 @@ export default function AdminPortal() {
                           </td>
                           <td className="py-2.5 font-mono text-slate-600">{row.apps}</td>
                           <td className="py-2.5 text-right font-mono font-bold text-emerald-600">
-                            {row.pct} â†—
+                            {row.pct} ↗
                           </td>
                         </tr>
                       ))}
@@ -903,10 +899,10 @@ export default function AdminPortal() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {[
-                          { id: "VO-2026-1256", name: "Rahul Kumawat", country: "ðŸ‡¨ðŸ‡¦ Canada", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
-                          { id: "VO-2026-1255", name: "Animesh Jain", country: "ðŸ‡¦ðŸ‡º Australia", date: "25 Jul 2026", status: "Approved", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                          { id: "VO-2026-1254", name: "Bhavani Sharma", country: "ðŸ‡ºðŸ‡¸ United States", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
-                          { id: "VO-2026-1253", name: "Balram Suman", country: "ðŸ‡¬ðŸ‡§ United Kingdom", date: "25 Jul 2026", status: "Rejected", stClass: "bg-red-50 text-red-700 border-red-200" },
+                          { id: "VO-2026-1256", name: "Rahul Kumawat", country: "🇨🇦 Canada", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
+                          { id: "VO-2026-1255", name: "Animesh Jain", country: "🇦🇺 Australia", date: "25 Jul 2026", status: "Approved", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                          { id: "VO-2026-1254", name: "Bhavani Sharma", country: "🇺🇸 United States", date: "25 Jul 2026", status: "Under Review", stClass: "bg-amber-50 text-amber-700 border-amber-200" },
+                          { id: "VO-2026-1253", name: "Balram Suman", country: "🇬🇧 United Kingdom", date: "25 Jul 2026", status: "Rejected", stClass: "bg-red-50 text-red-700 border-red-200" },
                           { id: "VO-2026-1252", name: "Som Gupta", country: "ðŸŒ Others", date: "25 Jul 2026", status: "Approved", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" }
                         ].map((row, i) => (
                           <tr key={i} className="hover:bg-slate-50 transition">
@@ -939,7 +935,7 @@ export default function AdminPortal() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <span className="text-xl font-extrabold text-slate-900">â‚¹28,75,400</span>
+                    <span className="text-xl font-extrabold text-slate-900">₹28,75,400</span>
                     <select className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none">
                       <option>Last 30 Days</option>
                       <option>Last 90 Days</option>
@@ -1032,16 +1028,8 @@ export default function AdminPortal() {
                 <AllDocumentsManagement />
               ) : activeSubItem === "Document Templates" ? (
                 <DocumentTemplatesManagement />
-              ) : activeSubItem === "All Transactions" || (activeSection === "Payments" && (!activeSubItem || activeSubItem === "All Transactions")) ? (
+              ) : activeSubItem === "All Transactions" || activeSubItem === "Successful Payments" || activeSubItem === "Pending Payments" || activeSubItem === "Failed Payments" || activeSubItem === "Refund Requests" || (activeSection === "Payments" && activeSubItem !== "Invoices") ? (
                 <AllTransactionsManagement />
-              ) : activeSubItem === "Successful Payments" ? (
-                <SuccessfulPaymentsManagement />
-              ) : activeSubItem === "Pending Payments" ? (
-                <PendingPaymentsManagement />
-              ) : activeSubItem === "Failed Payments" ? (
-                <FailedPaymentsManagement />
-              ) : activeSubItem === "Refund Requests" ? (
-                <RefundRequestsManagement />
               ) : activeSubItem === "Invoices" ? (
                 <InvoicesManagement />
               ) : activeSubItem === "All Appointments" || (activeSection === "Appointments" && (!activeSubItem || activeSubItem === "All Appointments")) ? (

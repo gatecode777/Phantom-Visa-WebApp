@@ -68,7 +68,7 @@ export default function SMSConfigurationManagement() {
   // Config States
   const [smsProvider, setSmsProvider] = useState("Twilio");
   const [accountSid, setAccountSid] = useState("AC9876543210fedcba");
-  const [authToken, setAuthToken] = useState("â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢");
+  const [authToken, setAuthToken] = useState("••••••••••••••••");
   const [senderId, setSenderId] = useState("PHTMVS");
   const [entityId, setEntityId] = useState("1201159876543210");
   const [headerId, setHeaderId] = useState("1302159876543210");
@@ -90,7 +90,7 @@ export default function SMSConfigurationManagement() {
   };
 
   const handleCheckBalance = () => {
-    triggerToast("SMS Credit Balance: â‚¹18,450.00 (Sufficient).");
+    triggerToast("SMS Credit Balance: ₹18,450.00 (Sufficient).");
   };
 
   return (
@@ -166,13 +166,13 @@ export default function SMSConfigurationManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Credit Balance</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹18,450</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹18,450</div>
           <span className="text-[10px] text-blue-600 font-bold">Sufficient Credit</span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">SMS Gateway</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Connected ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Connected 🟢</div>
           <span className="text-[10px] text-emerald-600 font-bold">Twilio Active</span>
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function SMSConfigurationManagement() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           log.status === "Delivered" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                         }`}>
-                          {log.status === "Delivered" ? "ðŸŸ¢ Delivered" : "ðŸ”´ Failed"}
+                          {log.status === "Delivered" ? "🟢 Delivered" : "🔴 Failed"}
                         </span>
                       </td>
                       <td className="py-2 text-right font-mono text-[11px] text-slate-500">{log.sentTime}</td>
@@ -303,15 +303,15 @@ export default function SMSConfigurationManagement() {
             <div className="space-y-2 text-xs font-semibold">
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DLT Entity Reg:</span>
-                <span className="font-bold text-emerald-800">Verified ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">Verified 🟢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>Sender ID Status:</span>
-                <span className="font-bold text-emerald-800">Active ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">Active 🟢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DLT Templates:</span>
-                <span className="font-bold text-emerald-800">12 Approved ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">12 Approved 🟢</span>
               </div>
             </div>
           </div>

@@ -29,6 +29,7 @@ export interface IAgent extends Document {
   website?: string;
   yearsInBusiness?: string;
   agencyTypes?: string[];
+  supportedVisaCountries?: string[];
   employeeCount?: string;
   monthlyCapacity?: string;
   accountHolderName?: string;
@@ -73,6 +74,7 @@ const AgentSchema: Schema = new Schema(
     website: { type: String },
     yearsInBusiness: { type: String },
     agencyTypes: [{ type: String }],
+    supportedVisaCountries: [{ type: String }],
     employeeCount: { type: String },
     monthlyCapacity: { type: String },
     accountHolderName: { type: String },

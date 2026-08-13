@@ -49,6 +49,8 @@ export interface ApplicationRecord {
   passportPlaceOfIssue?: string;
   appliedBy: "User" | "Agent";
   agentName?: string;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
   country: string;
   category: string;
   visaType: string;
@@ -172,8 +174,8 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     taxAmount: "₹700",
     amountPaid: "₹12,350",
     transactionId: "TXN-9988112",
-    paymentMethod: "UPI (Google Pay)",
-    paymentDate: "28-07-2026 10:14 AM",
+    paymentMethod: "UPI",
+    amountPaid: "₹12,350",
     embassyTrackingId: "CAN-EMB-8831",
     embassySubmissionDate: "2026-07-29",
     appointmentDate: "2026-08-05",
@@ -240,8 +242,8 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     taxAmount: "₹930",
     amountPaid: "₹18,930",
     transactionId: "TXN-7733441",
-    paymentMethod: "Credit Card (Visa)",
-    paymentDate: "29-07-2026 02:45 PM",
+    paymentMethod: "Credit Card",
+    amountPaid: "₹18,930",
     embassyTrackingId: "AUS-SYD-4412",
     embassySubmissionDate: "2026-07-30",
     appointmentDate: "2026-08-02",
@@ -305,12 +307,8 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     taxAmount: "₹470",
     amountPaid: "₹8,670",
     transactionId: "TXN-PENDING",
-    paymentMethod: "Net Banking (ICICI)",
-    paymentDate: "30-07-2026 11:20 AM",
-    embassyTrackingId: "UAE-GDRFA-9912",
-    embassySubmissionDate: "2026-07-30",
-    appointmentDate: "2026-08-01",
-    consulateBranch: "UAE Consulate General Mumbai",
+    paymentMethod: "Net Banking",
+    amountPaid: "₹8,670",
     documents: [
       { name: "Passport Bio Page", status: "Verified" },
       { name: "Company Cover Letter & Trade License", status: "Verified" },
@@ -338,10 +336,12 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   passportIssuingCountry: app.passportDetails?.issuingCountry || "India",
   passportPlaceOfIssue: app.passportDetails?.placeOfIssue || "New Delhi",
   appliedBy: app.appliedBy || "User",
-  agentName: app.agentName || "",
-  country: app.countryName || app.destination || "Canada",
-  category: app.categoryName || "Tourist",
-  visaType: app.visaTypeName || app.visaType || "eVisa (Multiple Entry)",
+  agentName: app.agentName || app.assignedAgentName || "",
+  assignedAgentId: app.assignedAgentId || "",
+  assignedAgentName: app.assignedAgentName || "",
+  country: app.countryName || app.destination || "Australia",
+  category: app.categoryName || "Tourist Visa",
+  visaType: app.visaTypeName || app.visaType || "Standard Visitor",
   submissionDate: app.createdAt ? new Date(app.createdAt).toISOString().split("T")[0] : app.submissionDate || "2026-08-07",
   paymentStatus: app.paymentStatus || "Paid",
   status: (app.status as any) || "Submitted",
@@ -350,34 +350,12 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   gender: app.personalDetails?.gender || app.gender || "Male",
   maritalStatus: app.personalDetails?.maritalStatus || "Single",
   nationality: app.personalDetails?.nationality || app.nationality || "Indian",
-  countryOfResidence: app.personalDetails?.countryOfResidence || "India",
-  email: app.personalDetails?.email || app.email || "applicant@phantomvisa.com",
-  phone: app.personalDetails?.phone || app.phone || "+91 98765 43210",
-  address: app.travelDetails?.hostAddress || app.address || "B-402, Green Park",
-  city: app.city || "Mumbai, Maharashtra",
-  travelDate: app.travelDetails?.travelDate || app.travelDates || "2026-09-15",
-  departureDate: app.travelDetails?.departureDate || "2026-09-30",
-  durationOfStay: app.stayValidity || "15 Days",
-  purposeOfVisit: app.purposeOfVisit || "Tourism & Sightseeing",
-  portOfEntry: app.portOfEntry || "Toronto International Airport (YYZ)",
-  hotelDetails: app.hotelDetails || "Fairmont Royal York, Toronto",
-  occupation: app.occupation || "Software Engineer",
-  employerName: app.employerName || "TechSolutions Pvt Ltd",
-  designation: app.designation || "Senior Developer",
-  annualIncome: app.annualIncome || "₹18,50,000 / year",
-  sponsorType: app.sponsorType || "Self-Funded",
-  bankBalance: app.bankBalance || "₹6,85,000 (HDFC Bank)",
-  governmentFee: app.pricing?.govFee ? `₹${app.pricing.govFee}` : "₹8,500",
-  serviceFee: app.pricing?.serviceFee ? `₹${app.pricing.serviceFee}` : "₹3,150",
-  taxAmount: app.pricing?.gst ? `₹${app.pricing.gst}` : "₹700",
-  transactionId: app.paymentDetails?.transactionId || "TXN-9988112",
-  paymentMethod: app.paymentDetails?.method || "UPI",
-  paymentDate: app.paymentDetails?.date || "2026-07-28 10:14 AM",
-  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 12350).toLocaleString("en-IN")}`,
-  embassyTrackingId: app.embassyTrackingId || "CAN-EMB-8831",
-  embassySubmissionDate: app.embassySubmissionDate || "2026-07-29",
-  appointmentDate: app.appointmentDate || "2026-08-05",
-  consulateBranch: app.consulateBranch || "VFS Global Center Mumbai",
+  email: app.personalDetails?.email || app.email || "",
+  phone: app.personalDetails?.phone || app.phone || "",
+  address: app.travelDetails?.hostAddress || app.address || "",
+  travelDate: app.travelDetails?.travelDate || app.travelDates || "",
+  durationOfStay: app.stayValidity || "60 Days",
+  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
   documents: Array.isArray(app.uploadedDocuments)
     ? app.uploadedDocuments.map((d: any) => ({ name: d.title, status: d.fileUrl ? "Verified" : "Pending" }))
     : [
@@ -908,7 +886,7 @@ export default function AllApplicationsManagement() {
                 </th>
                 <th className="py-3.5 px-4">Application ID</th>
                 <th className="py-3.5 px-4">Applicant</th>
-                <th className="py-3.5 px-4">Applied By</th>
+                <th className="py-3.5 px-4">Agent Assigned</th>
                 <th className="py-3.5 px-4">Country</th>
                 <th className="py-3.5 px-4">Visa Category</th>
                 <th className="py-3.5 px-4">Visa Type</th>
@@ -945,11 +923,14 @@ export default function AllApplicationsManagement() {
                       {a.applicantName}
                       <span className="block text-[10px] text-slate-400 font-mono font-normal">Passport: {a.passportNumber}</span>
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-700">
-                      {a.appliedBy === "Agent" ? (
-                        <span className="text-purple-700 font-bold">Agent ({a.agentName})</span>
+                    <td className="py-3.5 px-4">
+                      {a.assignedAgentName ? (
+                        <div>
+                          <span className="font-bold text-indigo-700">{a.assignedAgentName}</span>
+                          <span className="block text-[10px] font-mono text-slate-400">{a.assignedAgentId}</span>
+                        </div>
                       ) : (
-                        <span className="text-slate-600">Direct User</span>
+                        <span className="text-slate-400 text-[10px] font-semibold italic">Auto-assign / None</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
@@ -966,9 +947,9 @@ export default function AllApplicationsManagement() {
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold">
                       {a.paymentStatus === "Paid" ? (
-                        <span className="text-emerald-600">Paid</span>
+                        <span className="text-emerald-600">🟢 Paid</span>
                       ) : (
-                        <span className="text-amber-600">Pending</span>
+                        <span className="text-amber-600">🟡 Pending</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
@@ -1026,7 +1007,7 @@ export default function AllApplicationsManagement() {
           <div>
             {totalItems === 0
               ? "Showing 0 of 0 Applications"
-              : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} Application${totalItems === 1 ? "" : "s"}`}
+              : `Showing ${startIndex + 1}-${endIndex} of ${totalItems} Application${totalItems === 1 ? "" : "s"}`}
           </div>
 
           <div className="flex items-center gap-1 font-mono font-bold">
@@ -1127,6 +1108,25 @@ export default function AllApplicationsManagement() {
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Destination Country</span><strong className="text-slate-900 font-bold">{activeModalApp.country}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Category &amp; Type</span><strong className="text-slate-900 font-bold">{activeModalApp.category} ({activeModalApp.visaType})</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Priority Speed</span><strong className="text-purple-600 font-bold">{activeModalApp.priority}</strong></div>
+                    {activeModalApp.assignedAgentName ? (
+                      <div className="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-200 col-span-1 sm:col-span-2 lg:col-span-3">
+                        <span className="text-[10px] font-extrabold uppercase text-indigo-500 block mb-1">Assigned Agent</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-[#4848F7] text-white flex items-center justify-center font-black text-xs shrink-0">
+                            {activeModalApp.assignedAgentName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <strong className="text-indigo-800 font-bold text-xs">{activeModalApp.assignedAgentName}</strong>
+                            <span className="block text-[10px] font-mono text-indigo-500">{activeModalApp.assignedAgentId}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Assigned Agent</span>
+                        <span className="text-slate-400 italic text-xs">Auto-assign / None selected</span>
+                      </div>
+                    )}
                   </div>
 
                   {activeModalApp.status === "Rejected" && activeModalApp.rejectionReason && (

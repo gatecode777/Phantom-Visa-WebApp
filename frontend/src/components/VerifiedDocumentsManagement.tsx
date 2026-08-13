@@ -324,7 +324,7 @@ export default function VerifiedDocumentsManagement() {
               {VERIFIED_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -335,10 +335,10 @@ export default function VerifiedDocumentsManagement() {
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] font-semibold text-slate-600">
               <span className="text-slate-900 font-bold block mb-1">Status Indicators:</span>
               <div className="grid grid-cols-2 gap-1 text-[10px]">
-                <div className="flex items-center gap-1 text-emerald-700">Verified</div>
-                <div className="flex items-center gap-1 text-amber-700">Expiring Soon</div>
-                <div className="flex items-center gap-1 text-red-700">Expired</div>
-                <div className="flex items-center gap-1 text-blue-700">Re-verification</div>
+                <div className="flex items-center gap-1 text-emerald-700">🟢 Verified</div>
+                <div className="flex items-center gap-1 text-amber-700">⚠️ï¸ Expiring Soon</div>
+                <div className="flex items-center gap-1 text-red-700">🔴 Expired</div>
+                <div className="flex items-center gap-1 text-blue-700">ðŸ”„ Re-verification</div>
               </div>
             </div>
           </div>
@@ -541,15 +541,15 @@ export default function VerifiedDocumentsManagement() {
                     <td className="py-3.5 px-4">
                       {d.status === "Expiring Soon" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          Expiring Soon
+                          ⚠️ï¸ Expiring Soon
                         </span>
                       ) : d.status === "Expired" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          Expired
+                          🔴 Expired
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          Verified
+                          🟢 Verified
                         </span>
                       )}
                     </td>
@@ -597,7 +597,7 @@ export default function VerifiedDocumentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 14,286 Verified Documents</div>
+          <div>Showing 1-10 of 14,286 Verified Documents</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -738,7 +738,7 @@ export default function VerifiedDocumentsManagement() {
                       >
                         <FileCheck size={48} className="mx-auto mb-2 text-emerald-400" />
                         <p className="font-mono text-xs text-slate-200 font-bold">{activeModalDoc.documentName}</p>
-                        <p className="text-[10px] text-emerald-400 font-mono mt-1">âœ“ Verified Stamp Applied ({previewZoom}%)</p>
+                        <p className="text-[10px] text-emerald-400 font-mono mt-1">✓ Verified Stamp Applied ({previewZoom}%)</p>
                       </div>
                     </div>
                   </div>

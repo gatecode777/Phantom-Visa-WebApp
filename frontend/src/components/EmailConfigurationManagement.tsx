@@ -69,7 +69,7 @@ export default function EmailConfigurationManagement() {
   const [smtpHost, setSmtpHost] = useState("smtp.sendgrid.net");
   const [smtpPort, setSmtpPort] = useState("587");
   const [smtpUsername, setSmtpUsername] = useState("apikey");
-  const [smtpPassword, setSmtpPassword] = useState("â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢");
+  const [smtpPassword, setSmtpPassword] = useState("••••••••••••••••");
   const [encryption, setEncryption] = useState("TLS");
   const [testEmailRecipient, setTestEmailRecipient] = useState("test@phantomvisa.com");
 
@@ -177,7 +177,7 @@ export default function EmailConfigurationManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">SMTP Gateway</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Connected ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Connected 🟢</div>
           <span className="text-[10px] text-emerald-600 font-bold">SendGrid Active</span>
         </div>
       </div>
@@ -338,7 +338,7 @@ export default function EmailConfigurationManagement() {
                         </span>
                       </td>
                       <td className="py-2 text-center">
-                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">ðŸŸ¢ {log.status}</span>
+                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">🟢 {log.status}</span>
                       </td>
                       <td className="py-2 text-right font-mono text-[11px] text-slate-500">{log.sentTime}</td>
                     </tr>
@@ -359,15 +359,15 @@ export default function EmailConfigurationManagement() {
             <div className="space-y-2 text-xs font-semibold">
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>SPF Record:</span>
-                <span className="font-bold text-emerald-800">Verified ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">Verified 🟢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DKIM Status:</span>
-                <span className="font-bold text-emerald-800">Verified ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">Verified 🟢</span>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
                 <span>DMARC Policy:</span>
-                <span className="font-bold text-emerald-800">Configured ðŸŸ¢</span>
+                <span className="font-bold text-emerald-800">Configured 🟢</span>
               </div>
             </div>
           </div>

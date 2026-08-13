@@ -636,8 +636,8 @@ export default function NewApplicationsManagement() {
             <div className="space-y-1.5 text-[11px] text-slate-700 font-medium">
               {NEW_APPLICATION_WORKFLOW.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
-                    {idx + 1}
+                  <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -850,19 +850,19 @@ export default function NewApplicationsManagement() {
                     <td className="py-3.5 px-4">
                       {a.documentsStatus === "Complete" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          <CheckCircle2 size={11} /> Complete
+                          ✓ Complete
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
-                          <AlertTriangle size={11} /> {a.documentsStatus}
+                          ⚠️ï¸ {a.documentsStatus}
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold">
                       {a.paymentStatus === "Paid" ? (
-                        <span className="text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Paid</span>
+                        <span className="text-emerald-600">🟢 Paid</span>
                       ) : (
-                        <span className="text-amber-600 font-bold flex items-center gap-1"><Clock size={12} /> Pending</span>
+                        <span className="text-amber-600">⏳ Pending</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-mono">
@@ -876,15 +876,15 @@ export default function NewApplicationsManagement() {
                     <td className="py-3.5 px-4">
                       {a.status === "Accepted" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          <CheckCircle2 size={11} /> Accepted
+                          🟢 Accepted
                         </span>
                       ) : a.status === "Rejected" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          <XCircle size={11} /> Rejected
+                          🔴 Rejected
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-blue-200">
-                          <Sparkles size={11} /> New
+                          🆕 New
                         </span>
                       )}
                     </td>
@@ -932,7 +932,7 @@ export default function NewApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1 to 10 of 245 New Applications</div>
+          <div>Showing 1-10 of 245 New Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

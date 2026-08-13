@@ -397,7 +397,7 @@ export default function AllDocumentsManagement() {
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{totalDocsCount}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">
-              {statusFilter === "All" ? "Showing all (Active)" : "Click for all docs"}
+              {statusFilter === "All" ? "Showing all ✓" : "Click for all docs"}
             </span>
           </div>
 
@@ -410,7 +410,7 @@ export default function AllDocumentsManagement() {
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Verified Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{verifiedDocsCount}</div>
             <span className="text-[10px] text-emerald-600 font-bold">
-              {statusFilter === "Verified" ? "Showing verified (Active)" : "Click to filter verified"}
+              {statusFilter === "Verified" ? "Showing verified ✓" : "Click to filter verified"}
             </span>
           </div>
 
@@ -423,7 +423,7 @@ export default function AllDocumentsManagement() {
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Verification</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{pendingDocsCount}</div>
             <span className="text-[10px] text-amber-600 font-bold">
-              {statusFilter === "Pending" ? "Showing pending (Active)" : "Click to filter pending"}
+              {statusFilter === "Pending" ? "Showing pending ✓" : "Click to filter pending"}
             </span>
           </div>
 
@@ -436,7 +436,7 @@ export default function AllDocumentsManagement() {
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{rejectedDocsCount}</div>
             <span className="text-[10px] text-red-600 font-bold">
-              {statusFilter === "Rejected" ? "Showing rejected (Active)" : "Click to filter rejected"}
+              {statusFilter === "Rejected" ? "Showing rejected ✓" : "Click to filter rejected"}
             </span>
           </div>
 
@@ -449,7 +449,7 @@ export default function AllDocumentsManagement() {
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Expired Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{expiredDocsCount}</div>
             <span className="text-[10px] text-purple-600 font-bold">
-              {statusFilter === "Expired" ? "Showing expired (Active)" : "Click to filter expired"}
+              {statusFilter === "Expired" ? "Showing expired ✓" : "Click to filter expired"}
             </span>
           </div>
 
@@ -476,7 +476,7 @@ export default function AllDocumentsManagement() {
               {DOCUMENT_VERIFICATION_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    <ArrowRight size={10} />
                   </div>
                   <span>{step}</span>
                 </div>
@@ -701,15 +701,15 @@ export default function AllDocumentsManagement() {
                     <td className="py-3.5 px-4">
                       {d.verificationStatus === "Verified" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          Verified
+                          <CheckCircle2 size={12} className="text-emerald-600" /> Verified
                         </span>
                       ) : d.verificationStatus === "Rejected" ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          Rejected
+                          <XCircle size={12} className="text-red-600" /> Rejected
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          Pending
+                          <Clock size={12} className="text-amber-600" /> Pending
                         </span>
                       )}
                     </td>
@@ -789,7 +789,7 @@ export default function AllDocumentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 18,450 Uploaded Documents</div>
+          <div>Showing 1-10 of {documentsList.length} Uploaded Documents</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

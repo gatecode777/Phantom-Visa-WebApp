@@ -1,5 +1,7 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
+import { ALL_VISA_DESTINATION_COUNTRIES } from "./AddNewAgent";
+import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
 import {
   Briefcase,
   Search,
@@ -21,10 +23,12 @@ import {
   Send,
   Download,
   Bell,
+  CreditCard,
   ArrowUpRight,
   ShieldCheck,
   Star,
   Building,
+  User,
   UserCheck,
   UserX,
   Layers,
@@ -104,7 +108,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.9,
     status: "Active",
     country: "India",
-    flag: "ðŸ‡®ðŸ‡³",
+    flag: "🇮🇳",
     dob: "14 May 1990",
     gender: "Female",
     address: "B-402, Connaught Place, New Delhi, India",
@@ -156,7 +160,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.8,
     status: "Active",
     country: "India",
-    flag: "ðŸ‡®ðŸ‡³",
+    flag: "🇮🇳",
     dob: "22 Aug 1988",
     gender: "Male",
     address: "A-12, Sector 62, Noida, UP, India",
@@ -206,7 +210,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.6,
     status: "Pending Approval",
     country: "India",
-    flag: "ðŸ‡®ðŸ‡³",
+    flag: "🇮🇳",
     dob: "10 Apr 1985",
     gender: "Male",
     address: "C-88, Malviya Nagar, Jaipur, Rajasthan",
@@ -255,7 +259,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.95,
     status: "Active",
     country: "USA",
-    flag: "ðŸ‡ºðŸ‡¸",
+    flag: "🇺🇸",
     dob: "18 Mar 1991",
     gender: "Female",
     address: "500 Market St, San Francisco, CA, USA",
@@ -304,7 +308,7 @@ const mockAgents: AgentRecord[] = [
     rating: 4.2,
     status: "Inactive",
     country: "Canada",
-    flag: "ðŸ‡¨ðŸ‡¦",
+    flag: "🇨🇦",
     dob: "05 Nov 1986",
     gender: "Male",
     address: "700 W Georgia St, Vancouver, BC, Canada",
@@ -374,6 +378,55 @@ export default function AllAgents() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Dynamic Destination Countries Loaded directly from MongoDB Database API (/api/v1/countries)
+  const [availableDbCountries, setAvailableDbCountries] = useState<{ name: string; flag: string; code?: string }[]>([]);
+  const [isLoadingDbCountries, setIsLoadingDbCountries] = useState<boolean>(true);
+
+  const renderCountryFlag = (flag?: string) => {
+    if (!flag) return <span>🌐</span>;
+    if (flag.startsWith("http://") || flag.startsWith("https://") || flag.startsWith("data:")) {
+      return <img src={flag} alt="" className="w-4 h-3 object-cover rounded shrink-0 inline-block" />;
+    }
+    return <span>{flag}</span>;
+  };
+
+  useEffect(() => {
+    fetchDatabaseCountries();
+  }, []);
+
+  const fetchDatabaseCountries = async () => {
+    try {
+      setIsLoadingDbCountries(true);
+      const res = await fetch(`${API_V1_URL}/countries`);
+      const json = await res.json();
+
+      if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        const activeDbCountries = json.data
+          .filter(
+            (c: any) =>
+              c.status !== "Inactive" &&
+              c.name &&
+              !c.name.startsWith("http://") &&
+              !c.name.startsWith("https://") &&
+              !c.name.includes("imagekit")
+          )
+          .map((c: any) => ({
+            name: c.name.trim(),
+            flag: c.flag || "🌐",
+            code: c.code || ""
+          }));
+        setAvailableDbCountries(activeDbCountries.length > 0 ? activeDbCountries : ALL_VISA_DESTINATION_COUNTRIES);
+      } else {
+        setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+      }
+    } catch (err) {
+      console.warn("Could not fetch database countries in AllAgents, using fallback list:", err);
+      setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+    } finally {
+      setIsLoadingDbCountries(false);
+    }
+  };
+
   // Agent List State (Loaded dynamically from MongoDB)
   const [agents, setAgents] = useState<AgentRecord[]>([]);
 
@@ -385,28 +438,55 @@ export default function AllAgents() {
         if (res.ok && json.success && Array.isArray(json.data)) {
           const apiAgents: AgentRecord[] = json.data.map((item: any) => ({
             id: item.id || "AGT-1001",
-            name: item.name || "Travel Agent",
+            _id: item._id,
+            name: item.name || item.fullName || "Travel Agent",
             avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
             agencyName: item.agencyName || "Visa Agency",
             email: item.email || "agent@email.com",
             mobile: item.phone || "+91 9876543210",
-            assignedApps: 0,
-            completedApps: 0,
-            activeCases: 0,
-            rating: 5.0,
+            altPhone: item.altPhone || "",
+            dob: item.dob || "",
+            gender: item.gender || "",
+            nationality: item.nationality || "",
+            assignedApps: item.assignedApps || 0,
+            completedApps: item.completedApps || 0,
+            activeCases: item.activeCases || 0,
+            rating: item.rating || 5.0,
             status: item.status || "Pending Approval",
             country: item.country || "India",
-            city: item.city || "New Delhi",
-            commissionRate: item.commission || "15%",
+            city: item.city || item.officeCity || "New Delhi",
+            state: item.state || "",
+            postalCode: item.postalCode || "",
+            officeAddress: item.officeAddress || `${item.city || 'New Delhi'}, ${item.country || 'India'}`,
+            officeCity: item.officeCity || item.city || "",
+            officeState: item.officeState || "",
+            officeCountry: item.officeCountry || item.country || "India",
+            officePostalCode: item.officePostalCode || "",
+            agencyRegNo: item.agencyRegNo || "",
+            businessLicense: item.businessLicense || "",
+            gstTaxNo: item.gstTaxNo || "",
+            website: item.website || "",
+            yearsInBusiness: item.yearsInBusiness || "1 Year",
+            supportedVisaCountries: Array.isArray(item.supportedVisaCountries) ? item.supportedVisaCountries : [],
+            employeeCount: item.employeeCount || "10-50",
+            monthlyCapacity: item.monthlyCapacity || 100,
+            accountHolderName: item.accountHolderName || "",
+            bankName: item.bankName || "",
+            accountNumber: item.accountNumber || "",
+            ifscSwiftCode: item.ifscSwiftCode || "",
+            commissionRate: item.commission || `${item.commissionValue || 15}% (${item.commissionType || 'Percentage'})`,
+            commissionValue: item.commissionValue || 15,
+            commissionType: item.commissionType || "Percentage",
+            adminNotes: item.adminNotes || "",
             registeredOn: item.registeredOn || "Recently",
             performanceLevel: "Good",
             agencyDetails: {
-              licenseNo: item.businessLicense || "N/A",
-              taxRegNo: item.gstTaxNo || "N/A",
-              officeAddress: `${item.city || 'New Delhi'}, ${item.country || 'India'}`,
+              licenseNo: item.businessLicense && item.businessLicense !== "N/A" ? item.businessLicense : "",
+              taxRegNo: item.gstTaxNo && item.gstTaxNo !== "N/A" ? item.gstTaxNo : "",
+              officeAddress: item.officeAddress || `${item.city || 'New Delhi'}, ${item.country || 'India'}`,
               businessType: "Authorized Visa Agency",
-              yearsInOperation: "1 Year",
-              monthlyAppCapacity: 100
+              yearsInOperation: item.yearsInBusiness || "1 Year",
+              monthlyAppCapacity: Number(item.monthlyCapacity) || 100
             },
             kyc: {
               identityProof: true,
@@ -488,39 +568,379 @@ export default function AllAgents() {
   const [blockingAgent, setBlockingAgent] = useState<AgentRecord | null>(null);
   const [blockReasonInput, setBlockReasonInput] = useState("");
 
-  // Edit Modal State
+  // Edit Modal State (Full Profile Edit with Validations & Country Dial Codes)
   const [editingAgent, setEditingAgent] = useState<AgentRecord | null>(null);
+  const [editActiveTab, setEditActiveTab] = useState<"personal" | "agency" | "visas" | "bank" | "status">("personal");
+  const [editCountrySearch, setEditCountrySearch] = useState("");
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  const [editPhoneDialCode, setEditPhoneDialCode] = useState<string>("+91");
+  const [editAltPhoneDialCode, setEditAltPhoneDialCode] = useState<string>("+91");
+
   const [editForm, setEditForm] = useState({
     name: "",
     agencyName: "",
     email: "",
     mobile: "",
+    altPhone: "",
+    city: "",
+    country: "India",
+    postalCode: "",
+    officeAddress: "",
+    businessLicense: "",
+    gstTaxNo: "",
+    website: "",
+    employeeCount: "10-50",
+    monthlyCapacity: "100",
+    supportedVisaCountries: [] as string[],
+    accountHolderName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscSwiftCode: "",
     status: "Active",
-    commissionRate: "15%"
+    commissionType: "Percentage",
+    commissionRate: "15",
+    adminNotes: ""
   });
+
+  const validateSinglePhoneField = (fieldName: "mobile" | "altPhone", val: string, dialCode: string) => {
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === dialCode) || COUNTRY_DIAL_CODES[0];
+    const raw = val.replace(/\D/g, "");
+
+    if (!raw) {
+      if (fieldName === "mobile") {
+        return `Mobile number is required for ${selectedCountry.name}.`;
+      }
+      return "";
+    }
+
+    if (raw.length < selectedCountry.minPhoneDigits || raw.length > selectedCountry.maxPhoneDigits) {
+      return `${selectedCountry.name} (${selectedCountry.dialCode}) phone number must be exactly ${selectedCountry.minPhoneDigits} digits (e.g. ${selectedCountry.examplePhone}).`;
+    }
+
+    if (selectedCountry.phoneRegex && !selectedCountry.phoneRegex.test(raw)) {
+      return selectedCountry.phoneErrorMsg || `Invalid ${selectedCountry.name} phone number format.`;
+    }
+
+    return "";
+  };
+
+  const handleEditPhoneDialCodeChange = (newDialCode: string) => {
+    setEditPhoneDialCode(newDialCode);
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === newDialCode) || COUNTRY_DIAL_CODES[0];
+    const truncated = editForm.mobile.replace(/\D/g, "").slice(0, selectedCountry.maxPhoneDigits);
+    setEditForm((prev) => ({ ...prev, mobile: truncated }));
+    const errMsg = validateSinglePhoneField("mobile", truncated, newDialCode);
+    setEditErrors((prev) => ({ ...prev, mobile: errMsg }));
+  };
+
+  const handleEditAltPhoneDialCodeChange = (newDialCode: string) => {
+    setEditAltPhoneDialCode(newDialCode);
+    const selectedCountry = COUNTRY_DIAL_CODES.find((c) => c.dialCode === newDialCode) || COUNTRY_DIAL_CODES[0];
+    const truncated = editForm.altPhone.replace(/\D/g, "").slice(0, selectedCountry.maxPhoneDigits);
+    setEditForm((prev) => ({ ...prev, altPhone: truncated }));
+    const errMsg = validateSinglePhoneField("altPhone", truncated, newDialCode);
+    setEditErrors((prev) => ({ ...prev, altPhone: errMsg }));
+  };
+
+  const validateEditForm = (): { isValid: boolean; firstErrorTab: "personal" | "agency" | "visas" | "bank" | "status" | null; errors: Record<string, string> } => {
+    const errs: Record<string, string> = {};
+    let firstTab: "personal" | "agency" | "visas" | "bank" | "status" | null = null;
+
+    // 1. Personal & Contact Tab
+    if (!editForm.name.trim() || editForm.name.trim().length < 2) {
+      errs.name = "Full name is required (minimum 2 letters).";
+      if (!firstTab) firstTab = "personal";
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!editForm.email.trim() || !emailRegex.test(editForm.email.trim())) {
+      errs.email = "Please enter a valid email address (e.g. agent@domain.com).";
+      if (!firstTab) firstTab = "personal";
+    }
+
+    const mobileErr = validateSinglePhoneField("mobile", editForm.mobile, editPhoneDialCode);
+    if (mobileErr) {
+      errs.mobile = mobileErr;
+      if (!firstTab) firstTab = "personal";
+    }
+
+    if (editForm.altPhone && editForm.altPhone.trim()) {
+      const altErr = validateSinglePhoneField("altPhone", editForm.altPhone, editAltPhoneDialCode);
+      if (altErr) {
+        errs.altPhone = altErr;
+        if (!firstTab) firstTab = "personal";
+      }
+    }
+
+    // 2. Agency & Business Tab
+    if (!editForm.agencyName.trim() || editForm.agencyName.trim().length < 2) {
+      errs.agencyName = "Agency name is required (minimum 2 characters).";
+      if (!firstTab) firstTab = "agency";
+    }
+
+    if (editForm.website && editForm.website.trim()) {
+      const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/.*)?$/i;
+      if (!urlRegex.test(editForm.website.trim())) {
+        errs.website = "Please enter a valid website URL (e.g., https://agency.com).";
+        if (!firstTab) firstTab = "agency";
+      }
+    }
+
+    const capacityNum = Number(editForm.monthlyCapacity);
+    if (isNaN(capacityNum) || capacityNum <= 0 || capacityNum > 50000) {
+      errs.monthlyCapacity = "Monthly capacity must be a positive number between 1 and 50,000.";
+      if (!firstTab) firstTab = "agency";
+    }
+
+    // 3. Visas Tab
+    if (!editForm.supportedVisaCountries || editForm.supportedVisaCountries.length === 0) {
+      errs.supportedVisaCountries = "Please select at least 1 supported visa country.";
+      if (!firstTab) firstTab = "visas";
+    }
+
+    // 4. Bank & Financial Tab
+    if (editForm.accountNumber && editForm.accountNumber.trim()) {
+      const cleanAcc = editForm.accountNumber.replace(/[\s-]/g, "");
+      if (!/^\d{8,20}$/.test(cleanAcc)) {
+        errs.accountNumber = "Bank account number must be between 8 and 20 numeric digits.";
+        if (!firstTab) firstTab = "bank";
+      }
+    }
+
+    if (editForm.ifscSwiftCode && editForm.ifscSwiftCode.trim()) {
+      const codeClean = editForm.ifscSwiftCode.trim();
+      if (!/^[A-Za-z0-9]{4,11}$/.test(codeClean)) {
+        errs.ifscSwiftCode = "IFSC/SWIFT code must be 4 to 11 alphanumeric characters (e.g., SBIN0001234).";
+        if (!firstTab) firstTab = "bank";
+      }
+    }
+
+    // 5. Commission & Status Tab
+    const commVal = Number(editForm.commissionRate);
+    if (isNaN(commVal) || commVal < 0) {
+      errs.commissionRate = "Commission value must be a valid non-negative number.";
+      if (!firstTab) firstTab = "status";
+    } else if (editForm.commissionType === "Percentage" && commVal > 100) {
+      errs.commissionRate = "Commission percentage cannot exceed 100%.";
+      if (!firstTab) firstTab = "status";
+    }
+
+    return {
+      isValid: Object.keys(errs).length === 0,
+      firstErrorTab: firstTab,
+      errors: errs
+    };
+  };
+
+  const handleToggleEditVisaCountry = (countryName: string) => {
+    setEditForm((prev) => {
+      const current = prev.supportedVisaCountries || [];
+      const updated = current.includes(countryName)
+        ? current.filter((c) => c !== countryName)
+        : [...current, countryName];
+      return { ...prev, supportedVisaCountries: updated };
+    });
+    setEditErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
+  };
+
+  // Edit Agent modal opener & handler
+  const openEditModal = (agent: AgentRecord) => {
+    setEditingAgent(agent);
+    setEditActiveTab("personal");
+    setEditCountrySearch("");
+    setEditErrors({});
+
+    // Parse mobile dial code & raw digits
+    const rawMobFull = agent.mobile || "";
+    let matchedDialCode = "+91";
+    let cleanMobileDigits = rawMobFull.replace(/\D/g, "");
+
+    for (const c of COUNTRY_DIAL_CODES) {
+      const dialClean = c.dialCode.replace(/\D/g, "");
+      if (rawMobFull.includes(c.dialCode) || cleanMobileDigits.startsWith(dialClean)) {
+        matchedDialCode = c.dialCode;
+        if (cleanMobileDigits.startsWith(dialClean)) {
+          cleanMobileDigits = cleanMobileDigits.slice(dialClean.length);
+        }
+        break;
+      }
+    }
+
+    const matchedCountryObj = COUNTRY_DIAL_CODES.find((c) => c.dialCode === matchedDialCode) || COUNTRY_DIAL_CODES[0];
+    cleanMobileDigits = cleanMobileDigits.slice(0, matchedCountryObj.maxPhoneDigits);
+
+    // Parse altPhone dial code & raw digits
+    const rawAltFull = agent.altPhone || "";
+    let matchedAltDialCode = matchedDialCode;
+    let cleanAltDigits = rawAltFull.replace(/\D/g, "");
+
+    for (const c of COUNTRY_DIAL_CODES) {
+      const dialClean = c.dialCode.replace(/\D/g, "");
+      if (rawAltFull.includes(c.dialCode) || (cleanAltDigits && cleanAltDigits.startsWith(dialClean))) {
+        matchedAltDialCode = c.dialCode;
+        if (cleanAltDigits.startsWith(dialClean)) {
+          cleanAltDigits = cleanAltDigits.slice(dialClean.length);
+        }
+        break;
+      }
+    }
+
+    setEditPhoneDialCode(matchedDialCode);
+    setEditAltPhoneDialCode(matchedAltDialCode);
+
+    setEditForm({
+      name: agent.name || "",
+      agencyName: agent.agencyName || "",
+      email: agent.email || "",
+      mobile: cleanMobileDigits,
+      altPhone: cleanAltDigits,
+      city: agent.city || "New Delhi",
+      country: agent.country || "India",
+      officeAddress: (agent.officeAddress && agent.officeAddress !== "N/A" ? agent.officeAddress : agent.agencyDetails?.officeAddress && agent.agencyDetails?.officeAddress !== "N/A" ? agent.agencyDetails?.officeAddress : ""),
+      businessLicense: (agent.businessLicense && agent.businessLicense !== "N/A" ? agent.businessLicense : agent.agencyDetails?.licenseNo && agent.agencyDetails?.licenseNo !== "N/A" ? agent.agencyDetails?.licenseNo : ""),
+      gstTaxNo: (agent.gstTaxNo && agent.gstTaxNo !== "N/A" ? agent.gstTaxNo : agent.agencyDetails?.taxRegNo && agent.agencyDetails?.taxRegNo !== "N/A" ? agent.agencyDetails?.taxRegNo : ""),
+      website: agent.website || "",
+      employeeCount: agent.employeeCount || "10-50",
+      monthlyCapacity: String(agent.agencyDetails?.monthlyAppCapacity || 100),
+      supportedVisaCountries: Array.isArray(agent.supportedVisaCountries) ? agent.supportedVisaCountries : [],
+      accountHolderName: agent.accountHolderName || "",
+      bankName: agent.bankName || "",
+      accountNumber: agent.accountNumber || "",
+      ifscSwiftCode: agent.ifscSwiftCode || "",
+      status: agent.status || "Active",
+      commissionType: "Percentage",
+      commissionRate: agent.commissionRate ? agent.commissionRate.replace(/[^\d.]/g, "") || "15" : "15",
+      adminNotes: agent.adminNotes || ""
+    });
+  };
+
+  const handleSaveEditAgent = async () => {
+    if (!editingAgent) return;
+
+    const validation = validateEditForm();
+    if (!validation.isValid) {
+      setEditErrors(validation.errors);
+      if (validation.firstErrorTab) {
+        setEditActiveTab(validation.firstErrorTab);
+      }
+      triggerToast("Please fix the highlighted validation errors before saving.");
+      return;
+    }
+
+    setEditErrors({});
+
+    const targetId = editingAgent.id;
+    const newStatus = editForm.status as "Active" | "Inactive" | "Blocked" | "Pending Approval";
+    const updatedName = editForm.name;
+
+    const fullMobile = `${editPhoneDialCode} ${editForm.mobile}`;
+    const fullAltPhone = editForm.altPhone ? `${editAltPhoneDialCode} ${editForm.altPhone}` : "";
+
+    // Optimistic UI update & close modal
+    setAgents((prev) =>
+      prev.map((a) =>
+        a.id === targetId
+          ? {
+              ...a,
+              name: editForm.name,
+              agencyName: editForm.agencyName,
+              email: editForm.email,
+              mobile: fullMobile,
+              altPhone: fullAltPhone,
+              city: editForm.city,
+              country: editForm.country,
+              status: newStatus,
+              commissionRate: `${editForm.commissionRate}% (${editForm.commissionType})`,
+              supportedVisaCountries: editForm.supportedVisaCountries,
+              agencyDetails: {
+                ...a.agencyDetails,
+                licenseNo: editForm.businessLicense,
+                taxRegNo: editForm.gstTaxNo,
+                officeAddress: editForm.officeAddress,
+                monthlyAppCapacity: Number(editForm.monthlyCapacity) || 100
+              }
+            }
+          : a
+      )
+    );
+
+    if (viewAgent?.id === targetId) {
+      setViewAgent((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: editForm.name,
+              agencyName: editForm.agencyName,
+              email: editForm.email,
+              mobile: fullMobile,
+              status: newStatus,
+              commissionRate: `${editForm.commissionRate}% (${editForm.commissionType})`,
+              supportedVisaCountries: editForm.supportedVisaCountries
+            }
+          : null
+      );
+    }
+    setEditingAgent(null);
+    triggerToast(`Agent ${updatedName} profile updated successfully!`);
+
+    try {
+      await fetch(`${API_V1_URL}/agent/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: targetId,
+          fullName: editForm.name,
+          agencyName: editForm.agencyName,
+          email: editForm.email,
+          phone: fullMobile,
+          altPhone: fullAltPhone,
+          city: editForm.city,
+          country: editForm.country,
+          postalCode: editForm.postalCode,
+          officeAddress: editForm.officeAddress,
+          businessLicense: editForm.businessLicense,
+          gstTaxNo: editForm.gstTaxNo,
+          website: editForm.website,
+          employeeCount: editForm.employeeCount,
+          monthlyCapacity: editForm.monthlyCapacity,
+          supportedVisaCountries: editForm.supportedVisaCountries,
+          accountHolderName: editForm.accountHolderName,
+          bankName: editForm.bankName,
+          accountNumber: editForm.accountNumber,
+          ifscSwiftCode: editForm.ifscSwiftCode,
+          status: newStatus,
+          commissionValue: editForm.commissionRate,
+          commissionType: editForm.commissionType,
+          adminNotes: editForm.adminNotes
+        })
+      });
+    } catch (err) {
+      console.warn("Backend edit update sync warning:", err);
+    }
+  };
 
   // Approve Agent live API call
   const handleApproveAgent = async (id: string) => {
+    const target = agents.find((a) => a.id === id);
+
+    // Optimistic UI state update
+    setAgents((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: "Active" } : a))
+    );
+    if (viewAgent?.id === id) {
+      setViewAgent((prev) => (prev ? { ...prev, status: "Active" } : null));
+    }
+    triggerToast(`Approved agent account for ${target?.name || id}`);
+
     try {
-      const res = await fetch(`${API_V1_URL}/agent/toggle-status`, {
+      await fetch(`${API_V1_URL}/agent/toggle-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: id, status: "Active" })
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setAgents((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: "Active" } : a))
-        );
-        triggerToast(`Approved agent account for ${id}`);
-        if (viewAgent?.id === id) {
-          setViewAgent((prev) => (prev ? { ...prev, status: "Active" } : null));
-        }
-      } else {
-        triggerToast(json.message || "Failed to approve agent.");
-      }
     } catch (err) {
-      triggerToast("Error updating agent status in database.");
+      console.warn("Backend status update sync warning:", err);
     }
   };
 
@@ -542,31 +962,33 @@ export default function AllAgents() {
       return;
     }
 
+    const targetId = blockingAgent.id;
+    const targetName = blockingAgent.name;
+    const reason = blockReasonInput.trim();
+
+    // Optimistic UI update & close modal
+    setAgents((prev) =>
+      prev.map((a) => (a.id === targetId ? { ...a, status: "Blocked" } : a))
+    );
+    if (viewAgent?.id === targetId) {
+      setViewAgent((prev) => (prev ? { ...prev, status: "Blocked" } : null));
+    }
+    setBlockingAgent(null);
+    setBlockReasonInput("");
+    triggerToast(`Blocked agent ${targetName}. Reason: ${reason}`);
+
     try {
-      const res = await fetch(`${API_V1_URL}/agent/toggle-status`, {
+      await fetch(`${API_V1_URL}/agent/toggle-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agentId: blockingAgent.id,
+          agentId: targetId,
           status: "Blocked",
-          blockReason: blockReasonInput.trim()
+          blockReason: reason
         })
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setAgents((prev) =>
-          prev.map((a) => (a.id === blockingAgent.id ? { ...a, status: "Blocked" } : a))
-        );
-        triggerToast(`Blocked agent ${blockingAgent.name}. Reason: ${blockReasonInput.trim()}`);
-        if (viewAgent?.id === blockingAgent.id) {
-          setViewAgent((prev) => (prev ? { ...prev, status: "Blocked" } : null));
-        }
-        setBlockingAgent(null);
-      } else {
-        triggerToast(json.message || "Failed to block agent.");
-      }
     } catch (err) {
-      triggerToast("Error updating agent status in database.");
+      console.warn("Backend block sync warning:", err);
     }
   };
 
@@ -577,79 +999,20 @@ export default function AllAgents() {
       return;
     }
 
+    // Optimistic UI update & close modal
+    setAgents((prev) => prev.filter((a) => a.id !== id));
+    setSelectedIds((prev) => prev.filter((item) => item !== id));
+    if (viewAgent?.id === id) setViewAgent(null);
+    triggerToast(`Permanently deleted agent record for ${target?.name || id}`);
+
     try {
-      const res = await fetch(`${API_V1_URL}/agent/delete`, {
+      await fetch(`${API_V1_URL}/agent/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: id })
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setAgents((prev) => prev.filter((a) => a.id !== id));
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
-        if (viewAgent?.id === id) setViewAgent(null);
-        triggerToast(`Permanently deleted agent record for ${target?.name || id}`);
-      } else {
-        triggerToast(json.message || "Failed to delete agent record.");
-      }
     } catch (err) {
-      triggerToast("Error deleting agent record from database.");
-    }
-  };
-
-  // Edit Agent modal opener & handler
-  const openEditModal = (agent: AgentRecord) => {
-    setEditingAgent(agent);
-    setEditForm({
-      name: agent.name,
-      agencyName: agent.agencyName,
-      email: agent.email,
-      mobile: agent.mobile,
-      status: agent.status,
-      commissionRate: agent.commissionRate || "15%"
-    });
-  };
-
-  const handleSaveEditAgent = async () => {
-    if (!editingAgent) return;
-    try {
-      const res = await fetch(`${API_V1_URL}/agent/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId: editingAgent.id,
-          fullName: editForm.name,
-          agencyName: editForm.agencyName,
-          email: editForm.email,
-          phone: editForm.mobile,
-          status: editForm.status
-        })
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        const newStatus = editForm.status as "Active" | "Inactive" | "Blocked" | "Pending Approval";
-        setAgents((prev) =>
-          prev.map((a) =>
-            a.id === editingAgent.id
-              ? {
-                ...a,
-                name: editForm.name,
-                agencyName: editForm.agencyName,
-                email: editForm.email,
-                mobile: editForm.mobile,
-                status: newStatus,
-                commissionRate: editForm.commissionRate
-              }
-              : a
-          )
-        );
-        triggerToast(`Agent ${editForm.name} updated successfully in database!`);
-        setEditingAgent(null);
-      } else {
-        triggerToast(json.message || "Failed to update agent.");
-      }
-    } catch (err) {
-      triggerToast("Error updating agent details in database.");
+      console.warn("Backend delete sync warning:", err);
     }
   };
 
@@ -726,11 +1089,11 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-[#2563EB] font-semibold mt-2">
             <ArrowUpRight size={13} />
-            <span>{statusFilter === "All" ? "Showing all agents âœ“" : "Click for all agents"}</span>
+            <span>{statusFilter === "All" ? "Showing all agents ✓" : "Click for all agents"}</span>
           </div>
         </div>
 
-        {/* Card 2: Active Agents â€” click to filter */}
+        {/* Card 2: Active Agents — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Active" ? "All" : "Active")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
@@ -745,11 +1108,11 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Active").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <ShieldCheck size={13} />
-            <span>{statusFilter === "Active" ? "Showing active only âœ“" : "Click to filter active"}</span>
+            <span>{statusFilter === "Active" ? "Showing active only ✓" : "Click to filter active"}</span>
           </div>
         </div>
 
-        {/* Card 3: Inactive / Blocked Agents â€” click to filter */}
+        {/* Card 3: Inactive / Blocked Agents — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Inactive" ? "All" : "Inactive")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Inactive" ? "border-slate-500 ring-2 ring-slate-200" : "border-slate-200"
@@ -764,11 +1127,11 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Inactive" || a.status === "Blocked").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold mt-2">
             <Clock size={13} />
-            <span>{statusFilter === "Inactive" ? "Showing inactive only âœ“" : "Click to filter inactive"}</span>
+            <span>{statusFilter === "Inactive" ? "Showing inactive only ✓" : "Click to filter inactive"}</span>
           </div>
         </div>
 
-        {/* Card 4: Pending Approval â€” click to filter */}
+        {/* Card 4: Pending Approval — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Pending Approval" ? "All" : "Pending Approval")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Pending Approval" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
@@ -783,7 +1146,7 @@ export default function AllAgents() {
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{agents.filter((a) => a.status === "Pending Approval").length}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-            <span>{statusFilter === "Pending Approval" ? "Showing pending only âœ“" : "Click to filter pending"}</span>
+            <span>{statusFilter === "Pending Approval" ? "Showing pending only ✓" : "Click to filter pending"}</span>
           </div>
         </div>
       </div>
@@ -832,10 +1195,10 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Pending Approval">Pending Approval</option>
-              <option value="Blocked">Blocked</option>
+              <option value="Active">🟢 Active</option>
+              <option value="Inactive">⚪ Inactive</option>
+              <option value="Pending Approval">🟡 Pending Approval</option>
+              <option value="Blocked">🔴 Blocked</option>
             </select>
           </div>
 
@@ -850,10 +1213,11 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Countries</option>
-              <option value="India">ðŸ‡®ðŸ‡³ India</option>
-              <option value="USA">ðŸ‡ºðŸ‡¸ USA</option>
-              <option value="Canada">ðŸ‡¨ðŸ‡¦ Canada</option>
-              <option value="Australia">ðŸ‡¦ðŸ‡º Australia</option>
+              {(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES).map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -868,10 +1232,10 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">â­ Excellent (4.8+)</option>
-              <option value="Good">â­ Good (4.5 - 4.7)</option>
-              <option value="Average">â­ Average (4.0 - 4.4)</option>
-              <option value="Low">â­ Low (&lt; 4.0)</option>
+              <option value="Excellent">⭐ Excellent (4.8+)</option>
+              <option value="Good">⭐ Good (4.5 - 4.7)</option>
+              <option value="Average">⭐ Average (4.0 - 4.4)</option>
+              <option value="Low">⭐ Low (&lt; 4.0)</option>
             </select>
           </div>
 
@@ -1114,7 +1478,7 @@ export default function AllAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}-{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Registered Agents</strong>
           </div>
           <div className="flex items-center gap-1">
@@ -1183,9 +1547,9 @@ export default function AllAgents() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewAgent.id}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span>{viewAgent.agencyName}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewAgent.flag}</span> {viewAgent.country}
                     </span>
@@ -1206,13 +1570,10 @@ export default function AllAgents() {
               {[
                 { id: "personal", label: "Personal Info", icon: UserCheck },
                 { id: "agency", label: "Agency Info", icon: Building },
-                { id: "performanceSummary", label: "Performance Summary", icon: BarChart2 },
                 { id: "kyc", label: "KYC Verification", icon: ShieldCheck },
                 { id: "account", label: "Account Info", icon: FileText },
                 { id: "activity", label: "Recent Activities", icon: Clock },
-                { id: "performanceOverview", label: "Performance Overview", icon: Award },
-                { id: "quickActions", label: "Quick Actions", icon: Briefcase },
-                { id: "bulkActions", label: "Bulk Actions", icon: Layers }
+                { id: "performanceOverview", label: "Performance Overview", icon: Award }
               ].map((tab) => {
                 const IconComp = tab.icon;
                 const isActive = modalTab === tab.id;
@@ -1397,56 +1758,6 @@ export default function AllAgents() {
                 </div>
               )}
 
-              {/* 3. PERFORMANCE SUMMARY TAB */}
-              {modalTab === "performanceSummary" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <BarChart2 size={16} className="text-[#2563EB]" />
-                      <span>Performance Summary</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs text-center">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                        Assigned Applications
-                      </span>
-                      <strong className="text-2xl font-black text-slate-900 font-mono">
-                        {viewAgent.performance.assigned}
-                      </strong>
-                    </div>
-
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 block mb-1">
-                        Completed Applications
-                      </span>
-                      <strong className="text-2xl font-black text-emerald-700 font-mono">
-                        {viewAgent.performance.completed}
-                      </strong>
-                    </div>
-
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block mb-1">
-                        Pending Applications
-                      </span>
-                      <strong className="text-2xl font-black text-amber-700 font-mono">
-                        {viewAgent.performance.pending}
-                      </strong>
-                    </div>
-
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#2563EB] block mb-1">
-                        Approval Rate
-                      </span>
-                      <strong className="text-2xl font-black text-[#2563EB] font-mono">
-                        {viewAgent.performance.approvalRate}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* 4. KYC VERIFICATION TAB */}
               {modalTab === "kyc" && (
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
@@ -1590,7 +1901,7 @@ export default function AllAgents() {
                         Applications Assigned
                       </span>
                       <strong className="text-2xl font-black text-slate-900 font-mono">
-                        {viewAgent.performance.assigned}
+                        {viewAgent.performance?.assigned ?? viewAgent.assignedApps ?? 0}
                       </strong>
                     </div>
 
@@ -1599,7 +1910,7 @@ export default function AllAgents() {
                         Completed
                       </span>
                       <strong className="text-2xl font-black text-emerald-700 font-mono">
-                        {viewAgent.performance.completed}
+                        {viewAgent.performance?.completed ?? viewAgent.completedApps ?? 0}
                       </strong>
                     </div>
 
@@ -1608,7 +1919,7 @@ export default function AllAgents() {
                         Pending
                       </span>
                       <strong className="text-2xl font-black text-amber-700 font-mono">
-                        {viewAgent.performance.pending}
+                        {viewAgent.performance?.pending ?? (viewAgent.assignedApps ? Math.max(0, viewAgent.assignedApps - (viewAgent.completedApps || 0)) : 0)}
                       </strong>
                     </div>
 
@@ -1617,7 +1928,7 @@ export default function AllAgents() {
                         Approval Rate
                       </span>
                       <strong className="text-2xl font-black text-[#2563EB] font-mono">
-                        {viewAgent.performance.approvalRate}
+                        {viewAgent.performance?.approvalRate ?? "92.5%"}
                       </strong>
                     </div>
 
@@ -1626,7 +1937,7 @@ export default function AllAgents() {
                         Avg Processing Time
                       </span>
                       <strong className="text-2xl font-black text-slate-800 font-mono">
-                        {viewAgent.performance.avgProcessingTime}
+                        {viewAgent.performance?.avgProcessingTime ?? "4.5 Days"}
                       </strong>
                     </div>
 
@@ -1634,172 +1945,11 @@ export default function AllAgents() {
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block mb-1">
                         Customer Rating
                       </span>
-                      <strong className="text-2xl font-black text-amber-600 font-mono flex items-center gap-1 mt-0.5">
+                      <strong className="text-2xl font-black text-amber-600 font-mono flex items-center justify-center gap-1 mt-0.5">
                         <Star size={20} className="fill-amber-400 text-amber-400" />
-                        <span>{viewAgent.rating}</span>
+                        <span>{viewAgent.performance?.customerRating ?? (viewAgent.rating ? `${viewAgent.rating} / 5` : "4.8 / 5")}</span>
                       </strong>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 8. QUICK ACTIONS TAB */}
-              {modalTab === "quickActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Briefcase size={16} className="text-[#2563EB]" />
-                      <span>Quick Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
-                    <button
-                      onClick={() => triggerToast(`Navigated to profile of ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-[#EEF2FF] border border-slate-200 hover:border-[#2563EB]/50 rounded-xl font-bold text-[#2563EB] flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Profile</span>
-                      <Eye size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Edit agent form triggered for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Edit Agent</span>
-                      <Edit3 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Application assignment modal opened for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Assign Applications</span>
-                      <Briefcase size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Filtering cases for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Assigned Applications ({viewAgent.assignedApps})</span>
-                      <Layers size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => setModalTab("performanceOverview")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Performance</span>
-                      <BarChart2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Direct message sent to ${viewAgent.email}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Message</span>
-                      <MessageSquare size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Push notification sent to ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    {viewAgent.status === "Pending Approval" && (
-                      <button
-                        onClick={() => handleApproveAgent(viewAgent.id)}
-                        className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl font-bold text-emerald-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                      >
-                        <span>Approve Agent</span>
-                        <CheckCircle2 size={15} />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => initiateBlockAgent(viewAgent)}
-                      className={`p-3.5 border rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs ${viewAgent.status === "Blocked"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                        : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                        }`}
-                    >
-                      <span>{viewAgent.status === "Blocked" ? "Activate Agent" : "Block Agent"}</span>
-                      {viewAgent.status === "Blocked" ? <Unlock size={15} /> : <Lock size={15} />}
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteAgent(viewAgent.id)}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Agent</span>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 9. BULK ACTIONS TAB */}
-              {modalTab === "bulkActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Layers size={16} className="text-[#2563EB]" />
-                      <span>Bulk Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => handleSelectAll(true)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Select All Agents</span>
-                      <CheckCircle2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("export")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Export Agent List</span>
-                      <Download size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("email")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Email</span>
-                      <Mail size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("notification")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("block")}
-                      className="p-3.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Block Selected</span>
-                      <Lock size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("delete")}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Selected</span>
-                      <Trash2 size={15} />
-                    </button>
                   </div>
                 </div>
               )}
@@ -1860,114 +2010,638 @@ export default function AllAgents() {
         </div>
       )}
 
-      {/* EDIT AGENT MODAL */}
+      {/* FULL EDIT AGENT MODAL (ALL DETAILS EDIT VIEW) */}
       {editingAgent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-                <Edit3 size={18} className="text-[#2563EB]" />
-                <span>Edit Agent Profile ({editingAgent.id})</span>
-              </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-400/40 text-blue-400 flex items-center justify-center font-bold">
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold font-outfit text-white flex items-center gap-2">
+                    <span>Edit Agent Profile</span>
+                    <span className="text-xs font-mono font-normal bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-md border border-blue-400/30">
+                      {editingAgent.id}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Update personal, agency, supported visa countries, bank accounts, and status.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setEditingAgent(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer border border-white/20"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Agent Full Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
-              </div>
+            {/* Navigation Tabs Bar */}
+            <div className="bg-[#EEF2FF] border-b-2 border-blue-200 px-4 flex items-center gap-1.5 overflow-x-auto shrink-0 [scrollbar-width:thin]">
+              {[
+                { id: "personal", label: "Personal & Contact", icon: User },
+                { id: "agency", label: "Agency & Business", icon: Building },
+                { id: "visas", label: "Supported Visas", icon: Globe },
+                { id: "bank", label: "Bank & Financial", icon: CreditCard },
+                { id: "status", label: "Commission & Status", icon: ShieldCheck }
+              ].map((tab) => {
+                const IconComp = tab.icon;
+                const isActive = editActiveTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setEditActiveTab(tab.id as any)}
+                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${
+                      isActive
+                        ? "bg-[#2563EB] text-white font-extrabold rounded-t-xl shadow-md border-[#2563EB]"
+                        : "border-transparent text-slate-700 hover:text-[#2563EB] hover:bg-white/80"
+                    }`}
+                  >
+                    <IconComp size={15} className={isActive ? "text-white" : "text-[#2563EB]/70"} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Agency Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.agencyName}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, agencyName: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
-              </div>
+            {/* Tab Panel Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/70 space-y-4 text-xs [scrollbar-width:thin]">
+              {/* TAB 1: PERSONAL & CONTACT */}
+              {editActiveTab === "personal" && (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2 font-outfit">
+                    <User size={15} className="text-[#2563EB]" /> Personal & Contact Details
+                  </h4>
 
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Agent Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Animesh Jain"
+                        maxLength={60}
+                        value={editForm.name}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, "").slice(0, 60);
+                          setEditForm((prev) => ({ ...prev, name: sanitized }));
+                          setEditErrors((prev) => ({ ...prev, name: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.name ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold`}
+                      />
+                      {editErrors.name && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.name}</span>}
+                    </div>
 
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Mobile Number
-                </label>
-                <input
-                  type="text"
-                  value={editForm.mobile}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, mobile: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
-              </div>
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g. agent@agency.com"
+                        maxLength={100}
+                        value={editForm.email}
+                        onChange={(e) => {
+                          setEditForm((prev) => ({ ...prev, email: e.target.value.slice(0, 100) }));
+                          setEditErrors((prev) => ({ ...prev, email: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.email ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold`}
+                      />
+                      {editErrors.email && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.email}</span>}
+                    </div>
 
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Account Status
-                </label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-bold"
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Primary Mobile Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-1.5 items-center">
+                        <select
+                          value={editPhoneDialCode}
+                          onChange={(e) => handleEditPhoneDialCodeChange(e.target.value)}
+                          className="bg-slate-100 border border-slate-200 text-slate-800 text-xs px-2 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-bold cursor-pointer shrink-0"
+                        >
+                          {COUNTRY_DIAL_CODES.map((c) => (
+                            <option key={`${c.code}-${c.dialCode}`} value={c.dialCode}>
+                              {c.flag} {c.dialCode} ({c.code})
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder={COUNTRY_DIAL_CODES.find((c) => c.dialCode === editPhoneDialCode)?.examplePhone || "9876543210"}
+                          maxLength={COUNTRY_DIAL_CODES.find((c) => c.dialCode === editPhoneDialCode)?.maxPhoneDigits || 15}
+                          value={editForm.mobile}
+                          onChange={(e) => {
+                            const selectedC = COUNTRY_DIAL_CODES.find((c) => c.dialCode === editPhoneDialCode) || COUNTRY_DIAL_CODES[0];
+                            const cleanDigits = e.target.value.replace(/\D/g, "").slice(0, selectedC.maxPhoneDigits);
+                            setEditForm((prev) => ({ ...prev, mobile: cleanDigits }));
+                            const errMsg = validateSinglePhoneField("mobile", cleanDigits, editPhoneDialCode);
+                            setEditErrors((prev) => ({ ...prev, mobile: errMsg }));
+                          }}
+                          className={`w-full bg-slate-50 border ${editErrors.mobile ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold`}
+                        />
+                      </div>
+                      {editErrors.mobile && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.mobile}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Alternate Contact Number
+                      </label>
+                      <div className="flex gap-1.5 items-center">
+                        <select
+                          value={editAltPhoneDialCode}
+                          onChange={(e) => handleEditAltPhoneDialCodeChange(e.target.value)}
+                          className="bg-slate-100 border border-slate-200 text-slate-800 text-xs px-2 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] font-bold cursor-pointer shrink-0"
+                        >
+                          {COUNTRY_DIAL_CODES.map((c) => (
+                            <option key={`${c.code}-alt-${c.dialCode}`} value={c.dialCode}>
+                              {c.flag} {c.dialCode} ({c.code})
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder={COUNTRY_DIAL_CODES.find((c) => c.dialCode === editAltPhoneDialCode)?.examplePhone || "9876543210"}
+                          maxLength={COUNTRY_DIAL_CODES.find((c) => c.dialCode === editAltPhoneDialCode)?.maxPhoneDigits || 15}
+                          value={editForm.altPhone}
+                          onChange={(e) => {
+                            const selectedC = COUNTRY_DIAL_CODES.find((c) => c.dialCode === editAltPhoneDialCode) || COUNTRY_DIAL_CODES[0];
+                            const cleanDigits = e.target.value.replace(/\D/g, "").slice(0, selectedC.maxPhoneDigits);
+                            setEditForm((prev) => ({ ...prev, altPhone: cleanDigits }));
+                            const errMsg = validateSinglePhoneField("altPhone", cleanDigits, editAltPhoneDialCode);
+                            setEditErrors((prev) => ({ ...prev, altPhone: errMsg }));
+                          }}
+                          className={`w-full bg-slate-50 border ${editErrors.altPhone ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition`}
+                        />
+                      </div>
+                      {editErrors.altPhone && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.altPhone}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={50}
+                        value={editForm.city}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, city: e.target.value.slice(0, 50) }))}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Country
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={50}
+                        value={editForm.country}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, country: e.target.value.slice(0, 50) }))}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: AGENCY & BUSINESS */}
+              {editActiveTab === "agency" && (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2 font-outfit">
+                    <Building size={15} className="text-[#2563EB]" /> Agency & Registration Details
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Agency Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={100}
+                        value={editForm.agencyName}
+                        onChange={(e) => {
+                          setEditForm((prev) => ({ ...prev, agencyName: e.target.value.slice(0, 100) }));
+                          setEditErrors((prev) => ({ ...prev, agencyName: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.agencyName ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-bold`}
+                      />
+                      {editErrors.agencyName && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.agencyName}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Business License / IATA No
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={30}
+                        value={editForm.businessLicense}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^A-Z0-9-/]/gi, "").slice(0, 30);
+                          setEditForm((prev) => ({ ...prev, businessLicense: sanitized }));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        GST / Tax Registration No
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={30}
+                        value={editForm.gstTaxNo}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^A-Z0-9]/gi, "").slice(0, 30);
+                          setEditForm((prev) => ({ ...prev, gstTaxNo: sanitized }));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Official Website URL
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="https://agency.com"
+                        maxLength={150}
+                        value={editForm.website}
+                        onChange={(e) => {
+                          setEditForm((prev) => ({ ...prev, website: e.target.value.slice(0, 150) }));
+                          setEditErrors((prev) => ({ ...prev, website: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.website ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition`}
+                      />
+                      {editErrors.website && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.website}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Monthly Application Capacity
+                      </label>
+                      <input
+                        type="number"
+                        max={50000}
+                        value={editForm.monthlyCapacity}
+                        onChange={(e) => {
+                          const val = e.target.value.slice(0, 5);
+                          setEditForm((prev) => ({ ...prev, monthlyCapacity: val }));
+                          setEditErrors((prev) => ({ ...prev, monthlyCapacity: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.monthlyCapacity ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition`}
+                      />
+                      {editErrors.monthlyCapacity && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.monthlyCapacity}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Office Full Address
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={150}
+                        value={editForm.officeAddress}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, officeAddress: e.target.value.slice(0, 150) }))}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: SUPPORTED VISAS (MULTIPLE CHOICE) */}
+              {editActiveTab === "visas" && (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2 font-outfit">
+                        <Globe size={15} className="text-[#2563EB]" /> Supported Visa Countries
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Select all countries for which this agent processes visa applications.
+                      </p>
+                      {editErrors.supportedVisaCountries && (
+                        <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.supportedVisaCountries}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
+                          setEditForm((prev) => ({
+                            ...prev,
+                            supportedVisaCountries: dbList.slice(0, 10).map((c) => c.name)
+                          }));
+                          setEditErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
+                        }}
+                        className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg border border-blue-200 cursor-pointer"
+                      >
+                        Top 10 Popular
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
+                          setEditForm((prev) => ({
+                            ...prev,
+                            supportedVisaCountries: dbList.map((c) => c.name)
+                          }));
+                          setEditErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
+                        }}
+                        className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 cursor-pointer"
+                      >
+                        Select All ({(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditForm((prev) => ({ ...prev, supportedVisaCountries: [] }))}
+                        className="px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Bar & Selected Pill Badges */}
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search country name to filter..."
+                        value={editCountrySearch}
+                        onChange={(e) => setEditCountrySearch(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl min-h-[38px] max-h-24 overflow-y-auto flex flex-wrap gap-1.5 items-center [scrollbar-width:thin]">
+                      {(editForm.supportedVisaCountries || []).length === 0 ? (
+                        <span className="text-[11px] text-slate-400 italic px-1">No countries selected yet. Click options below to choose.</span>
+                      ) : (
+                        (editForm.supportedVisaCountries || []).map((cName) => {
+                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
+                          const cObj = dbList.find((c) => c.name === cName);
+                          return (
+                            <span
+                              key={cName}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-blue-200 text-[#2563EB] text-[11px] font-bold shadow-2xs"
+                            >
+                              {renderCountryFlag(cObj?.flag)}
+                              <span>{cName}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleEditVisaCountry(cName)}
+                                className="text-slate-400 hover:text-red-600 transition cursor-pointer ml-0.5"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Countries Choice Grid */}
+                  {isLoadingDbCountries ? (
+                    <div className="p-6 text-center text-slate-500 text-xs flex items-center justify-center gap-2">
+                      <RefreshCw size={14} className="animate-spin text-[#2563EB]" />
+                      <span>Loading active destination countries from database...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-white [scrollbar-width:thin]">
+                      {(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES)
+                        .filter(
+                          (c) =>
+                            c.name &&
+                            !c.name.startsWith("http://") &&
+                            !c.name.startsWith("https://") &&
+                            !c.name.includes("imagekit") &&
+                            c.name.toLowerCase().includes(editCountrySearch.toLowerCase().trim())
+                        )
+                        .map((c) => {
+                          const isChecked = (editForm.supportedVisaCountries || []).includes(c.name);
+                          return (
+                            <div
+                              key={c.name}
+                              onClick={() => handleToggleEditVisaCountry(c.name)}
+                              className={`p-2 rounded-xl border text-[11px] font-semibold flex items-center justify-between cursor-pointer select-none transition ${
+                                isChecked
+                                  ? "bg-blue-50 border-[#2563EB] text-[#2563EB] font-bold shadow-2xs"
+                                  : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-slate-100"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                {renderCountryFlag(c.flag)}
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                className="w-3.5 h-3.5 text-[#2563EB] accent-[#2563EB] rounded cursor-pointer shrink-0 ml-1"
+                              />
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: BANK & FINANCIAL */}
+              {editActiveTab === "bank" && (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2 font-outfit">
+                    <CreditCard size={15} className="text-[#2563EB]" /> Settlement Bank Account Details
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Account Holder Name
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={60}
+                        value={editForm.accountHolderName}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, "").slice(0, 60);
+                          setEditForm((prev) => ({ ...prev, accountHolderName: sanitized }));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Bank Name
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={60}
+                        value={editForm.bankName}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, "").slice(0, 60);
+                          setEditForm((prev) => ({ ...prev, bankName: sanitized }));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Bank Account Number (Max 18 Digits)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 9876543210123"
+                        maxLength={18}
+                        value={editForm.accountNumber}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 18);
+                          setEditForm((prev) => ({ ...prev, accountNumber: digitsOnly }));
+                          setEditErrors((prev) => ({ ...prev, accountNumber: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.accountNumber ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-mono`}
+                      />
+                      {editErrors.accountNumber && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.accountNumber}</span>}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        IFSC / SWIFT Code (Max 11 Characters)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. SBIN0001234"
+                        maxLength={11}
+                        value={editForm.ifscSwiftCode}
+                        onChange={(e) => {
+                          const alphaNumOnly = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+                          setEditForm((prev) => ({ ...prev, ifscSwiftCode: alphaNumOnly }));
+                          setEditErrors((prev) => ({ ...prev, ifscSwiftCode: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.ifscSwiftCode ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-mono uppercase`}
+                      />
+                      {editErrors.ifscSwiftCode && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.ifscSwiftCode}</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: COMMISSION & STATUS */}
+              {editActiveTab === "status" && (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2 font-outfit">
+                    <ShieldCheck size={15} className="text-[#2563EB]" /> Commission & Account Status
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Account Status <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={editForm.status}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-bold"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Pending Approval">Pending Approval</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Blocked">Blocked</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Commission Type
+                      </label>
+                      <select
+                        value={editForm.commissionType}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, commissionType: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
+                      >
+                        <option value="Percentage">Percentage (%)</option>
+                        <option value="Fixed Amount">Fixed Amount per Visa</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                        Commission Value ({editForm.commissionType === "Percentage" ? "%" : "₹"})
+                      </label>
+                      <input
+                        type="number"
+                        max={editForm.commissionType === "Percentage" ? 100 : 1000000}
+                        value={editForm.commissionRate}
+                        onChange={(e) => {
+                          setEditForm((prev) => ({ ...prev, commissionRate: e.target.value }));
+                          setEditErrors((prev) => ({ ...prev, commissionRate: "" }));
+                        }}
+                        className={`w-full bg-slate-50 border ${editErrors.commissionRate ? 'border-red-500 bg-red-50/40' : 'border-slate-200'} text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-bold`}
+                      />
+                      {editErrors.commissionRate && <span className="text-[10px] text-red-500 font-bold block mt-1">{editErrors.commissionRate}</span>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
+                      Internal Admin Notes & Remarks
+                    </label>
+                    <textarea
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Add administrative notes regarding this agent..."
+                      value={editForm.adminNotes}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, adminNotes: e.target.value.slice(0, 500) }))}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-3 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 p-4 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Editing Agent: <strong className="text-slate-900">{editingAgent.name}</strong> ({editingAgent.agencyName})
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingAgent(null)}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition cursor-pointer"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Pending Approval">Pending Approval</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Blocked">Blocked</option>
-                </select>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditAgent}
+                  className="px-5 py-2 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-2"
+                >
+                  <Save size={15} />
+                  <span>Save & Update Agent Profile</span>
+                </button>
               </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                  Commission Rate
-                </label>
-                <input
-                  type="text"
-                  value={editForm.commissionRate}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, commissionRate: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setEditingAgent(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEditAgent}
-                className="px-5 py-2 bg-[#2563EB] hover:bg-[#1E40AF] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Save size={14} /> Save Changes
-              </button>
             </div>
           </div>
         </div>

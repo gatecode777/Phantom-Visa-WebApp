@@ -128,14 +128,8 @@ const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
     approvalDate: "01 Aug 2026",
     approvalTime: "10:30 AM",
     visaIssueDate: "01 Aug 2026",
-    visaExpiryDate: "31 Jul 2036",
-    visaValidity: "10 Years Multiple Entry",
-    issuanceType: "E-Visa",
-    dispatchStatus: "Delivered",
-    courierPartner: "BlueDart Express",
-    waybillNumber: "BD-99881122",
-    dispatchDate: "02 Aug 2026",
-    status: "Visa Issued",
+    visaStatus: "Visa Issued",
+    status: "Approved",
     amountPaid: "₹12,350",
     transactionId: "TXN-9988112",
     dob: "1994-08-12",
@@ -255,14 +249,8 @@ const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
     approvalDate: "30 Jul 2026",
     approvalTime: "02:00 PM",
     visaIssueDate: "30 Jul 2026",
-    visaExpiryDate: "29 Oct 2026",
-    visaValidity: "90 Days Validity",
-    issuanceType: "E-Visa",
-    dispatchStatus: "Ready for Dispatch",
-    courierPartner: "VFS Courier",
-    waybillNumber: "VFS-55112233",
-    dispatchDate: "04 Aug 2026",
-    status: "Visa Issued",
+    visaStatus: "Completed",
+    status: "Approved",
     amountPaid: "₹8,670",
     transactionId: "TXN-5511223",
     dob: "1988-06-25",
@@ -523,8 +511,8 @@ export default function ApprovedApplicationsManagement() {
             <div className="space-y-1.5 text-[11px] text-slate-700 font-medium">
               {APPROVAL_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono border border-emerald-200">
-                    {idx + 1}
+                  <div className="w-5 h-5 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-[10px] shrink-0">
+                    ▼
                   </div>
                   <span className="font-semibold text-slate-800">{step}</span>
                 </div>
@@ -748,24 +736,24 @@ export default function ApprovedApplicationsManagement() {
                         <Download size={12} /> E-Visa PDF
                       </button>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-xs">
-                      {a.dispatchStatus === "Delivered" ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
-                          <CheckCircle2 size={11} /> Delivered
+                    <td className="py-3.5 px-4 font-mono font-bold">
+                      {a.visaStatus === "Visa Issued" ? (
+                        <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded text-[10px] border border-purple-200">
+                          🟢 Visa Issued
                         </span>
                       ) : a.dispatchStatus === "Dispatched / In Transit" ? (
                         <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">
                           <Truck size={11} /> In Transit
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">
-                          <Clock size={11} /> {a.dispatchStatus}
+                        <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[10px] border border-blue-200">
+                          📋 Ready for Issue
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                        <CheckCircle2 size={11} /> Approved
+                        🟢 Approved
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -812,7 +800,7 @@ export default function ApprovedApplicationsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1 to 10 of 5,240 Approved Grants</div>
+          <div>Showing 1-10 of 1,856 Approved Applications</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

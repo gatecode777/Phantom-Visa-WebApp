@@ -587,7 +587,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
           </div>
         </div>
 
-        {/* Card 2: Active Applicants â€” click to filter */}
+        {/* Card 2: Active Applicants — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Active" ? "All" : "Active")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
@@ -603,11 +603,11 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{activeApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold mt-2">
             <CheckCircle2 size={13} />
-            <span>{statusFilter === "Active" ? "Showing active only âœ“" : `${activeRatio}% Active Ratio â€” Click to filter`}</span>
+            <span>{statusFilter === "Active" ? "Showing active only ✓" : `${activeRatio}% Active Ratio — Click to filter`}</span>
           </div>
         </div>
 
-        {/* Card 3: Inactive Applicants â€” click to filter */}
+        {/* Card 3: Inactive Applicants — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Inactive" ? "All" : "Inactive")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
@@ -623,11 +623,11 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{inactiveApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold mt-2">
             <Clock size={13} />
-            <span>{statusFilter === "Inactive" ? "Showing inactive only âœ“" : "Click to filter inactive"}</span>
+            <span>{statusFilter === "Inactive" ? "Showing inactive only ✓" : "Click to filter inactive"}</span>
           </div>
         </div>
 
-        {/* Card 4: Blocked Applicants â€” click to filter */}
+        {/* Card 4: Blocked Applicants — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Blocked" ? "All" : "Blocked")}
           className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
@@ -643,7 +643,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
           <h3 className="text-2xl font-black text-slate-900 mt-3 font-mono">{blockedApplicantsCount}</h3>
           <div className="flex items-center gap-1.5 text-[11px] text-red-600 font-semibold mt-2">
             <ShieldAlert size={13} />
-            <span>{statusFilter === "Blocked" ? "Showing blocked only âœ“" : (blockedApplicantsCount > 0 ? "Click to filter blocked" : "No Blocked Users")}</span>
+            <span>{statusFilter === "Blocked" ? "Showing blocked only ✓" : (blockedApplicantsCount > 0 ? "Click to filter blocked" : "No Blocked Users")}</span>
           </div>
         </div>
       </div>
@@ -965,7 +965,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
               <span>Showing <strong className="text-slate-900 font-mono">0</strong> Applicants</span>
             ) : (
               <span>
-                Showing <strong className="text-slate-900 font-mono">{startIndex + 1}â€“{endIndex}</strong> of{" "}
+                Showing <strong className="text-slate-900 font-mono">{startIndex + 1}-{endIndex}</strong> of{" "}
                 <strong className="text-slate-900 font-mono">{totalItems}</strong> Applicants
               </span>
             )}
@@ -1051,9 +1051,9 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewApplicant.id}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span>{viewApplicant.email}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       <span>{viewApplicant.flag}</span> {viewApplicant.country}
                     </span>
@@ -1076,9 +1076,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                 { id: "visa", label: "Visa Information", icon: Globe },
                 { id: "documents", label: "Documents", icon: CheckCircle2 },
                 { id: "payments", label: "Payment Details", icon: CreditCard },
-                { id: "timeline", label: "Activity Timeline", icon: History },
-                { id: "quickActions", label: "Quick Actions", icon: Briefcase },
-                { id: "bulkActions", label: "Bulk Actions", icon: Users }
+                { id: "timeline", label: "Activity Timeline", icon: History }
               ].map((tab) => {
                 const IconComp = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1277,13 +1275,13 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Total Paid Amount</span>
                       <strong className="text-emerald-600 text-xl font-mono font-black">
-                        â‚¹{(viewApplicant.payments?.totalPaid || 45000).toLocaleString("en-IN")}
+                        ₹{(viewApplicant.payments?.totalPaid || 45000).toLocaleString("en-IN")}
                       </strong>
                     </div>
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Pending Balance</span>
                       <strong className="text-red-600 text-xl font-mono font-black">
-                        â‚¹{(viewApplicant.payments?.pendingAmount || 0).toLocaleString("en-IN")}
+                        ₹{(viewApplicant.payments?.pendingAmount || 0).toLocaleString("en-IN")}
                       </strong>
                     </div>
                   </div>
@@ -1296,11 +1294,11 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                           <div>
                             <p className="font-bold text-slate-800">{txn.desc}</p>
                             <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                              {txn.date} â€¢ via {txn.method}
+                              {txn.date} • via {txn.method}
                             </p>
                           </div>
                           <span className="font-mono font-bold text-emerald-600 text-sm">
-                            +â‚¹{txn.amount.toLocaleString("en-IN")}
+                            +₹{txn.amount.toLocaleString("en-IN")}
                           </span>
                         </div>
                       ))}
@@ -1339,134 +1337,6 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                         <p className="text-[11px] text-slate-500 font-mono mt-0.5">{item.time}</p>
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 6. QUICK ACTIONS TAB */}
-              {activeTab === "quickActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Briefcase size={16} className="text-[#2563EB]" />
-                      <span>Quick Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => triggerToast(`Navigated to full profile of ${viewApplicant.name}`)}
-                      className="p-3.5 bg-white hover:bg-[#EEF2FF] border border-slate-200 hover:border-[#2563EB]/50 rounded-xl font-bold text-[#2563EB] flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Full Profile</span>
-                      <ArrowUpRight size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Filtered applications for ${viewApplicant.name}`)}
-                      className="p-3.5 bg-white hover:bg-[#EEF2FF] border border-slate-200 hover:border-[#2563EB]/50 rounded-xl font-bold text-[#2563EB] flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>View Applications ({viewApplicant.totalApplications})</span>
-                      <ArrowUpRight size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Agent assignment dialog opened for ${viewApplicant.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Assign Senior Agent</span>
-                      <Briefcase size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Push notification sent to ${viewApplicant.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Direct Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBlockUser(viewApplicant.id)}
-                      className={`p-3.5 border rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs ${
-                        viewApplicant.status === "Blocked"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                      }`}
-                    >
-                      <span>{viewApplicant.status === "Blocked" ? "Activate User" : "Block User"}</span>
-                      {viewApplicant.status === "Blocked" ? <Unlock size={15} /> : <Lock size={15} />}
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteUser(viewApplicant.id)}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Account Record</span>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 7. BULK ACTIONS TAB */}
-              {activeTab === "bulkActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Users size={16} className="text-[#2563EB]" />
-                      <span>Bulk Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => handleSelectAll(true)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Select All Applicants</span>
-                      <CheckCircle2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("export")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Export Applicants</span>
-                      <Download size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("email")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Bulk Email</span>
-                      <Mail size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("notification")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Bulk Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("block")}
-                      className="p-3.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Block Selected</span>
-                      <Lock size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("delete")}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 rounded-xl font-bold flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Delete Selected</span>
-                      <Trash2 size={15} />
-                    </button>
                   </div>
                 </div>
               )}

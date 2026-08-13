@@ -78,11 +78,11 @@ export const VISA_TYPE_REPORT_FEATURES = [
 ];
 
 const MOCK_VISA_TYPE_PERFORMANCE: VisaTypePerformanceRow[] = [
-  { icon: "ðŸ§³", visaType: "Tourist Visa", applications: 7200, approved: 5148, rejected: 612, pending: 1440, revenue: "â‚¹1.12 Cr", approvalRate: "88.4%", avgProcessing: "6 Days" },
-  { icon: "ðŸ’¼", visaType: "Business Visa", applications: 4850, approved: 3950, rejected: 485, pending: 415, revenue: "â‚¹98.20 L", approvalRate: "91.5%", avgProcessing: "8 Days" },
-  { icon: "ðŸŽ“", visaType: "Student Visa", applications: 3940, approved: 2970, rejected: 360, pending: 610, revenue: "â‚¹1.15 Cr", approvalRate: "89.2%", avgProcessing: "14 Days" },
-  { icon: "ðŸ‘·", visaType: "Work Visa", applications: 1920, approved: 1480, rejected: 170, pending: 270, revenue: "â‚¹42.60 L", approvalRate: "87.8%", avgProcessing: "18 Days" },
-  { icon: "ðŸ¥", visaType: "Medical Visa", applications: 632, approved: 510, rejected: 32, pending: 90, revenue: "â‚¹16.40 L", approvalRate: "94.1%", avgProcessing: "4 Days" }
+  { icon: "🧳", visaType: "Tourist Visa", applications: 7200, approved: 5148, rejected: 612, pending: 1440, revenue: "₹1.12 Cr", approvalRate: "88.4%", avgProcessing: "6 Days" },
+  { icon: "💼", visaType: "Business Visa", applications: 4850, approved: 3950, rejected: 485, pending: 415, revenue: "₹98.20 L", approvalRate: "91.5%", avgProcessing: "8 Days" },
+  { icon: "🎓", visaType: "Student Visa", applications: 3940, approved: 2970, rejected: 360, pending: 610, revenue: "₹1.15 Cr", approvalRate: "89.2%", avgProcessing: "14 Days" },
+  { icon: "👷", visaType: "Work Visa", applications: 1920, approved: 1480, rejected: 170, pending: 270, revenue: "₹42.60 L", approvalRate: "87.8%", avgProcessing: "18 Days" },
+  { icon: "ðŸ¥", visaType: "Medical Visa", applications: 632, approved: 510, rejected: 32, pending: 90, revenue: "₹16.40 L", approvalRate: "94.1%", avgProcessing: "4 Days" }
 ];
 
 export default function VisaTypeReportsManagement() {
@@ -182,12 +182,12 @@ export default function VisaTypeReportsManagement() {
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-purple-600 block mb-1">Top Revenue</span>
           <div className="text-xl font-black text-slate-900 font-mono">Student</div>
-          <span className="text-[9px] text-purple-600 font-bold">â‚¹1.15 Cr</span>
+          <span className="text-[9px] text-purple-600 font-bold">₹1.15 Cr</span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-teal-600 block mb-1">Total Revenue</span>
-          <div className="text-xl font-black text-slate-900 font-mono">â‚¹3.84 Cr</div>
+          <div className="text-xl font-black text-slate-900 font-mono">₹3.84 Cr</div>
           <span className="text-[9px] text-teal-600 font-bold">Gross Earnings</span>
         </div>
 
@@ -337,7 +337,7 @@ export default function VisaTypeReportsManagement() {
               </div>
               <div className="flex justify-between items-center bg-purple-50/60 p-2 rounded-xl border border-purple-200">
                 <span>Highest Revenue:</span>
-                <strong className="font-bold text-slate-900">Student Visa (â‚¹1.15 Cr)</strong>
+                <strong className="font-bold text-slate-900">Student Visa (₹1.15 Cr)</strong>
               </div>
               <div className="flex justify-between items-center bg-emerald-50/60 p-2 rounded-xl border border-emerald-200">
                 <span>Highest Approval Rate:</span>
@@ -403,7 +403,7 @@ export default function VisaTypeReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {VISA_TYPE_REPORT_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
                   <span>{wf}</span>
                 </div>
               ))}

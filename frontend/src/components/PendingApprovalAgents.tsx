@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   Clock,
@@ -517,8 +517,8 @@ export default function PendingApprovalAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Statuses</option>
-              <option value="Pending">Pending Verification</option>
-              <option value="Under Review">ðŸŸ¡ Under Review</option>
+              <option value="Pending">🟡 Pending Verification</option>
+              <option value="Under Review">🟡 Under Review</option>
             </select>
           </div>
 
@@ -720,7 +720,7 @@ export default function PendingApprovalAgents() {
         {/* DYNAMIC PAGINATION FOOTER */}
         <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}â€“{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-900">{filteredAgents.length === 0 ? 0 : startIndex + 1}-{endIndex}</strong> of{" "}
             <strong className="text-slate-900">{filteredAgents.length} Pending Agent Requests</strong>
           </div>
           <div className="flex items-center gap-1">
@@ -925,9 +925,9 @@ export default function PendingApprovalAgents() {
                   </div>
                   <p className="text-xs text-blue-100 font-mono flex items-center gap-2 mt-1">
                     <span>{viewAgent.id}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span>{viewAgent.agencyName}</span>
-                    <span className="text-blue-300">â€¢</span>
+                    <span className="text-blue-300">•</span>
                     <span className="bg-white/10 px-2 py-0.5 rounded text-white font-sans font-semibold">
                       {viewAgent.agencyType}
                     </span>
@@ -950,9 +950,7 @@ export default function PendingApprovalAgents() {
                 { id: "agency", label: "Agency Information", icon: Building },
                 { id: "documents", label: "Submitted Documents", icon: FileText },
                 { id: "checklist", label: "Verification Checklist", icon: CheckCircle2 },
-                { id: "remarks", label: "Admin Remarks", icon: MessageSquare },
-                { id: "quickActions", label: "Quick Actions", icon: Clock },
-                { id: "bulkActions", label: "Bulk Actions", icon: Layers }
+                { id: "remarks", label: "Admin Remarks", icon: MessageSquare }
               ].map((tab) => {
                 const IconComp = tab.icon;
                 const isActive = modalTab === tab.id;
@@ -1146,7 +1144,7 @@ export default function PendingApprovalAgents() {
                           <div>
                             <span className="font-extrabold text-slate-800 block">{doc.name}</span>
                             <span className="text-[11px] text-slate-500 font-mono">
-                              PDF Document â€¢ {doc.size}
+                              PDF Document • {doc.size}
                             </span>
                           </div>
                         </div>
@@ -1261,114 +1259,6 @@ export default function PendingApprovalAgents() {
                         </button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 6. QUICK ACTIONS TAB */}
-              {modalTab === "quickActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Clock size={16} className="text-[#2563EB]" />
-                      <span>Quick Operational Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => setApproveAgentTarget(viewAgent)}
-                      className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl font-bold text-emerald-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Approve Agent</span>
-                      <CheckCircle2 size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => setRejectAgentTarget(viewAgent)}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-bold text-red-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Reject Application</span>
-                      <XCircle size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Request for additional docs sent to ${viewAgent.email}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Request Additional Documents</span>
-                      <FilePlus size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Email notification sent to ${viewAgent.email}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Email</span>
-                      <Mail size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => triggerToast(`Message prompt opened for ${viewAgent.name}`)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Message</span>
-                      <MessageSquare size={15} className="text-[#2563EB]" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 7. BULK ACTIONS TAB */}
-              {modalTab === "bulkActions" && (
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-wide flex items-center gap-2 font-outfit">
-                      <Layers size={16} className="text-[#2563EB]" />
-                      <span>Bulk Approval Actions</span>
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <button
-                      onClick={() => handleSelectAll(true)}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Select All Requests</span>
-                      <CheckCircle2 size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("approve")}
-                      className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl font-bold text-emerald-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Approve Selected</span>
-                      <CheckCircle2 size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("reject")}
-                      className="p-3.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-bold text-red-700 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Reject Selected</span>
-                      <XCircle size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("notification")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Send Notification</span>
-                      <Bell size={15} className="text-[#2563EB]" />
-                    </button>
-
-                    <button
-                      onClick={() => handleBulkAction("export")}
-                      className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 flex items-center justify-between transition cursor-pointer shadow-2xs"
-                    >
-                      <span>Export List</span>
-                      <Download size={15} className="text-[#2563EB]" />
-                    </button>
                   </div>
                 </div>
               )}

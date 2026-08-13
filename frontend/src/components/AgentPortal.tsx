@@ -1261,7 +1261,7 @@ export default function AgentPortal() {
                   const amt = parseFloat(topupAmount);
                   if (amt > 0) {
                     addFunds(amt);
-                    triggerToast(`Added â‚¹${formatINR(amt)} to agency wallet balance!`);
+                    triggerToast(`Added ₹${formatINR(amt)} to agency wallet balance!`);
                     setShowAddFundsModal(false);
                   }
                 }}

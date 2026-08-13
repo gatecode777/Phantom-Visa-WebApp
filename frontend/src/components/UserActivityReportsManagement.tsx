@@ -390,9 +390,9 @@ export default function UserActivityReportsManagement() {
                     <td className="py-2 font-mono text-[11px] text-slate-500">{log.ipAddress}</td>
                     <td className="py-2 text-center font-bold">
                       {log.status === "Success" ? (
-                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">ðŸŸ¢ Success</span>
+                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">🟢 Success</span>
                       ) : (
-                        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">ðŸ”´ Failed</span>
+                        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">🔴 Failed</span>
                       )}
                     </td>
                   </tr>
@@ -414,7 +414,7 @@ export default function UserActivityReportsManagement() {
             <div className="space-y-1 text-slate-700">
               {USER_ACTIVITY_WORKFLOW.map((wf, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">â–¼</span>
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
                   <span>{wf}</span>
                 </div>
               ))}

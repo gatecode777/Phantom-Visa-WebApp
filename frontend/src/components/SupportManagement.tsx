@@ -230,7 +230,7 @@ export default function SupportManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Support Agents</span>
-          <div className="text-xl font-black text-slate-900 font-mono">16 Online ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">16 Online 🟢</div>
           <span className="text-[10px] text-emerald-600 font-bold">Active Staff</span>
         </div>
       </div>
@@ -344,7 +344,7 @@ export default function SupportManagement() {
                       <td className="py-2 text-center font-mono font-bold text-emerald-700">{a.resolvedCount}</td>
                       <td className="py-2 text-center font-mono font-bold text-purple-700">{a.csat}</td>
                       <td className="py-2 text-center font-mono text-[11px] text-slate-600">{a.avgTime}</td>
-                      <td className="py-2 text-right font-bold text-[10px] text-emerald-700">ðŸŸ¢ {a.status}</td>
+                      <td className="py-2 text-right font-bold text-[10px] text-emerald-700">🟢 {a.status}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -510,10 +510,10 @@ export default function SupportManagement() {
                   onChange={(e) => setPriority(e.target.value as any)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold"
                 >
-                  <option value="Urgent">ðŸ”´ Urgent</option>
-                  <option value="High">ðŸŸ  High</option>
-                  <option value="Medium">ðŸŸ¡ Medium</option>
-                  <option value="Low">ðŸŸ¢ Low</option>
+                  <option value="Urgent">🔴 Urgent</option>
+                  <option value="High">🟠 High</option>
+                  <option value="Medium">🟡 Medium</option>
+                  <option value="Low">🟢 Low</option>
                 </select>
               </div>
 

@@ -357,7 +357,7 @@ export default function InvoicesManagement() {
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Total Invoiced Amount</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">â‚¹2,98,45,000</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹2,98,45,000</div>
             <span className="text-[10px] text-purple-600 font-bold">Gross Invoiced</span>
           </div>
         </div>
@@ -374,7 +374,7 @@ export default function InvoicesManagement() {
               {INVOICE_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    â–¼
+                    ▼
                   </div>
                   <span>{step}</span>
                 </div>
@@ -589,7 +589,7 @@ export default function InvoicesManagement() {
                       {inv.agentName && <span className="block text-[10px] text-slate-400 font-normal">({inv.agentName})</span>}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-extrabold text-emerald-600">
-                      â‚¹{inv.invoiceAmount.toLocaleString()}
+                      ₹{inv.invoiceAmount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">
                       {inv.invoiceDate}
@@ -597,15 +597,15 @@ export default function InvoicesManagement() {
                     <td className="py-3.5 px-4">
                       {inv.status === "Paid" ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-200">
-                          Paid
+                          🟢 Paid
                         </span>
                       ) : inv.status === "Pending" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
-                          Pending
+                          🟡 Pending
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
-                          Cancelled
+                          🔴 Cancelled
                         </span>
                       )}
                     </td>
@@ -660,7 +660,7 @@ export default function InvoicesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 22,420 Invoices</div>
+          <div>Showing 1-10 of 22,420 Invoices</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -701,7 +701,7 @@ export default function InvoicesManagement() {
                       Tax Invoice {activeModalInvoice.invoiceNo}
                     </h3>
                     <span className="font-mono text-xs font-bold text-blue-300 bg-blue-900/50 px-2 py-0.5 rounded border border-blue-700">
-                      â‚¹{activeModalInvoice.invoiceAmount.toLocaleString()} ({activeModalInvoice.status.toUpperCase()})
+                      ₹{activeModalInvoice.invoiceAmount.toLocaleString()} ({activeModalInvoice.status.toUpperCase()})
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">Txn ID: <strong className="text-blue-300">{activeModalInvoice.txnId}</strong> &bull; Applicant: {activeModalInvoice.applicantName}</p>
@@ -773,23 +773,23 @@ export default function InvoicesManagement() {
                     <div className="space-y-2 text-xs font-medium text-slate-700">
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Visa Application Fee</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>Service Charge</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>CGST (9%)</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
                         <span>SGST (9%)</span>
-                        <span className="font-mono font-bold">â‚¹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
                         <span>Total Invoiced Amount</span>
-                        <span className="font-mono text-[#2563EB]">â‚¹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
+                        <span className="font-mono text-[#2563EB]">₹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

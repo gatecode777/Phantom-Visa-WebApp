@@ -15,7 +15,6 @@ import ApplicantCancelledApplications from "./ApplicantCancelledApplications";
 import ApplicantUploadDocuments from "./ApplicantUploadDocuments";
 import ApplicantMyDocuments from "./ApplicantMyDocuments";
 import ApplicantVerificationStatus from "./ApplicantVerificationStatus";
-import ApplicantMakePayment from "./ApplicantMakePayment";
 import ApplicantApplyVisa from "./ApplicantApplyVisa";
 import ApplicantPaymentHistory from "./ApplicantPaymentHistory";
 import ApplicantInvoices from "./ApplicantInvoices";
@@ -104,12 +103,12 @@ export default function CustomerPortal() {
     } catch { }
     return "vault";
   });
-  const [paymentSubTab, setPaymentSubTab] = useState<"checkout" | "history" | "invoices">(() => {
+  const [paymentSubTab, setPaymentSubTab] = useState<"history" | "invoices">(() => {
     try {
       const saved = localStorage.getItem("customer_active_subtab");
-      if (localStorage.getItem("customer_active_tab") === "payments" && saved) return saved as any;
+      if (localStorage.getItem("customer_active_tab") === "payments" && saved && saved !== "checkout") return saved as any;
     } catch { }
-    return "checkout";
+    return "history";
   });
   const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">(() => {
     try {
@@ -550,7 +549,6 @@ export default function CustomerPortal() {
               {openPayments && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
-                    { label: "Visa Fee Checkout", tab: "checkout" },
                     { label: "Payment History", tab: "history" },
                     { label: "Invoices & Receipts", tab: "invoices" }
                   ].map((sub) => (
@@ -1259,8 +1257,8 @@ export default function CustomerPortal() {
                   setAppFilter("Submitted");
                 }}
                 onNavigatePayment={() => {
-                  handleTabChange("payments", "make_payment");
-                  setPaymentSubTab("checkout");
+                  handleTabChange("payments", "history");
+                  setPaymentSubTab("history");
                 }}
               />
             )
@@ -1361,22 +1359,14 @@ export default function CustomerPortal() {
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
             <div>
-              {paymentSubTab === "checkout" ? (
-                <ApplicantMakePayment
-                  applications={applications}
-                  walletBalance={walletBalance}
-                  onNavigateSupport={() => setCustomerTab("support")}
-                />
-              ) : paymentSubTab === "invoices" ? (
+              {paymentSubTab === "invoices" ? (
                 <ApplicantInvoices
                   applications={applications}
-                  onNavigateMakePayment={() => setPaymentSubTab("checkout")}
                   onNavigateSupport={() => setCustomerTab("support")}
                 />
               ) : (
                 <ApplicantPaymentHistory
                   applications={applications}
-                  onNavigateMakePayment={() => setPaymentSubTab("checkout")}
                   onNavigateSupport={() => setCustomerTab("support")}
                 />
               )}
@@ -1466,7 +1456,7 @@ export default function CustomerPortal() {
                   onNavigateApply={() => handleTabChange("apply")}
                   onNavigateCheckout={() => {
                     handleTabChange("payments");
-                    setPaymentSubTab("checkout");
+                    setPaymentSubTab("history");
                   }}
                   onNavigateSupport={() => handleTabChange("support")}
                 />
@@ -1507,7 +1497,7 @@ export default function CustomerPortal() {
             <ApplicantSettings
               onNavigatePayments={() => {
                 handleTabChange("payments");
-                setPaymentSubTab("checkout");
+                setPaymentSubTab("history");
               }}
               onNavigateSupport={() => handleTabChange("support")}
             />

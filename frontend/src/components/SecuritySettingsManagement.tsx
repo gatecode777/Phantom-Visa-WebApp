@@ -157,7 +157,7 @@ export default function SecuritySettingsManagement() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">2FA Enforcement</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Active ðŸŸ¢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Active 🟢</div>
           <span className="text-[10px] text-blue-600 font-bold">Mandatory Admin</span>
         </div>
 
@@ -283,7 +283,7 @@ export default function SecuritySettingsManagement() {
                   onChange={(e) => setEnableIpWhitelist(e.target.value === "Active")}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-bold text-emerald-700"
                 >
-                  <option value="Active">Active ðŸŸ¢</option>
+                  <option value="Active">Active 🟢</option>
                   <option value="Disabled">Disabled</option>
                 </select>
               </div>

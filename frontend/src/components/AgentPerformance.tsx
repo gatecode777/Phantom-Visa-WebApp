@@ -327,7 +327,7 @@ export default function AgentPerformance() {
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 block mb-1">
             Satisfaction
           </span>
-          <div className="text-xl font-black text-amber-600 font-mono">â­ 4.8 / 5</div>
+          <div className="text-xl font-black text-amber-600 font-mono">⭐ 4.8 / 5</div>
         </div>
       </div>
 
@@ -371,10 +371,10 @@ export default function AgentPerformance() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] transition font-semibold"
             >
               <option value="All">All Tiers</option>
-              <option value="Excellent">â­â­â­â­â­ Excellent (&gt;90%)</option>
-              <option value="Good">â­â­â­â­ Good (85-90%)</option>
-              <option value="Average">â­â­â­ Average (75-85%)</option>
-              <option value="Low">â­â­ Low (&lt;75%)</option>
+              <option value="Excellent">⭐⭐⭐⭐⭐ Excellent (&gt;90%)</option>
+              <option value="Good">⭐⭐⭐⭐ Good (85-90%)</option>
+              <option value="Average">⭐⭐⭐ Average (75-85%)</option>
+              <option value="Low">⭐⭐ Low (&lt;75%)</option>
             </select>
           </div>
 
@@ -544,7 +544,7 @@ export default function AgentPerformance() {
                       {rec.avgProcTime}
                     </td>
                     <td className="py-3.5 px-4 text-center font-bold text-amber-600 font-mono">
-                      â­ {rec.rating}
+                      ⭐ {rec.rating}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
@@ -580,7 +580,7 @@ export default function AgentPerformance() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1â€“10 of 245 Agents</div>
+          <div>Showing 1-10 of 245 Agents</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
@@ -655,7 +655,7 @@ export default function AgentPerformance() {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between p-2 bg-amber-50 rounded-xl border border-amber-100">
               <span className="text-amber-700 font-medium">Average Rating:</span>
-              <strong className="text-amber-800 font-mono font-bold">â­ 4.8 / 5</strong>
+              <strong className="text-amber-800 font-mono font-bold">⭐ 4.8 / 5</strong>
             </div>
             <div className="flex justify-between p-2 bg-slate-50 rounded-xl border border-slate-100">
               <span className="text-slate-500 font-medium">Total Customer Reviews:</span>
@@ -718,7 +718,7 @@ export default function AgentPerformance() {
                 <span className="text-slate-500 text-xs font-mono">112 Completed Apps</span>
               </div>
             </div>
-            <span className="text-amber-600 font-black font-mono text-base">â­ 4.9</span>
+            <span className="text-amber-600 font-black font-mono text-base">⭐ 4.9</span>
           </div>
 
           <div className="bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
@@ -731,7 +731,7 @@ export default function AgentPerformance() {
                 <span className="text-slate-500 text-xs font-mono">87 Completed Apps</span>
               </div>
             </div>
-            <span className="text-slate-700 font-black font-mono text-base">â­ 4.8</span>
+            <span className="text-slate-700 font-black font-mono text-base">⭐ 4.8</span>
           </div>
 
           <div className="bg-gradient-to-br from-amber-50/30 to-amber-100/30 border border-amber-200/80 p-4 rounded-2xl flex items-center justify-between">
@@ -744,7 +744,7 @@ export default function AgentPerformance() {
                 <span className="text-slate-500 text-xs font-mono">69 Completed Apps</span>
               </div>
             </div>
-            <span className="text-amber-700 font-black font-mono text-base">â­ 4.5</span>
+            <span className="text-amber-700 font-black font-mono text-base">⭐ 4.5</span>
           </div>
         </div>
       </div>
@@ -865,7 +865,7 @@ export default function AgentPerformance() {
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-amber-500 font-extrabold uppercase block">Rating</span>
-                      <strong className="text-amber-500 text-lg font-mono font-black">â­ {activeRecord.rating}</strong>
+                      <strong className="text-amber-500 text-lg font-mono font-black">⭐ {activeRecord.rating}</strong>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Avg Speed</span>
@@ -951,7 +951,7 @@ export default function AgentPerformance() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px]">
-                            âœ“
+                            ✓
                           </div>
                           <span className="font-bold text-slate-900">{act.action}</span>
                         </div>
