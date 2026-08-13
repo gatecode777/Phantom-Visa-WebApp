@@ -58,11 +58,11 @@ export interface DocumentRecord {
   uploadDate: string;
   uploadDateTime: string;
   verificationStatus:
-    | "Verified"
-    | "Pending"
-    | "Rejected"
-    | "Expired"
-    | "Re-upload Requested";
+  | "Verified"
+  | "Pending"
+  | "Rejected"
+  | "Expired"
+  | "Re-upload Requested";
   verifiedBy?: string;
   verificationDate?: string;
   expiryDate?: string;
@@ -391,9 +391,8 @@ export default function AllDocumentsManagement() {
           {/* Card 1: Total Documents */}
           <div
             onClick={() => setStatusFilter("All")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{totalDocsCount}</div>
@@ -405,9 +404,8 @@ export default function AllDocumentsManagement() {
           {/* Card 2: Verified Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Verified" ? "All" : "Verified")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Verified" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Verified" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Verified Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{verifiedDocsCount}</div>
@@ -419,9 +417,8 @@ export default function AllDocumentsManagement() {
           {/* Card 3: Pending Verification */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Pending" ? "All" : "Pending")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Pending" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Pending" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Verification</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{pendingDocsCount}</div>
@@ -433,9 +430,8 @@ export default function AllDocumentsManagement() {
           {/* Card 4: Rejected Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Rejected" ? "All" : "Rejected")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Rejected" ? "border-red-500 ring-2 ring-red-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Rejected" ? "border-red-500 ring-2 ring-red-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{rejectedDocsCount}</div>
@@ -447,9 +443,8 @@ export default function AllDocumentsManagement() {
           {/* Card 5: Expired Documents */}
           <div
             onClick={() => setStatusFilter(statusFilter === "Expired" ? "All" : "Expired")}
-            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${
-              statusFilter === "Expired" ? "border-purple-500 ring-2 ring-purple-200" : "border-slate-200"
-            }`}
+            className={`bg-white border rounded-3xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer ${statusFilter === "Expired" ? "border-purple-500 ring-2 ring-purple-200" : "border-slate-200"
+              }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Expired Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{expiredDocsCount}</div>
@@ -738,11 +733,10 @@ export default function AllDocumentsManagement() {
                               <button
                                 onClick={() => handleVerifyDocument(d)}
                                 disabled={isDocVerified}
-                                className={`p-1.5 rounded-lg transition ${
-                                  isDocVerified
-                                    ? "text-emerald-300 opacity-40 cursor-not-allowed bg-emerald-50/50"
-                                    : "text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                                }`}
+                                className={`p-1.5 rounded-lg transition ${isDocVerified
+                                  ? "text-emerald-300 opacity-40 cursor-not-allowed bg-emerald-50/50"
+                                  : "text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                                  }`}
                                 title={isDocVerified ? "Already Verified ✓" : "Verify Document"}
                               >
                                 <CheckCircle2 size={15} />
@@ -750,11 +744,10 @@ export default function AllDocumentsManagement() {
                               <button
                                 onClick={() => handleRejectDocument(d)}
                                 disabled={isDocRejected}
-                                className={`p-1.5 rounded-lg transition ${
-                                  isDocRejected
-                                    ? "text-red-300 opacity-40 cursor-not-allowed bg-red-50/50"
-                                    : "text-red-600 hover:bg-red-50 cursor-pointer"
-                                }`}
+                                className={`p-1.5 rounded-lg transition ${isDocRejected
+                                  ? "text-red-300 opacity-40 cursor-not-allowed bg-red-50/50"
+                                  : "text-red-600 hover:bg-red-50 cursor-pointer"
+                                  }`}
                                 title={isDocRejected ? "Already Rejected ✕" : "Reject Document"}
                               >
                                 <XCircle size={15} />
@@ -850,11 +843,10 @@ export default function AllDocumentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>
@@ -1116,22 +1108,20 @@ export default function AllDocumentsManagement() {
                       <button
                         onClick={() => handleVerifyDocument(activeModalDoc)}
                         disabled={isModalDocVerified}
-                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${
-                          isModalDocVerified
-                            ? "bg-emerald-600/50 opacity-60 cursor-not-allowed shadow-none"
-                            : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer shadow-sm"
-                        }`}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${isModalDocVerified
+                          ? "bg-emerald-600/50 opacity-60 cursor-not-allowed shadow-none"
+                          : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer shadow-sm"
+                          }`}
                       >
                         <CheckCircle2 size={15} /> {isModalDocVerified ? "Verified ✓" : "Verify Document"}
                       </button>
                       <button
                         onClick={() => handleRejectDocument(activeModalDoc)}
                         disabled={isModalDocRejected}
-                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${
-                          isModalDocRejected
-                            ? "bg-red-600/50 opacity-60 cursor-not-allowed shadow-none"
-                            : "bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm"
-                        }`}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${isModalDocRejected
+                          ? "bg-red-600/50 opacity-60 cursor-not-allowed shadow-none"
+                          : "bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm"
+                          }`}
                       >
                         <XCircle size={15} /> {isModalDocRejected ? "Rejected ✕" : "Reject Document"}
                       </button>

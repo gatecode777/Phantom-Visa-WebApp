@@ -1,10 +1,41 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVisa, Application, VisaStatus, formatINR, AgentTab } from "../context/VisaContext";
 import MRZStrip from "./MRZStrip";
 import Logo from "./Logo";
+import AllApplicationsManagement from "./AllApplicationsManagement";
+import NewApplicationsManagement from "./NewApplicationsManagement";
+import AssignedApplicationsManagement from "./AssignedApplicationsManagement";
+import UnderReviewManagement from "./UnderReviewManagement";
+import ApprovedApplicationsManagement from "./ApprovedApplicationsManagement";
+import RejectedApplicationsManagement from "./RejectedApplicationsManagement";
+import CompletedApplicationsManagement from "./CompletedApplicationsManagement";
+import AllApplicants from "./AllApplicants";
+import ApplicantDetailsManagement from "./ApplicantDetailsManagement";
+import PendingVerificationManagement from "./PendingVerificationManagement";
+import VerifiedDocumentsManagement from "./VerifiedDocumentsManagement";
+import PendingDocumentsManagement from "./PendingDocumentsManagement";
+import PendingPaymentsManagement from "./PendingPaymentsManagement";
+import AllTransactionsManagement from "./AllTransactionsManagement";
+import InvoicesManagement from "./InvoicesManagement";
+import UpcomingAppointmentsManagement from "./UpcomingAppointmentsManagement";
+import MessagesManagement from "./MessagesManagement";
+import NotificationsManagement from "./NotificationsManagement";
+import DailyReportsManagement from "./DailyReportsManagement";
+import MonthlyReportsManagement from "./MonthlyReportsManagement";
+import PerformanceReportsManagement from "./PerformanceReportsManagement";
+import VisaTypeReportsManagement from "./VisaTypeReportsManagement";
+import RevenueReportsManagement from "./RevenueReportsManagement";
+import UserActivityReportsManagement from "./UserActivityReportsManagement";
+import GeneralSettingsManagement from "./GeneralSettingsManagement";
+import SecuritySettingsManagement from "./SecuritySettingsManagement";
+import PaymentGatewayManagement from "./PaymentGatewayManagement";
+import EmailConfigurationManagement from "./EmailConfigurationManagement";
+import SMSConfigurationManagement from "./SMSConfigurationManagement";
+import RolesPermissionsManagement from "./RolesPermissionsManagement";
+import SupportManagement from "./SupportManagement";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -96,8 +127,8 @@ export default function AgentPortal() {
   }, []);
 
   // Sub-tab filtering states
-  const [appFilter, setAppFilter] = useState<
-    "all" | "Draft" | "Submitted" | "Embassy Processing" | "Approved" | "Rejected" | "Docs Pending"
+  const [appSubTab, setAppSubTab] = useState<
+    "all" | "new" | "assigned" | "under_review" | "approved" | "rejected" | "completed"
   >("all");
   const [searchAppQuery, setSearchAppQuery] = useState("");
   const [applicantSubTab, setApplicantSubTab] = useState<"list" | "details">("list");
@@ -105,6 +136,7 @@ export default function AgentPortal() {
   const [docVerifSubTab, setDocVerifSubTab] = useState<"pending" | "verified" | "additional">("pending");
   const [paymentSubTab, setPaymentSubTab] = useState<"verification" | "transactions" | "invoices">("verification");
   const [reportSubTab, setReportSubTab] = useState<"daily" | "monthly" | "performance">("daily");
+  const [settingsSubTab, setSettingsSubTab] = useState<"security" | "general" | "payment_gateway" | "email" | "sms" | "roles">("security");
 
   // Modals & Toast
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
@@ -233,15 +265,6 @@ export default function AgentPortal() {
     { id: "APP-04", name: "Omrishi Sharma", nationality: "India", passport: "Z1182736", email: "omrishi@sharma.in", activeVisas: 1, lastApp: "VO-2026-1252" }
   ];
 
-  const filteredApps = applications.filter((a) => {
-    const matchesSearch =
-      a.id.toLowerCase().includes(searchAppQuery.toLowerCase()) ||
-      a.travelerName.toLowerCase().includes(searchAppQuery.toLowerCase()) ||
-      a.destination.toLowerCase().includes(searchAppQuery.toLowerCase());
-    if (appFilter === "all") return matchesSearch;
-    return matchesSearch && a.status === appFilter;
-  });
-
   return (
     <div className="flex h-screen bg-[#F8F9FD] text-slate-800 font-sans overflow-hidden">
       {/* Toast Notification */}
@@ -258,17 +281,7 @@ export default function AgentPortal() {
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full select-none z-20 shrink-0">
         {/* Top Branding Section in Sidebar */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Logo className="h-8 w-auto" />
-            <div className="leading-tight">
-              <span className="font-outfit font-extrabold text-sm text-indigo-950 block tracking-tight">
-                Phantom
-              </span>
-              <span className="text-[9px] text-slate-500 font-medium block">
-                FOREX MART PVT LTD
-              </span>
-            </div>
-          </div>
+          <Logo variant="header" />
         </div>
 
         {/* Scrollable Sidebar Nav Links */}
@@ -291,6 +304,7 @@ export default function AgentPortal() {
             <button
               onClick={() => {
                 toggleAccordion("visa_apps");
+                setAppSubTab("all");
                 handleTabChange("applications");
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
@@ -309,47 +323,61 @@ export default function AgentPortal() {
             {openAccordions["visa_apps"] && (
               <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
                 <button
-                  onClick={() => { setAppFilter("all"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center ${appFilter === "all" && agentTab === "applications" ? "text-purple-700 font-bold" : "hover:text-slate-900"}`}
+                  onClick={() => { setAppSubTab("all"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "all" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>All Applications</span>
                 </button>
                 <button
-                  onClick={() => { setAppFilter("Draft"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center ${appFilter === "Draft" && agentTab === "applications" ? "text-purple-700 font-bold" : "hover:text-slate-900"}`}
+                  onClick={() => { setAppSubTab("new"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "new" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>New Applications</span>
                   <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">12</span>
                 </button>
                 <button
-                  onClick={() => { setAppFilter("Submitted"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center ${appFilter === "Submitted" && agentTab === "applications" ? "text-purple-700 font-bold" : "hover:text-slate-900"}`}
+                  onClick={() => { setAppSubTab("assigned"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "assigned" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Assigned to Me</span>
                   <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">8</span>
                 </button>
                 <button
-                  onClick={() => { setAppFilter("Embassy Processing"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center ${appFilter === "Embassy Processing" && agentTab === "applications" ? "text-purple-700 font-bold" : "hover:text-slate-900"}`}
+                  onClick={() => { setAppSubTab("under_review"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "under_review" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Under Review</span>
                   <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">15</span>
                 </button>
                 <button
-                  onClick={() => { setAppFilter("Approved"); handleTabChange("applications"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  onClick={() => { setAppSubTab("approved"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "approved" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Approved</span>
                 </button>
                 <button
-                  onClick={() => { setAppFilter("Rejected"); handleTabChange("applications"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  onClick={() => { setAppSubTab("rejected"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "rejected" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Rejected</span>
                 </button>
                 <button
-                  onClick={() => handleTabChange("applications")}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  onClick={() => { setAppSubTab("completed"); handleTabChange("applications"); }}
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applications" && appSubTab === "completed" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Completed</span>
                 </button>
@@ -381,13 +409,17 @@ export default function AgentPortal() {
               <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
                 <button
                   onClick={() => { setApplicantSubTab("list"); handleTabChange("applicants"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applicants" && applicantSubTab === "list" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Applicant List</span>
                 </button>
                 <button
                   onClick={() => { setApplicantSubTab("details"); handleTabChange("applicants"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "applicants" && applicantSubTab === "details" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Applicant Details</span>
                 </button>
@@ -419,19 +451,25 @@ export default function AgentPortal() {
               <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
                 <button
                   onClick={() => { setDocVerifSubTab("pending"); handleTabChange("doc_verification"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "doc_verification" && docVerifSubTab === "pending" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Pending Verification</span>
                 </button>
                 <button
                   onClick={() => { setDocVerifSubTab("verified"); handleTabChange("doc_verification"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "doc_verification" && docVerifSubTab === "verified" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Verified Documents</span>
                 </button>
                 <button
                   onClick={() => { setDocVerifSubTab("additional"); handleTabChange("doc_verification"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "doc_verification" && docVerifSubTab === "additional" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Additional Requests</span>
                 </button>
@@ -463,19 +501,25 @@ export default function AgentPortal() {
               <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
                 <button
                   onClick={() => { setPaymentSubTab("verification"); handleTabChange("payments"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "payments" && paymentSubTab === "verification" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Payment Verification</span>
                 </button>
                 <button
                   onClick={() => { setPaymentSubTab("transactions"); handleTabChange("payments"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "payments" && paymentSubTab === "transactions" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Transactions</span>
                 </button>
                 <button
                   onClick={() => { setPaymentSubTab("invoices"); handleTabChange("payments"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "payments" && paymentSubTab === "invoices" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Invoices</span>
                 </button>
@@ -546,19 +590,25 @@ export default function AgentPortal() {
               <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
                 <button
                   onClick={() => { setReportSubTab("daily"); handleTabChange("reports"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "reports" && reportSubTab === "daily" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Daily Report</span>
                 </button>
                 <button
                   onClick={() => { setReportSubTab("monthly"); handleTabChange("reports"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "reports" && reportSubTab === "monthly" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Monthly Report</span>
                 </button>
                 <button
                   onClick={() => { setReportSubTab("performance"); handleTabChange("reports"); }}
-                  className="w-full text-left px-2 py-1.5 rounded hover:text-slate-900"
+                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                    agentTab === "reports" && reportSubTab === "performance" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
                   <span>Performance Report</span>
                 </button>
@@ -567,16 +617,77 @@ export default function AgentPortal() {
           </div>
 
           <div className="pt-2 border-t border-slate-100 space-y-1">
-            {/* Settings */}
-            <button
-              onClick={() => handleTabChange("settings")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                agentTab === "settings" ? "bg-purple-50 text-purple-700 font-bold" : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <Settings size={18} className={agentTab === "settings" ? "text-purple-600" : "text-slate-400"} />
-              <span>Settings</span>
-            </button>
+            {/* Settings Accordion */}
+            <div>
+              <button
+                onClick={() => {
+                  toggleAccordion("settings");
+                  handleTabChange("settings");
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
+                  agentTab === "settings" ? "bg-purple-50 text-purple-700 font-bold" : "hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings size={18} className={agentTab === "settings" ? "text-purple-600" : "text-slate-400"} />
+                  <span>Settings</span>
+                </div>
+                {openAccordions["settings"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+
+              {openAccordions["settings"] && (
+                <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
+                  <button
+                    onClick={() => { setSettingsSubTab("security"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "security" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Security Settings</span>
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSubTab("general"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "general" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>General Settings</span>
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSubTab("payment_gateway"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "payment_gateway" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Payment Gateway</span>
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSubTab("email"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "email" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Email Config</span>
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSubTab("sms"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "sms" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>SMS Config</span>
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSubTab("roles"); handleTabChange("settings"); }}
+                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
+                      agentTab === "settings" && settingsSubTab === "roles" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Roles & Permissions</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Support */}
             <button
@@ -749,7 +860,10 @@ export default function AgentPortal() {
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold text-sm text-slate-900">My Assigned Applications</h3>
                   <button
-                    onClick={() => handleTabChange("applications")}
+                    onClick={() => {
+                      setAppSubTab("assigned");
+                      handleTabChange("applications");
+                    }}
                     className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition"
                   >
                     View All
@@ -1030,71 +1144,92 @@ export default function AgentPortal() {
           {/* ============================================================ */}
           {agentTab === "applications" && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-200 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Visa Applications Directory</h2>
-                  <p className="text-xs text-slate-500">Track and process client visa files</p>
-                </div>
-                <button
-                  onClick={() => setAgentTab("wizard")}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 transition shadow-xs"
-                >
-                  <Plus size={14} /> New Application
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredApps.map((a) => (
-                  <div key={a.id} className="bg-white border border-slate-200 p-5 rounded-xl space-y-3 shadow-xs">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                          {a.id}
-                        </span>
-                        <h4 className="font-bold text-base mt-1 text-slate-900">{a.travelerName}</h4>
-                        <p className="text-xs text-slate-500">{a.destination} &bull; {a.visaType}</p>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
-                        a.status === "Approved" ? "bg-emerald-50 text-emerald-600" : a.status === "Rejected" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
-                      }`}>
-                        {a.status}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-600 space-y-1 border-t border-slate-100 pt-3">
-                      <div className="flex justify-between"><span>Passport:</span><span className="font-mono font-medium">{a.passportNumber}</span></div>
-                      <div className="flex justify-between"><span>Fee Charged:</span><span className="font-mono font-bold text-slate-900">₹{formatINR(a.fees)}</span></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {appSubTab === "all" && <AllApplicationsManagement />}
+              {appSubTab === "new" && <NewApplicationsManagement />}
+              {appSubTab === "assigned" && <AssignedApplicationsManagement />}
+              {appSubTab === "under_review" && <UnderReviewManagement />}
+              {appSubTab === "approved" && <ApprovedApplicationsManagement />}
+              {appSubTab === "rejected" && <RejectedApplicationsManagement />}
+              {appSubTab === "completed" && <CompletedApplicationsManagement />}
             </div>
           )}
 
           {agentTab === "applicants" && (
-            <div className="bg-white border border-slate-200 p-6 rounded-xl space-y-4">
-              <h3 className="font-bold text-base text-slate-900">Registered Applicants</h3>
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-purple-50 text-purple-900 font-semibold">
-                    <th className="p-3">Applicant ID</th>
-                    <th className="p-3">Full Name</th>
-                    <th className="p-3">Nationality</th>
-                    <th className="p-3">Passport #</th>
-                    <th className="p-3">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {applicantsList.map((app) => (
-                    <tr key={app.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-mono font-bold text-indigo-600">{app.id}</td>
-                      <td className="p-3 font-semibold text-slate-900">{app.name}</td>
-                      <td className="p-3 text-slate-600">{app.nationality}</td>
-                      <td className="p-3 font-mono text-slate-500">{app.passport}</td>
-                      <td className="p-3 text-slate-500">{app.email}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              {applicantSubTab === "list" && (
+                <AllApplicants
+                  onSelectApplicant={(app) => {
+                    setSelectedApplicant(app);
+                    setApplicantSubTab("details");
+                  }}
+                />
+              )}
+              {applicantSubTab === "details" && (
+                <ApplicantDetailsManagement
+                  selectedApplicant={selectedApplicant}
+                  onSelectApplicant={(app) => setSelectedApplicant(app)}
+                  onBackToList={() => setApplicantSubTab("list")}
+                />
+              )}
+            </div>
+          )}
+
+          {agentTab === "doc_verification" && (
+            <div className="space-y-6">
+              {docVerifSubTab === "pending" && <PendingVerificationManagement />}
+              {docVerifSubTab === "verified" && <VerifiedDocumentsManagement />}
+              {docVerifSubTab === "additional" && <PendingDocumentsManagement />}
+            </div>
+          )}
+
+          {agentTab === "payments" && (
+            <div className="space-y-6">
+              {paymentSubTab === "verification" && <PendingPaymentsManagement />}
+              {paymentSubTab === "transactions" && <AllTransactionsManagement />}
+              {paymentSubTab === "invoices" && <InvoicesManagement />}
+            </div>
+          )}
+
+          {agentTab === "appointments" && (
+            <div className="space-y-6">
+              <UpcomingAppointmentsManagement />
+            </div>
+          )}
+
+          {agentTab === "messages" && (
+            <div className="space-y-6">
+              <MessagesManagement />
+            </div>
+          )}
+
+          {agentTab === "notifications" && (
+            <div className="space-y-6">
+              <NotificationsManagement />
+            </div>
+          )}
+
+          {agentTab === "reports" && (
+            <div className="space-y-6">
+              {reportSubTab === "daily" && <DailyReportsManagement />}
+              {reportSubTab === "monthly" && <MonthlyReportsManagement />}
+              {reportSubTab === "performance" && <PerformanceReportsManagement />}
+            </div>
+          )}
+
+          {agentTab === "settings" && (
+            <div className="space-y-6">
+              {settingsSubTab === "security" && <SecuritySettingsManagement />}
+              {settingsSubTab === "general" && <GeneralSettingsManagement />}
+              {settingsSubTab === "payment_gateway" && <PaymentGatewayManagement />}
+              {settingsSubTab === "email" && <EmailConfigurationManagement />}
+              {settingsSubTab === "sms" && <SMSConfigurationManagement />}
+              {settingsSubTab === "roles" && <RolesPermissionsManagement />}
+            </div>
+          )}
+
+          {agentTab === "support" && (
+            <div className="space-y-6">
+              <SupportManagement />
             </div>
           )}
         </main>

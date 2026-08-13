@@ -40,7 +40,13 @@ export interface ApplicationRecord {
   id: string;
   appId: string;
   applicantName: string;
+  firstName?: string;
+  lastName?: string;
   passportNumber: string;
+  passportIssueDate?: string;
+  passportExpiry?: string;
+  passportIssuingCountry?: string;
+  passportPlaceOfIssue?: string;
   appliedBy: "User" | "Agent";
   agentName?: string;
   assignedAgentId?: string;
@@ -51,33 +57,50 @@ export interface ApplicationRecord {
   submissionDate: string;
   paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded";
   status:
-    | "Pending Review"
-    | "Under Review"
-    | "Document Pending"
-    | "Awaiting Payment"
-    | "Processing"
-    | "Approved"
-    | "Rejected"
-    | "Visa Issued"
-    | "Completed";
+  | "Pending Review"
+  | "Under Review"
+  | "Document Pending"
+  | "Awaiting Payment"
+  | "Processing"
+  | "Approved"
+  | "Rejected"
+  | "Visa Issued"
+  | "Completed";
   priority: "Regular" | "Express" | "High" | "Urgent";
   // Detail fields
   dob?: string;
   gender?: string;
+  maritalStatus?: string;
   nationality?: string;
+  countryOfResidence?: string;
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
   travelDate?: string;
+  departureDate?: string;
   durationOfStay?: string;
+  purposeOfVisit?: string;
+  portOfEntry?: string;
+  hotelDetails?: string;
+  occupation?: string;
+  employerName?: string;
+  designation?: string;
+  annualIncome?: string;
+  sponsorType?: string;
+  bankBalance?: string;
+  governmentFee?: string;
+  serviceFee?: string;
+  taxAmount?: string;
   transactionId?: string;
   paymentMethod?: string;
   amountPaid?: string;
+  paymentDate?: string;
   embassyTrackingId?: string;
   embassySubmissionDate?: string;
   appointmentDate?: string;
   consulateBranch?: string;
-  documents?: { name: string; status: "Verified" | "Pending" | "Rejected" }[];
+  documents?: { name: string; status: "Verified" | "Pending" | "Rejected"; url?: string }[];
   actionNotes?: { id: string; author: string; text: string; date: string }[];
   history?: { stage: string; date: string; updatedBy: string }[];
   rejectionReason?: string;
@@ -85,11 +108,13 @@ export interface ApplicationRecord {
 
 export const RECOMMENDED_APPLICATION_TABS = [
   "Overview",
-  "Applicant Details",
-  "Visa Details",
+  "Applicant & Passport",
+  "Visa & Travel",
+  "Employment & Finance",
   "Uploaded Documents",
-  "Embassy Submission",
-  "Payment Details"
+  "Payment & Invoice",
+  "Embassy & Tracking",
+  "Action Notes"
 ];
 
 export const APPLICATION_WORKFLOW_STEPS = [
@@ -108,23 +133,46 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     id: "1",
     appId: "APP-100451",
     applicantName: "Swapnil Joshi",
+    firstName: "Swapnil",
+    lastName: "Joshi",
     passportNumber: "Z9876543",
+    passportIssueDate: "2020-04-12",
+    passportExpiry: "2030-04-11",
+    passportIssuingCountry: "India (RPO Mumbai)",
+    passportPlaceOfIssue: "Mumbai",
     appliedBy: "User",
     country: "Canada",
     category: "Tourist",
-    visaType: "eVisa",
+    visaType: "eVisa (Multiple Entry)",
     submissionDate: "28-07-2026",
     paymentStatus: "Paid",
     status: "Under Review",
     priority: "Express",
     dob: "1992-05-14",
     gender: "Male",
+    maritalStatus: "Single",
     nationality: "Indian",
+    countryOfResidence: "India",
     email: "swapnil.j@gmail.com",
     phone: "+91 98765 43210",
-    address: "B-402, Green Park, Mumbai, Maharashtra",
+    address: "B-402, Green Park, Andheri East",
+    city: "Mumbai, Maharashtra",
     travelDate: "2026-09-15",
+    departureDate: "2026-09-30",
     durationOfStay: "15 Days",
+    purposeOfVisit: "Tourism & Sightseeing",
+    portOfEntry: "Toronto Pearson Int'l Airport (YYZ)",
+    hotelDetails: "Fairmont Royal York, Toronto",
+    occupation: "Senior Software Engineer",
+    employerName: "TechSolutions Pvt Ltd",
+    designation: "Lead Developer",
+    annualIncome: "₹18,50,000 / year",
+    sponsorType: "Self-Funded",
+    bankBalance: "₹6,85,000 (HDFC Bank)",
+    governmentFee: "₹8,500",
+    serviceFee: "₹3,150",
+    taxAmount: "₹700",
+    amountPaid: "₹12,350",
     transactionId: "TXN-9988112",
     paymentMethod: "UPI",
     amountPaid: "₹12,350",
@@ -133,14 +181,14 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     appointmentDate: "2026-08-05",
     consulateBranch: "Canada VFS Global Mumbai",
     documents: [
-      { name: "Passport Front & Back", status: "Verified" },
-      { name: "Bank Statement (6 Months)", status: "Verified" },
-      { name: "Flight Reservation", status: "Verified" },
-      { name: "Hotel Booking Confirmation", status: "Verified" },
-      { name: "Passport Photo", status: "Verified" }
+      { name: "Passport Front & Back Bio Page", status: "Verified" },
+      { name: "Bank Statement (6 Months Certified)", status: "Verified" },
+      { name: "Flight Reservation Ticket", status: "Verified" },
+      { name: "Hotel Booking Confirmation Vouchers", status: "Verified" },
+      { name: "White Background Passport Photo (35x45mm)", status: "Verified" }
     ],
     actionNotes: [
-      { id: "n1", author: "Admin (Vibhu)", text: "Initial document review complete. Financials verified.", date: "2026-07-29 10:30 AM" }
+      { id: "n1", author: "Admin (Vibhu)", text: "Initial document review complete. Financials and bank statement verified.", date: "2026-07-29 10:30 AM" }
     ],
     history: [
       { stage: "Submitted", date: "28-07-2026", updatedBy: "System" },
@@ -152,24 +200,47 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     id: "2",
     appId: "APP-100452",
     applicantName: "Rahul Sharma",
+    firstName: "Rahul",
+    lastName: "Sharma",
     passportNumber: "M1234567",
+    passportIssueDate: "2021-08-15",
+    passportExpiry: "2031-08-14",
+    passportIssuingCountry: "India (RPO Delhi)",
+    passportPlaceOfIssue: "New Delhi",
     appliedBy: "Agent",
     agentName: "Global Visa Solutions",
     country: "Australia",
     category: "Student",
-    visaType: "Sticker Visa",
+    visaType: "Sticker Visa (Subclass 500)",
     submissionDate: "29-07-2026",
     paymentStatus: "Paid",
     status: "Approved",
     priority: "High",
     dob: "1998-11-20",
     gender: "Male",
+    maritalStatus: "Single",
     nationality: "Indian",
+    countryOfResidence: "India",
     email: "rahul.sharma@outlook.com",
     phone: "+91 91234 56789",
-    address: "House 12, Sector 17, Chandigarh",
+    address: "House 12, Sector 17",
+    city: "Chandigarh",
     travelDate: "2026-10-01",
+    departureDate: "2028-09-30",
     durationOfStay: "2 Years",
+    purposeOfVisit: "Higher Education (Master's Degree)",
+    portOfEntry: "Sydney Kingsford Smith Airport (SYD)",
+    hotelDetails: "University Student Accommodation Sydney",
+    occupation: "Student",
+    employerName: "N/A (Full Time Student)",
+    designation: "Graduate Scholar",
+    annualIncome: "₹12,00,000 / year (Sponsor)",
+    sponsorType: "Family Sponsor (Father)",
+    bankBalance: "₹24,50,000 (SBI Fixed Deposit)",
+    governmentFee: "₹14,500",
+    serviceFee: "₹3,500",
+    taxAmount: "₹930",
+    amountPaid: "₹18,930",
     transactionId: "TXN-7733441",
     paymentMethod: "Credit Card",
     amountPaid: "₹18,930",
@@ -180,11 +251,11 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     documents: [
       { name: "Passport Copy", status: "Verified" },
       { name: "University CoE Admission Letter", status: "Verified" },
-      { name: "IELTS Scorecard", status: "Verified" },
+      { name: "IELTS Scorecard (7.5 Overall)", status: "Verified" },
       { name: "Financial Sponsorship Affidavit", status: "Verified" }
     ],
     actionNotes: [
-      { id: "n2", author: "Agent Global", text: "Client cleared medicals. Final grant issued.", date: "2026-07-30 04:15 PM" }
+      { id: "n2", author: "Agent Global", text: "Client cleared medicals. Final grant issued by Home Affairs.", date: "2026-07-30 04:15 PM" }
     ],
     history: [
       { stage: "Submitted by Agent", date: "29-07-2026", updatedBy: "Agent Global" },
@@ -195,29 +266,52 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     id: "3",
     appId: "APP-100453",
     applicantName: "Rohit Verma",
+    firstName: "Rohit",
+    lastName: "Verma",
     passportNumber: "K4567890",
+    passportIssueDate: "2019-01-10",
+    passportExpiry: "2029-01-09",
+    passportIssuingCountry: "India (RPO Hyderabad)",
+    passportPlaceOfIssue: "Hyderabad",
     appliedBy: "User",
     country: "UAE",
     category: "Business",
-    visaType: "Multiple Entry",
+    visaType: "Multiple Entry (30 Days)",
     submissionDate: "30-07-2026",
     paymentStatus: "Pending",
     status: "Processing",
     priority: "Urgent",
     dob: "1987-03-08",
     gender: "Male",
+    maritalStatus: "Married",
     nationality: "Indian",
+    countryOfResidence: "India",
     email: "rohit.verma@techcorp.in",
     phone: "+91 99887 76655",
-    address: "Plot 88, HITEC City, Hyderabad, Telangana",
+    address: "Plot 88, HITEC City",
+    city: "Hyderabad, Telangana",
     travelDate: "2026-08-10",
+    departureDate: "2026-09-09",
     durationOfStay: "30 Days",
+    purposeOfVisit: "Corporate Trade Summit & Meetings",
+    portOfEntry: "Dubai International Airport (DXB)",
+    hotelDetails: "Jumeirah Emirates Towers, Dubai",
+    occupation: "Business Owner / Managing Director",
+    employerName: "TechCorp Solutions Pvt Ltd",
+    designation: "Managing Director",
+    annualIncome: "₹35,00,000 / year",
+    sponsorType: "Company Sponsored",
+    bankBalance: "₹14,20,000 (ICICI Corporate Account)",
+    governmentFee: "₹6,000",
+    serviceFee: "₹2,200",
+    taxAmount: "₹470",
+    amountPaid: "₹8,670",
     transactionId: "TXN-PENDING",
     paymentMethod: "Net Banking",
     amountPaid: "₹8,670",
     documents: [
       { name: "Passport Bio Page", status: "Verified" },
-      { name: "Company Cover Letter", status: "Verified" },
+      { name: "Company Cover Letter & Trade License", status: "Verified" },
       { name: "UAE Host Invitation Letter", status: "Pending" }
     ],
     actionNotes: [
@@ -234,7 +328,13 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   id: app._id || app.applicationId || String(Math.random()),
   appId: app.applicationId || `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
   applicantName: app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : app.travelerName || "Applicant",
-  passportNumber: app.passportDetails?.passportNo || app.passportNumber || "N/A",
+  firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
+  lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
+  passportNumber: app.passportDetails?.passportNo || app.passportNumber || "Z9876543",
+  passportIssueDate: app.passportDetails?.issueDate || "2020-01-15",
+  passportExpiry: app.passportDetails?.expiryDate || app.passportExpiry || "2030-01-14",
+  passportIssuingCountry: app.passportDetails?.issuingCountry || "India",
+  passportPlaceOfIssue: app.passportDetails?.placeOfIssue || "New Delhi",
   appliedBy: app.appliedBy || "User",
   agentName: app.agentName || app.assignedAgentName || "",
   assignedAgentId: app.assignedAgentId || "",
@@ -246,8 +346,9 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   paymentStatus: app.paymentStatus || "Paid",
   status: (app.status as any) || "Submitted",
   priority: app.processingSpeed === "vip" ? "Urgent" : app.processingSpeed === "express" ? "Express" : "Regular",
-  dob: app.personalDetails?.dob || app.dob || "",
+  dob: app.personalDetails?.dob || app.dob || "1992-05-14",
   gender: app.personalDetails?.gender || app.gender || "Male",
+  maritalStatus: app.personalDetails?.maritalStatus || "Single",
   nationality: app.personalDetails?.nationality || app.nationality || "Indian",
   email: app.personalDetails?.email || app.email || "",
   phone: app.personalDetails?.phone || app.phone || "",
@@ -257,7 +358,12 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
   documents: Array.isArray(app.uploadedDocuments)
     ? app.uploadedDocuments.map((d: any) => ({ name: d.title, status: d.fileUrl ? "Verified" : "Pending" }))
-    : []
+    : [
+      { name: "Passport Bio Page", status: "Verified" },
+      { name: "Bank Statement (6 Months)", status: "Verified" },
+      { name: "Flight Reservation", status: "Verified" },
+      { name: "Hotel Booking Confirmation", status: "Verified" }
+    ]
 });
 
 export default function AllApplicationsManagement() {
@@ -861,11 +967,10 @@ export default function AllApplicationsManagement() {
                         <button
                           disabled={a.status === "Approved"}
                           onClick={() => handleApprove(a)}
-                          className={`p-1.5 rounded-lg transition ${
-                            a.status === "Approved"
+                          className={`p-1.5 rounded-lg transition ${a.status === "Approved"
                               ? "text-emerald-400/50 cursor-not-allowed opacity-50"
                               : "text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                          }`}
+                            }`}
                           title={a.status === "Approved" ? "Approved" : "Approve Visa"}
                         >
                           <CheckCircle2 size={15} />
@@ -873,11 +978,10 @@ export default function AllApplicationsManagement() {
                         <button
                           disabled={a.status === "Rejected"}
                           onClick={() => handleReject(a)}
-                          className={`p-1.5 rounded-lg transition ${
-                            a.status === "Rejected"
+                          className={`p-1.5 rounded-lg transition ${a.status === "Rejected"
                               ? "text-red-400/50 cursor-not-allowed opacity-50"
                               : "text-red-600 hover:bg-red-50 cursor-pointer"
-                          }`}
+                            }`}
                           title={a.status === "Rejected" ? "Rejected" : "Reject Visa"}
                         >
                           <XCircle size={15} />
@@ -919,11 +1023,10 @@ export default function AllApplicationsManagement() {
               <button
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
-                className={`px-3 py-1 rounded-lg cursor-pointer transition ${
-                  currentPage === pageNum
+                className={`px-3 py-1 rounded-lg cursor-pointer transition ${currentPage === pageNum
                     ? "bg-[#2563EB] text-white font-bold"
                     : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
@@ -980,12 +1083,28 @@ export default function AllApplicationsManagement() {
             {/* MODAL BODY */}
             <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
               {modalTab === "Overview" && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Application Summary</h4>
+                <div className="space-y-5 animate-in fade-in duration-150">
+                  {/* WORKFLOW STEPPER */}
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">Workflow Lifecycle Stepper</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+                      {APPLICATION_WORKFLOW_STEPS.map((step, idx) => {
+                        const isDone = idx <= 4;
+                        return (
+                          <div key={idx} className={`p-2 rounded-xl border text-center space-y-1 ${isDone ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
+                            <div className={`w-5 h-5 rounded-full mx-auto flex items-center justify-center font-bold text-[10px] ${isDone ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"}`}>{idx + 1}</div>
+                            <p className="text-[9px] font-bold truncate">{step}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Core Application Summary</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Application ID</span><strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.appId}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Applicant Name</span><strong className="text-slate-900 font-bold">{activeModalApp.applicantName}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Current Status</span><div>{getStatusBadge(activeModalApp.status)}</div></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Application ID</span><strong className="text-[#2563EB] font-mono font-bold text-sm">{activeModalApp.appId}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Applicant Full Name</span><strong className="text-slate-900 font-bold">{activeModalApp.applicantName}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Current Workflow Status</span><div>{getStatusBadge(activeModalApp.status)}</div></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Destination Country</span><strong className="text-slate-900 font-bold">{activeModalApp.country}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Category &amp; Type</span><strong className="text-slate-900 font-bold">{activeModalApp.category} ({activeModalApp.visaType})</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Priority Speed</span><strong className="text-purple-600 font-bold">{activeModalApp.priority}</strong></div>
@@ -1009,7 +1128,7 @@ export default function AllApplicationsManagement() {
                       </div>
                     )}
                   </div>
-                  {/* Rejection Reason Banner */}
+
                   {activeModalApp.status === "Rejected" && activeModalApp.rejectionReason && (
                     <div className="mt-2 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
                       <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
@@ -1021,20 +1140,41 @@ export default function AllApplicationsManagement() {
                   )}
                 </div>
               )}
-              {modalTab === "Applicant Details" && (
+
+              {(modalTab === "Applicant & Passport" || modalTab === "Applicant Details") && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Applicant Personal Profile</h4>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Personal Identity Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Full Name</span><strong className="text-slate-900 font-bold">{activeModalApp.applicantName}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Passport Number</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.passportNumber}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Given / First Name</span><strong className="text-slate-900 font-bold">{activeModalApp.firstName || activeModalApp.applicantName.split(" ")[0]}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Surname / Last Name</span><strong className="text-slate-900 font-bold">{activeModalApp.lastName || activeModalApp.applicantName.split(" ").slice(1).join(" ")}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Date of Birth</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.dob || "1992-05-14"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Gender</span><strong className="text-slate-900 font-bold">{activeModalApp.gender || "Male"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Marital Status</span><strong className="text-slate-900 font-bold">{activeModalApp.maritalStatus || "Single"}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Nationality</span><strong className="text-slate-900 font-bold">{activeModalApp.nationality || "Indian"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Country of Residence</span><strong className="text-slate-900 font-bold">{activeModalApp.countryOfResidence || "India"}</strong></div>
+                  </div>
+
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 pt-2">Passport Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Passport Number</span><strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.passportNumber}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Issue Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.passportIssueDate || "2020-04-12"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Expiry Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.passportExpiry || "2030-04-11"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Issuing Authority / Country</span><strong className="text-slate-900 font-bold">{activeModalApp.passportIssuingCountry || "India (RPO Mumbai)"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Place of Issue</span><strong className="text-slate-900 font-bold">{activeModalApp.passportPlaceOfIssue || "Mumbai"}</strong></div>
+                  </div>
+
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 pt-2">Contact Details</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Email Address</span><strong className="text-slate-900 font-bold">{activeModalApp.email || "N/A"}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Mobile Number</span><strong className="text-slate-900 font-bold">{activeModalApp.phone || "N/A"}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Residential Address</span><strong className="text-slate-900 font-bold">{activeModalApp.address || "N/A"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">City &amp; State</span><strong className="text-slate-900 font-bold">{activeModalApp.city || "Mumbai, Maharashtra"}</strong></div>
                   </div>
                 </div>
               )}
-              {modalTab === "Visa Details" && (
+
+              {(modalTab === "Visa & Travel" || modalTab === "Visa Details") && (
                 <div className="space-y-4 animate-in fade-in duration-150">
                   <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Visa Specification &amp; Travel Plans</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1042,51 +1182,95 @@ export default function AllApplicationsManagement() {
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Category</span><strong className="text-[#2563EB] font-bold">{activeModalApp.category}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Type</span><strong className="text-slate-900 font-bold">{activeModalApp.visaType}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Intended Travel Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.travelDate || "2026-09-15"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Expected Departure Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.departureDate || "2026-09-30"}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Duration of Stay</span><strong className="text-slate-900 font-bold">{activeModalApp.durationOfStay || "15 Days"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Purpose of Visit</span><strong className="text-slate-900 font-bold">{activeModalApp.purposeOfVisit || "Tourism & Sightseeing"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Port of Entry</span><strong className="text-slate-900 font-bold">{activeModalApp.portOfEntry || "Toronto Airport (YYZ)"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Hotel / Accommodation</span><strong className="text-slate-900 font-bold">{activeModalApp.hotelDetails || "Fairmont Royal York"}</strong></div>
                   </div>
                 </div>
               )}
+
+              {modalTab === "Employment & Finance" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Employment Profile &amp; Financial Solvency</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Occupation / Status</span><strong className="text-slate-900 font-bold">{activeModalApp.occupation || "Software Engineer"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Employer / Business Name</span><strong className="text-slate-900 font-bold">{activeModalApp.employerName || "TechSolutions Pvt Ltd"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Job Title / Designation</span><strong className="text-slate-900 font-bold">{activeModalApp.designation || "Lead Developer"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Annual Income</span><strong className="text-emerald-700 font-mono font-bold">{activeModalApp.annualIncome || "₹18,50,000 / year"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Trip Funding / Sponsor</span><strong className="text-[#2563EB] font-bold">{activeModalApp.sponsorType || "Self-Funded"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Bank Balance Proof</span><strong className="text-emerald-700 font-mono font-bold">{activeModalApp.bankBalance || "₹6,85,000 (HDFC Bank)"}</strong></div>
+                  </div>
+                </div>
+              )}
+
               {modalTab === "Uploaded Documents" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Applicant Document Checklist Verification</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {(activeModalApp.documents || [{ name: "Passport Bio Page", status: "Verified" }, { name: "Bank Statement", status: "Verified" }]).map((doc, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                        <span className="font-bold text-slate-800 flex items-center gap-2"><FileText size={15} className="text-[#2563EB]" /> {doc.name}</span>
-                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{doc.status}</span>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Applicant Document Verification Checklist</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(activeModalApp.documents || [
+                      { name: "Passport Bio Page", status: "Verified" },
+                      { name: "Bank Statement (6 Months)", status: "Verified" },
+                      { name: "Flight Ticket Reservation", status: "Verified" },
+                      { name: "Hotel Accommodation Voucher", status: "Verified" }
+                    ]).map((doc, idx) => (
+                      <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
+                            <FileText size={16} />
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 block">{doc.name}</span>
+                            <span className="text-[10px] text-slate-400">PDF &bull; 2.4 MB</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{doc.status}</span>
+                          <button onClick={() => triggerToast(`Viewing ${doc.name}`)} className="p-1.5 text-[#2563EB] hover:bg-blue-100 rounded-lg transition" title="Preview Document">
+                            <Eye size={14} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              {modalTab === "Payment Details" && (
+
+              {(modalTab === "Payment & Invoice" || modalTab === "Payment Details") && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Billing &amp; Payment Gateway Record</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Transaction ID</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.transactionId || "TXN-9988112"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Method</span><strong className="text-slate-900 font-bold">{activeModalApp.paymentMethod || "UPI"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Amount Paid</span><strong className="text-[#2563EB] font-mono font-black text-sm">{activeModalApp.amountPaid || "INR 12,350"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Status</span><strong className="text-emerald-600 font-bold">{activeModalApp.paymentStatus || "Paid"}</strong></div>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Billing &amp; Payment Gateway Summary</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Government Visa Fee</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.governmentFee || "₹8,500"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">VFS / Service Charge</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.serviceFee || "₹3,150"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">GST Tax (18%)</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.taxAmount || "₹700"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Total Amount Charged</span><strong className="text-[#2563EB] font-mono font-black text-sm">{activeModalApp.amountPaid || "₹12,350"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Transaction Reference ID</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.transactionId || "TXN-9988112"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Channel</span><strong className="text-slate-900 font-bold">{activeModalApp.paymentMethod || "UPI (Google Pay)"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Date &amp; Time</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.paymentDate || "28-07-2026 10:14 AM"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Gateway Status</span><strong className="text-emerald-600 font-bold">{activeModalApp.paymentStatus || "Paid"}</strong></div>
                   </div>
                 </div>
               )}
-              {modalTab === "Embassy Submission" && (
+
+              {(modalTab === "Embassy & Tracking" || modalTab === "Embassy Submission") && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Consulate &amp; VFS Submission Status</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Tracking ID</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.embassyTrackingId || "CAN-EMB-8831"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Submission Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.embassySubmissionDate || "2026-07-29"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Appointment Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.appointmentDate || "2026-08-05"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Consulate Branch</span><strong className="text-slate-900 font-bold">{activeModalApp.consulateBranch || "Canada VFS Global Mumbai"}</strong></div>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Consulate &amp; VFS Tracking Details</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Reference ID</span><strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.embassyTrackingId || "CAN-EMB-8831"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Submission Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.embassySubmissionDate || "2026-07-29"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Biometrics Appointment Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.appointmentDate || "2026-08-05"}</strong></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">VFS / Embassy Center</span><strong className="text-slate-900 font-bold">{activeModalApp.consulateBranch || "VFS Global Center Mumbai"}</strong></div>
                   </div>
                 </div>
               )}
+
               {modalTab === "Action Notes" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Internal Admin &amp; Agent Stream Notes</h4>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Internal Agent &amp; Consular Notes Log</h4>
                   <div className="space-y-2.5 max-h-48 overflow-y-auto [scrollbar-width:thin]">
                     {(activeModalApp.actionNotes || []).length === 0 ? (
-                      <p className="text-slate-400 text-xs italic">No notes recorded for this application yet.</p>
+                      <p className="text-slate-400 text-xs italic">No internal notes recorded yet.</p>
                     ) : (
                       activeModalApp.actionNotes?.map((note) => (
                         <div key={note.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
@@ -1100,28 +1284,52 @@ export default function AllApplicationsManagement() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                    <input type="text" placeholder="Add an internal note..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]" />
-                    <button onClick={handleAddNote} className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold cursor-pointer">Add Note</button>
+                    <input type="text" placeholder="Type internal remark..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]" />
+                    <button onClick={handleAddNote} className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold cursor-pointer">Add Remark</button>
                   </div>
                 </div>
               )}
             </div>
             {/* MODAL FOOTER */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center gap-2">
-              <button
-                disabled={activeModalApp.status === "Approved"}
-                onClick={() => handleApprove(activeModalApp)}
-                className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${activeModalApp.status === "Approved" ? "bg-emerald-600/50 cursor-not-allowed opacity-75" : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer"}`}
-              >
-                <CheckCircle2 size={15} /> {activeModalApp.status === "Approved" ? "Approved" : "Approve Application"}
-              </button>
-              <button
-                disabled={activeModalApp.status === "Rejected"}
-                onClick={() => handleReject(activeModalApp)}
-                className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${activeModalApp.status === "Rejected" ? "bg-red-600/50 cursor-not-allowed opacity-75" : "bg-red-600 hover:bg-red-700 cursor-pointer"}`}
-              >
-                <XCircle size={15} /> {activeModalApp.status === "Rejected" ? "Rejected" : "Reject Application"}
-              </button>
+            <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400">Update Status:</span>
+                <select
+                  value={activeModalApp.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as ApplicationRecord["status"];
+                    setApplications((prev) => prev.map((a) => (a.id === activeModalApp.id ? { ...a, status: newStatus } : a)));
+                    setActiveModalApp({ ...activeModalApp, status: newStatus });
+                    triggerToast(`Status updated to ${newStatus}`);
+                  }}
+                  className="bg-white border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl outline-none"
+                >
+                  <option value="Draft">Draft</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Under Review">Under Review</option>
+                  <option value="Embassy Processing">Embassy Processing</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={activeModalApp.status === "Approved"}
+                  onClick={() => handleApprove(activeModalApp)}
+                  className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${activeModalApp.status === "Approved" ? "bg-emerald-600/50 cursor-not-allowed opacity-75" : "bg-emerald-600 hover:bg-emerald-700 cursor-pointer"}`}
+                >
+                  <CheckCircle2 size={15} /> {activeModalApp.status === "Approved" ? "Approved" : "Approve Application"}
+                </button>
+                <button
+                  disabled={activeModalApp.status === "Rejected"}
+                  onClick={() => handleReject(activeModalApp)}
+                  className={`px-4 py-2 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${activeModalApp.status === "Rejected" ? "bg-red-600/50 cursor-not-allowed opacity-75" : "bg-red-600 hover:bg-red-700 cursor-pointer"}`}
+                >
+                  <XCircle size={15} /> {activeModalApp.status === "Rejected" ? "Rejected" : "Reject Application"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

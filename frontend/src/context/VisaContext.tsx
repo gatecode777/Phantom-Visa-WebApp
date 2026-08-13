@@ -31,6 +31,7 @@ export type VisaStatus =
 
 export interface Application {
   id: string;
+  applicationId?: string;
   travelerName: string;
   dob: string;
   passportNumber: string;
@@ -231,7 +232,16 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         return JSON.parse(saved);
       }
     } catch (e) {}
-    return null;
+    return {
+      token: "mock-agent-session-token",
+      user: {
+        id: "AGENT-001",
+        name: "Geeta Bisht",
+        email: "geeta.bisht@phantomvisa.com",
+        role: "Agent",
+        phone: "+919876543212"
+      }
+    };
   });
 
   const [currentRole, setCurrentRole] = useState<"Agent" | "Staff" | "Customer" | "Super Admin">(() => {
@@ -245,7 +255,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
           Staff: "Staff",
           Agent: "Agent"
         };
-        return roleMap[parsed.user?.role] || "Customer";
+        return roleMap[parsed.user?.role] || "Agent";
       }
     } catch (e) {}
     return "Agent";

@@ -47,14 +47,14 @@ export interface VerifiedDocumentRecord {
   applicantName: string;
   passportNumber: string;
   documentType:
-    | "Passport"
-    | "Passport Photograph"
-    | "Bank Statement"
-    | "Travel Insurance"
-    | "Medical Certificate"
-    | "Police Clearance Certificate (PCC)"
-    | "Invitation Letter"
-    | "Other";
+  | "Passport"
+  | "Passport Photograph"
+  | "Bank Statement"
+  | "Travel Insurance"
+  | "Medical Certificate"
+  | "Police Clearance Certificate (PCC)"
+  | "Invitation Letter"
+  | "Other";
   documentName: string;
   fileFormat: "PDF" | "JPG" | "PNG";
   fileSize: string;
@@ -651,11 +651,10 @@ export default function VerifiedDocumentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

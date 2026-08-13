@@ -48,6 +48,7 @@ export interface VaultDocItem {
   status: VaultDocStatus;
   size: string;
   fileName: string;
+  fileUrl?: string;
   format: string;
   updatedBy: string;
   notes?: string;

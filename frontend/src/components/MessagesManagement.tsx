@@ -341,11 +341,10 @@ export default function MessagesManagement() {
             <button
               key={tab}
               onClick={() => setActiveSubmenu(tab)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 shrink-0 ${
-                active
+              className={`px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 shrink-0 ${active
                   ? "bg-[#2563EB] text-white shadow-md"
                   : "bg-slate-50 text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-              }`}
+                }`}
             >
               <span>{tab}</span>
             </button>

@@ -641,9 +641,8 @@ export default function PendingApprovalAgents() {
                 paginatedAgents.map((agent) => (
                   <tr
                     key={agent.id}
-                    className={`hover:bg-blue-50/40 transition-colors ${
-                      selectedIds.includes(agent.id) ? "bg-blue-50/60" : ""
-                    }`}
+                    className={`hover:bg-blue-50/40 transition-colors ${selectedIds.includes(agent.id) ? "bg-blue-50/60" : ""
+                      }`}
                   >
                     <td className="py-3.5 px-4">
                       <input
@@ -736,11 +735,10 @@ export default function PendingApprovalAgents() {
               <button
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
-                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${
-                  currentPage === pageNum
+                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${currentPage === pageNum
                     ? "bg-[#2563EB] text-white"
                     : "border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
@@ -961,11 +959,10 @@ export default function PendingApprovalAgents() {
                   <button
                     key={tab.id}
                     onClick={() => setModalTab(tab.id as any)}
-                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${
-                      isActive
+                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${isActive
                         ? "bg-[#2563EB] text-white font-extrabold rounded-t-xl shadow-md border-[#2563EB]"
                         : "border-transparent text-slate-700 hover:text-[#2563EB] hover:bg-white/80"
-                    }`}
+                      }`}
                   >
                     <IconComp size={15} className={isActive ? "text-white" : "text-[#2563EB]/70"} />
                     <span>{tab.label}</span>
@@ -1201,11 +1198,10 @@ export default function PendingApprovalAgents() {
                       return (
                         <div
                           key={item.key}
-                          className={`p-3.5 rounded-xl border flex items-center justify-between font-bold ${
-                            isPassed
+                          className={`p-3.5 rounded-xl border flex items-center justify-between font-bold ${isPassed
                               ? "bg-emerald-50/70 border-emerald-200 text-emerald-800"
                               : "bg-amber-50/70 border-amber-200 text-amber-800"
-                          }`}
+                            }`}
                         >
                           <span className="flex items-center gap-2">
                             {isPassed ? (

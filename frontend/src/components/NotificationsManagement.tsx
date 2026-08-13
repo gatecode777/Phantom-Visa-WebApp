@@ -49,14 +49,14 @@ export interface NotificationRecord {
   userAddress: string;
   appId?: string;
   notificationType:
-    | "Application Submitted"
-    | "Document Verification"
-    | "Payment Successful"
-    | "Payment Failed"
-    | "Appointment Scheduled"
-    | "Visa Stamped"
-    | "Security Alert"
-    | "Announcement";
+  | "Application Submitted"
+  | "Document Verification"
+  | "Payment Successful"
+  | "Payment Failed"
+  | "Appointment Scheduled"
+  | "Visa Stamped"
+  | "Security Alert"
+  | "Announcement";
   channel: "Email" | "SMS" | "Push" | "System In-App";
   title: string;
   body: string;
@@ -650,11 +650,10 @@ export default function NotificationsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
-                        ? "bg-[#2563EB] text-white shadow-sm"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
+                      ? "bg-[#2563EB] text-white shadow-sm"
+                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

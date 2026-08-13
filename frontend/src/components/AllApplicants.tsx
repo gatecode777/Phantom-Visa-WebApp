@@ -75,7 +75,7 @@ export interface ApplicantRecord {
   timeline?: Array<{ title: string; time: string; completed: boolean }>;
 }
 
-const mockApplicants: ApplicantRecord[] = [
+export const mockApplicants: ApplicantRecord[] = [
   {
     id: "APP-1025",
     name: "Geeta Bisht",
@@ -293,7 +293,11 @@ const mockApplicants: ApplicantRecord[] = [
   }
 ];
 
-export default function AllApplicants() {
+interface AllApplicantsProps {
+  onSelectApplicant?: (applicant: ApplicantRecord) => void;
+}
+
+export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps = {}) {
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -906,6 +910,7 @@ export default function AllApplicants() {
                             onClick={() => {
                               setViewApplicant(app);
                               setActiveTab("personal");
+                              if (onSelectApplicant) onSelectApplicant(app);
                             }}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-[#EEF2FF] text-[#4848F7] border border-slate-200 transition cursor-pointer"
                             title="View Applicant Details"

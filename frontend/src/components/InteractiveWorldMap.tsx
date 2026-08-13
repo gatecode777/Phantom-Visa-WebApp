@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Application, VisaStatus } from "../context/VisaContext";
-import worldCountriesData from "./worldCountriesSvg.json";
+import rawWorldCountriesData from "./worldCountriesSvg.json";
+const worldCountriesData: any[] = (rawWorldCountriesData as any) || [];
 import {
   ZoomIn,
   ZoomOut,

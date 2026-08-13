@@ -526,7 +526,7 @@ export default function AllAgents() {
 
     const matchesStatus = statusFilter === "All" || a.status === statusFilter;
     const matchesCountry = countryFilter === "All" || a.country === countryFilter;
-    
+
     let matchesPerf = true;
     if (performanceFilter === "Excellent") matchesPerf = a.rating >= 4.8;
     else if (performanceFilter === "Good") matchesPerf = a.rating >= 4.5 && a.rating < 4.8;
@@ -1077,9 +1077,8 @@ export default function AllAgents() {
         {/* Card 1: Total Agents */}
         <div
           onClick={() => setStatusFilter("All")}
-          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
-            statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
-          }`}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "All" ? "border-[#2563EB] ring-2 ring-blue-200" : "border-slate-200"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Total Agents</span>
@@ -1097,9 +1096,8 @@ export default function AllAgents() {
         {/* Card 2: Active Agents — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Active" ? "All" : "Active")}
-          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
-            statusFilter === "Active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
-          }`}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Active Agents</span>
@@ -1117,9 +1115,8 @@ export default function AllAgents() {
         {/* Card 3: Inactive / Blocked Agents — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Inactive" ? "All" : "Inactive")}
-          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
-            statusFilter === "Inactive" ? "border-slate-500 ring-2 ring-slate-200" : "border-slate-200"
-          }`}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Inactive" ? "border-slate-500 ring-2 ring-slate-200" : "border-slate-200"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Inactive Agents</span>
@@ -1137,9 +1134,8 @@ export default function AllAgents() {
         {/* Card 4: Pending Approval — click to filter */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Pending Approval" ? "All" : "Pending Approval")}
-          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${
-            statusFilter === "Pending Approval" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
-          }`}
+          className={`bg-white border rounded-2xl p-5 shadow-2xs hover:shadow-md transition group cursor-pointer ${statusFilter === "Pending Approval" ? "border-amber-500 ring-2 ring-amber-200" : "border-slate-200"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Pending Approval</span>
@@ -1357,9 +1353,8 @@ export default function AllAgents() {
                 paginatedAgents.map((agent) => (
                   <tr
                     key={agent.id}
-                    className={`hover:bg-blue-50/40 transition-colors ${
-                      selectedIds.includes(agent.id) ? "bg-blue-50/60" : ""
-                    }`}
+                    className={`hover:bg-blue-50/40 transition-colors ${selectedIds.includes(agent.id) ? "bg-blue-50/60" : ""
+                      }`}
                   >
                     <td className="py-3.5 px-4">
                       <input
@@ -1404,26 +1399,24 @@ export default function AllAgents() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border inline-flex items-center gap-1.5 ${
-                          agent.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : agent.status === "Pending Approval"
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border inline-flex items-center gap-1.5 ${agent.status === "Active"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : agent.status === "Pending Approval"
                             ? "bg-amber-50 text-amber-700 border-amber-200"
                             : agent.status === "Blocked"
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-slate-100 text-slate-700 border-slate-200"
-                        }`}
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-slate-100 text-slate-700 border-slate-200"
+                          }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            agent.status === "Active"
-                              ? "bg-emerald-500"
-                              : agent.status === "Pending Approval"
+                          className={`w-1.5 h-1.5 rounded-full ${agent.status === "Active"
+                            ? "bg-emerald-500"
+                            : agent.status === "Pending Approval"
                               ? "bg-amber-500 animate-ping"
                               : agent.status === "Blocked"
-                              ? "bg-red-500"
-                              : "bg-slate-400"
-                          }`}
+                                ? "bg-red-500"
+                                : "bg-slate-400"
+                            }`}
                         />
                         {agent.status}
                       </span>
@@ -1459,11 +1452,10 @@ export default function AllAgents() {
                         <button
                           onClick={() => initiateBlockAgent(agent)}
                           title={agent.status === "Blocked" ? "Activate Agent" : "Block Agent"}
-                          className={`p-1.5 rounded-lg transition cursor-pointer ${
-                            agent.status === "Blocked"
-                              ? "hover:bg-emerald-100 text-emerald-600"
-                              : "hover:bg-amber-100 text-amber-600"
-                          }`}
+                          className={`p-1.5 rounded-lg transition cursor-pointer ${agent.status === "Blocked"
+                            ? "hover:bg-emerald-100 text-emerald-600"
+                            : "hover:bg-amber-100 text-amber-600"
+                            }`}
                         >
                           {agent.status === "Blocked" ? <Unlock size={15} /> : <Lock size={15} />}
                         </button>
@@ -1501,11 +1493,10 @@ export default function AllAgents() {
               <button
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
-                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${
-                  currentPage === pageNum
-                    ? "bg-[#2563EB] text-white"
-                    : "border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
-                }`}
+                className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer ${currentPage === pageNum
+                  ? "bg-[#2563EB] text-white"
+                  : "border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold"
+                  }`}
               >
                 {pageNum}
               </button>
@@ -1544,13 +1535,12 @@ export default function AllAgents() {
                       {viewAgent.name}
                     </h2>
                     <span
-                      className={`px-3 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
-                        viewAgent.status === "Active"
-                          ? "bg-emerald-500/20 text-white border-white/30"
-                          : viewAgent.status === "Pending Approval"
+                      className={`px-3 py-0.5 rounded-full text-[10px] font-bold font-mono border ${viewAgent.status === "Active"
+                        ? "bg-emerald-500/20 text-white border-white/30"
+                        : viewAgent.status === "Pending Approval"
                           ? "bg-amber-500/30 text-white border-white/30"
                           : "bg-slate-500/30 text-white border-white/30"
-                      }`}
+                        }`}
                     >
                       {viewAgent.status}
                     </span>
@@ -1592,11 +1582,10 @@ export default function AllAgents() {
                   <button
                     key={tab.id}
                     onClick={() => setModalTab(tab.id as any)}
-                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${
-                      isActive
-                        ? "bg-[#2563EB] text-white font-extrabold rounded-t-xl shadow-md border-[#2563EB]"
-                        : "border-transparent text-slate-700 hover:text-[#2563EB] hover:bg-white/80"
-                    }`}
+                    className={`py-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-all duration-200 whitespace-nowrap cursor-pointer -mb-[2px] ${isActive
+                      ? "bg-[#2563EB] text-white font-extrabold rounded-t-xl shadow-md border-[#2563EB]"
+                      : "border-transparent text-slate-700 hover:text-[#2563EB] hover:bg-white/80"
+                      }`}
                   >
                     <IconComp size={15} className={isActive ? "text-white" : "text-[#2563EB]/70"} />
                     <span>{tab.label}</span>
@@ -1792,11 +1781,10 @@ export default function AllAgents() {
                     ].map((item, idx) => (
                       <div
                         key={idx}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between font-bold ${
-                          item.verified
-                            ? "bg-emerald-50/70 border-emerald-200 text-emerald-800"
-                            : "bg-amber-50/70 border-amber-200 text-amber-800"
-                        }`}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between font-bold ${item.verified
+                          ? "bg-emerald-50/70 border-emerald-200 text-emerald-800"
+                          : "bg-amber-50/70 border-amber-200 text-amber-800"
+                          }`}
                       >
                         <span className="flex items-center gap-2">
                           {item.verified ? (

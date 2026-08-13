@@ -51,11 +51,11 @@ export interface PendingPaymentRecord {
   pendingSince: string;
   pendingSinceTime: string;
   pendingReason:
-    | "Awaiting Payment"
-    | "Gateway Processing"
-    | "Bank Verification"
-    | "Manual Verification"
-    | "Payment Timeout";
+  | "Awaiting Payment"
+  | "Gateway Processing"
+  | "Bank Verification"
+  | "Manual Verification"
+  | "Payment Timeout";
   status: "Pending" | "Confirmed" | "Failed";
   country: string;
   visaCategory: "Tourist" | "Business" | "Student" | "Work" | "Medical" | "Transit";
@@ -702,11 +702,10 @@ export default function PendingPaymentsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
                         ? "bg-[#2563EB] text-white shadow-sm"
                         : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>

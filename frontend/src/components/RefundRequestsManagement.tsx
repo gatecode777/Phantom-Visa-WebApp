@@ -50,16 +50,16 @@ export interface RefundRequestRecord {
   originalAmount: number;
   refundMethod: "UPI" | "Credit Card" | "Debit Card" | "Net Banking" | "Wallet" | "Bank Transfer";
   refundReason:
-    | "Application Cancelled"
-    | "Visa Rejected"
-    | "Duplicate Payment"
-    | "Overpayment"
-    | "Embassy Fee Revision"
-    | "Service Delay"
-    | "Technical Error"
-    | "Travel Plan Cancelled"
-    | "Incorrect Category"
-    | "Other";
+  | "Application Cancelled"
+  | "Visa Rejected"
+  | "Duplicate Payment"
+  | "Overpayment"
+  | "Embassy Fee Revision"
+  | "Service Delay"
+  | "Technical Error"
+  | "Travel Plan Cancelled"
+  | "Incorrect Category"
+  | "Other";
   requestDate: string;
   requestDateTime: string;
   status: "Pending Approval" | "Approved" | "Processed" | "Rejected" | "Not Eligible";
@@ -699,11 +699,10 @@ export default function RefundRequestsManagement() {
                   <button
                     key={tab}
                     onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                      active
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
                         ? "bg-[#2563EB] text-white shadow-sm"
                         : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                    }`}
+                      }`}
                   >
                     <span>{tab}</span>
                   </button>
