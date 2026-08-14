@@ -580,6 +580,18 @@ router.post("/verify-visa-document", (req: Request, res: Response, next) => {
       return res.status(500).json({ success: false, verificationStatus: "error", message: "AI verification not configured." });
     }
 
+    // Gemini inline vision accepts a limited set of image encodings. Never
+    // relabel an unsupported format as PNG: that prevents the model from
+    // inspecting the actual bytes and previously triggered a fail-open path.
+    const supportedVisionMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+    if (!supportedVisionMimeTypes.has(file.mimetype)) {
+      return res.status(200).json({
+        success: false,
+        verificationStatus: "wrong_type",
+        message: "Use a JPEG, PNG, WEBP, or PDF file. This file format cannot be securely verified."
+      });
+    }
+
     // Pre-checks: classify the EXPECTED document type from its title
     const docName = (documentTitle || documentType || "visa document").toLowerCase();
     const fileNameLower = (file.originalname || "").toLowerCase();
@@ -623,12 +635,7 @@ router.post("/verify-visa-document", (req: Request, res: Response, next) => {
     }
 
     const base64Data = fileBuffer.toString("base64");
-    let mimeType = file.mimetype || "image/jpeg";
-    const isPdf = mimeType === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
-    // Gemini inlineData needs image/* or application/pdf
-    if (!mimeType.startsWith("image/") && mimeType !== "application/pdf") {
-      mimeType = "image/png";
-    }
+    const mimeType = file.mimetype;
 
     // ──── Build Gemini prompt based on expected document type ─────────────────
     let expectedTypes = "";
@@ -636,7 +643,7 @@ router.post("/verify-visa-document", (req: Request, res: Response, next) => {
 
     if (isPhotoDoc) {
       expectedTypes = `"Passport Photograph" | "Passport Photo" | "Portrait Photo" | "Headshot"`;
-      checkInstruction = `Check if this is a clear passport-size photograph or studio portrait showing a REAL HUMAN face. Accept genuine human passport-style portraits, headshots, or studio photos. REJECT anime drawings, manga art, cartoons, wallpapers, logos, graphic designs, icons, avatars, screenshots, utility bills, electricity bills, bank statements, or unrelated files.`;
+      checkInstruction = `Accept ONLY a clear passport-style photograph of exactly one REAL HUMAN face. The face must be the main subject, visible, front-facing or near-front-facing, and not obscured. REJECT food, objects, animals, scenery, documents, collages, screenshots, selfies with multiple people, anime drawings, cartoons, avatars, logos, graphic designs, and unrelated files.`;
     } else if (isPassportDoc) {
       expectedTypes = `"Passport" | "Passport Bio Page" | "Passport Booklet"`;
       checkInstruction = `Check if this is a genuine international travel passport booklet or bio-data page showing a photo, full name, passport number, nationality, date of birth, issue date, and expiry date. REJECT anime images, drawings, wallpapers, logos, graphic designs, screenshots, utility bills, electricity bills, invoices, loose photos, driving licences, Aadhaar/PAN cards, or unrelated files.`;
@@ -671,11 +678,15 @@ Carefully examine the uploaded document image and answer:
 1. Is the image clear, readable, and not blurry/cropped/dark?
 2. What type of document is this ACTUALLY? Be specific (e.g. "Hotel Booking Invoice", "Hotel Reservation Confirmation", "Passport Bio Page", "Bank Statement", "Electricity Bill", "Flight E-Ticket", "Anime Drawing", "Logo Image", "Unknown", etc.)
 3. Does this document MATCH the expected slot "${documentTitle}"? Consider semantic equivalents — a "Hotel Booking Invoice" IS a valid "Hotel Booking" document.
+4. For a passport photograph, is there exactly one real human face as the main subject? Do not infer this from filename or context.
 
 Respond STRICTLY with valid JSON (no markdown, no extra text):
 {
   "isReadable": true,
   "isCorrectDocumentType": true,
+  "hasSingleRealHumanFace": false,
+  "isScreenshotOrUi": false,
+  "isIllustrationOrSynthetic": false,
   "detectedDocumentName": "exact name of what this document actually is",
   "confidence": 95,
   "reasoning": "one-sentence explanation of why it matches or why it is rejected"
@@ -716,33 +727,13 @@ Respond STRICTLY with valid JSON (no markdown, no extra text):
       if (!geminiJson && attempt < 3) await new Promise((r) => setTimeout(r, 1000));
     }
 
-    // ──── Fallback: AI unavailable — use conservative filename-based accept ──
+    // ──── Fail closed when AI is unavailable ─────────────────────────────────
     if (!geminiJson) {
-      console.warn("⚠️ All Gemini models unavailable — using fallback heuristic.");
-
-      // Reject obvious junk even in fallback
-      if (isGraphicLogoOrIcon || isScreenshotFile || isElectricityBillFile) {
-        const rejectType = isGraphicLogoOrIcon ? "graphic/logo image" : isScreenshotFile ? "screenshot" : "utility bill";
-        return res.status(200).json({
-          success: false,
-          verificationStatus: "wrong_type",
-          message: `Uploaded file appears to be a ${rejectType}, not a valid ${documentTitle || "document"}.`
-        });
-      }
-
-      // Require PDF for bank statements in fallback
-      if (isBankDoc && !isPdf && !fileNameLower.includes("bank") && !fileNameLower.includes("statement")) {
-        return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: "Uploaded file does not appear to be a Bank Statement." });
-      }
-
-      // Accept everything else in fallback (AI is down)
-      return res.status(200).json({
-        success: true,
-        verificationStatus: "verified",
-        documentType: documentTitle || documentType || "Uploaded Document",
-        detectedDocumentName: documentTitle || "Uploaded Scan",
-        confidence: 85,
-        message: `✓ Document accepted: ${documentTitle || "Uploaded Scan"} (AI service temporarily unavailable)`
+      console.warn("⚠️ All Gemini models unavailable; document left unverified.");
+      return res.status(503).json({
+        success: false,
+        verificationStatus: "error",
+        message: "AI verification is temporarily unavailable. Your document was not accepted; please retry shortly."
       });
     }
 
@@ -775,7 +766,8 @@ Respond STRICTLY with valid JSON (no markdown, no extra text):
     const isDetectedUtilityBill    = (detectedLower.includes("electricity") || detectedLower.includes("gas bill") || detectedLower.includes("water bill") || detectedLower.includes("utility bill") || detectedLower.includes("power bill")) && !detectedLower.includes("hotel") && !detectedLower.includes("flight") && !detectedLower.includes("booking");
 
     // Start with AI's own verdict
-    let isAccepted = parsed.isCorrectDocumentType !== false;
+    const confidence = Number(parsed.confidence);
+    let isAccepted = parsed.isCorrectDocumentType === true && Number.isFinite(confidence) && confidence >= 85;
 
     // Override: reject if clearly wrong category
     if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
@@ -784,11 +776,7 @@ Respond STRICTLY with valid JSON (no markdown, no extra text):
 
     // ──── Per-slot semantic acceptance rules ──────────────────────────────────
     if (isPhotoDoc) {
-      if (isDetectedAnimeOrCartoon || isDetectedLogoOrIcon || isDetectedScreenshot || isDetectedUtilityBill) {
-        isAccepted = false;
-      } else if (detectedLower.includes("human") || detectedLower.includes("face") || detectedLower.includes("portrait") || detectedLower.includes("headshot") || detectedLower.includes("passport photo")) {
-        isAccepted = true;
-      }
+      isAccepted = isAccepted && parsed.hasSingleRealHumanFace === true && parsed.isScreenshotOrUi !== true && parsed.isIllustrationOrSynthetic !== true && !isDetectedAnimeOrCartoon && !isDetectedLogoOrIcon && !isDetectedScreenshot && !isDetectedUtilityBill;
     } else if (isPassportDoc) {
       if (detectedLower.includes("passport bio") || detectedLower.includes("passport page") || detectedLower.includes("passport booklet") || detectedLower.includes("passport document")) {
         isAccepted = true;
@@ -1173,7 +1161,11 @@ router.get("/activity-logs", async (req: Request, res: Response) => {
  */
 router.get("/vault", async (req: Request, res: Response) => {
   try {
-    const applications = await ApplicationModel.find().sort({ createdAt: -1 });
+    const applicationId = typeof req.query.applicationId === "string" ? req.query.applicationId : "";
+    const applicationQuery = applicationId
+      ? { $or: [{ applicationId }, { _id: mongoose.Types.ObjectId.isValid(applicationId) ? applicationId : null }] }
+      : {};
+    const applications = await ApplicationModel.find(applicationQuery).sort({ createdAt: -1 });
 
     const vaultDocsMap = new Map<string, any>();
     let activeValidCount = 0;
@@ -1184,9 +1176,13 @@ router.get("/vault", async (req: Request, res: Response) => {
     for (const app of applications) {
       const docs = Array.isArray(app.uploadedDocuments) ? app.uploadedDocuments : [];
       for (const doc of docs) {
-        if (!doc.fileUrl && doc.status === "not_uploaded") continue;
+        // The vault contains actual uploads only; requirement placeholders and
+        // status-only records belong to the upload checklist, not the vault.
+        if (!doc.fileUrl) continue;
 
-        const docKey = `${doc.title.toLowerCase().trim()}`;
+        // requirementId is the stable identity for a slot. Older records fall
+        // back to title, so re-uploads update rather than create vault entries.
+        const docKey = `${app.applicationId}:${doc.requirementId || doc.title.toLowerCase().trim()}`;
         const statusNorm = (doc.status || "uploaded").toLowerCase();
         let displayStatus = "pending";
         if (statusNorm === "verified") displayStatus = "verified";
@@ -1210,12 +1206,14 @@ router.get("/vault", async (req: Request, res: Response) => {
           expiryDate = exp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
         }
 
-        const isExpired = new Date(expiryDate) < new Date();
-        const finalStatus = isExpired ? "expired" : displayStatus;
+        // Status is intentionally never overridden by a derived expiry date:
+        // Upload Documents, Verification Status, and the Vault must expose the
+        // same document status from the application record.
+        const finalStatus = displayStatus;
 
         if (!vaultDocsMap.has(docKey)) {
           const vaultItem = {
-            id: `v-doc-${vaultDocsMap.size + 1}`,
+          id: `${app.applicationId}:${(doc as any)._id || doc.requirementId || doc.title}`,
             name: doc.title,
             category: doc.documentType?.includes("Bank") ? "Financial" : doc.documentType?.includes("Letter") ? "Employment" : "Identity",
             uploadDate,
@@ -1227,7 +1225,7 @@ router.get("/vault", async (req: Request, res: Response) => {
             fileUrl: doc.fileUrl || "",
             format: doc.format || "PDF",
             updatedBy: doc.verifiedBy || "Applicant",
-            notes: doc.rejectionReason || "Verified original document stored in encrypted vault."
+            notes: doc.rejectionReason || "Uploaded document stored in encrypted vault."
           };
 
           vaultDocsMap.set(docKey, vaultItem);
@@ -1269,7 +1267,7 @@ router.get("/vault", async (req: Request, res: Response) => {
  */
 router.post("/vault/attach", async (req: Request, res: Response) => {
   try {
-    const { applicationId, requirementTitle, vaultFileUrl, vaultFileName } = req.body;
+    const { applicationId, requirementId, requirementTitle, vaultFileUrl, vaultFileName } = req.body;
 
     if (!applicationId || !requirementTitle || !vaultFileUrl) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "applicationId, requirementTitle, and vaultFileUrl are required."));
@@ -1284,7 +1282,10 @@ router.post("/vault/attach", async (req: Request, res: Response) => {
     }
 
     const docs = application.uploadedDocuments || [];
-    const docIndex = docs.findIndex((d: any) => d.title.toLowerCase().trim() === requirementTitle.toLowerCase().trim());
+    const docIndex = docs.findIndex((d: any) =>
+      (requirementId && d.requirementId === requirementId) ||
+      d.title.toLowerCase().trim() === requirementTitle.toLowerCase().trim()
+    );
 
     if (docIndex !== -1) {
       docs[docIndex].fileUrl = vaultFileUrl;
@@ -1293,6 +1294,7 @@ router.post("/vault/attach", async (req: Request, res: Response) => {
       docs[docIndex].uploadedAt = new Date();
     } else {
       docs.push({
+        requirementId: requirementId || undefined,
         title: requirementTitle,
         fileUrl: vaultFileUrl,
         fileName: vaultFileName || requirementTitle + ".pdf",
@@ -1303,7 +1305,14 @@ router.post("/vault/attach", async (req: Request, res: Response) => {
       });
     }
 
-    application.uploadedDocuments = docs;
+    // Ensure a requirement slot remains a single mutable record even if an
+    // earlier client sent duplicate entries for it.
+    const deduplicatedDocs = new Map<string, any>();
+    for (const doc of docs) {
+      const key = String(doc.requirementId || doc.title || "").trim().toLowerCase();
+      if (key) deduplicatedDocs.set(key, doc);
+    }
+    application.uploadedDocuments = Array.from(deduplicatedDocs.values());
     await application.save();
 
     return res.status(200).json({
@@ -1317,4 +1326,351 @@ router.post("/vault/attach", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/v1/applicant/profile
+ * Fetch comprehensive personal identity profile, passport vault, co-travelers, and live metrics
+ */
+router.get("/profile", async (req: Request, res: Response) => {
+  try {
+    let userId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const jwtSecret = process.env.JWT_SECRET || "fallback_secret";
+        const jwt = await import("jsonwebtoken");
+        const decoded = jwt.default.verify(token, jwtSecret) as any;
+        userId = decoded.userId || decoded.id;
+      } catch (e) {}
+    }
+
+    let applicant = null;
+    let user = null;
+    if (userId) {
+      user = await User.findById(userId);
+      applicant = await Applicant.findOne({ userId });
+      if (!applicant && user?.email) {
+        applicant = await Applicant.findOne({ "personalInfo.email": user.email });
+      }
+      if (!applicant && user?.phone) {
+        applicant = await Applicant.findOne({ "personalInfo.phone": user.phone });
+      }
+    }
+
+    if (!applicant) {
+      applicant = await Applicant.findOne({}).sort({ updatedAt: -1 });
+    }
+
+    if (!applicant) {
+      // Create seed applicant record if none exists
+      applicant = await Applicant.create({
+        applicantId: `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        userId: userId || undefined,
+        personalInfo: {
+          fullName: user?.name || "Vibhu Sharma",
+          firstName: (user?.name || "Vibhu").split(" ")[0],
+          lastName: (user?.name || "Vibhu Sharma").split(" ").slice(1).join(" ") || "Sharma",
+          dob: "1995-06-12",
+          gender: "Male",
+          nationality: "Indian",
+          phone: user?.phone || "+91 98765 43210",
+          email: user?.email || "vibhu@phantomvisa.com",
+          country: "India",
+          address: "B-402, Highstreet Towers, MG Road, New Delhi, Delhi - 110001",
+          city: "New Delhi",
+          state: "Delhi",
+          postalCode: "110001",
+          occupation: "Senior Software Consultant",
+          employer: "TechCorp Solutions Pvt Ltd"
+        },
+        passportDetails: {
+          passportNumber: "Z9817264",
+          passportType: "Regular Ordinary (Type P)",
+          dateOfIssue: "2023-12-21",
+          dateOfExpiry: "2033-12-20",
+          placeOfIssue: "New Delhi",
+          scannedStatus: "Verified & OCR Scanned"
+        },
+        coTravelers: [
+          {
+            id: "TRAVELER-1",
+            fullName: "Ananya Sharma",
+            relation: "Spouse",
+            passportNumber: "Z9817265",
+            dob: "1996-05-14",
+            kycStatus: "Verified"
+          },
+          {
+            id: "TRAVELER-2",
+            fullName: "Aarav Sharma",
+            relation: "Child",
+            passportNumber: "X1029481",
+            dob: "2020-08-02",
+            kycStatus: "Verified"
+          }
+        ],
+        preferences: {
+          twoFactorAuth: true,
+          emailNotifications: true,
+          smsNotifications: true,
+          passportReminder: true
+        },
+        kycDetails: {
+          kycStatus: "Approved",
+          govtIdType: "National Identification & Address Proof",
+          aadhaarNumber: "5489 1234 9876",
+          panCardNumber: "ABCDE1234F",
+          submittedAt: new Date(),
+          verifiedAt: new Date()
+        },
+        status: "Active"
+      });
+    }
+
+    // Query real applications to compute live stats
+    const applicantQuery: any[] = [];
+    if (applicant.userId) applicantQuery.push({ userId: applicant.userId });
+    if (applicant.personalInfo?.email) applicantQuery.push({ "personalDetails.email": applicant.personalInfo.email });
+    if (applicant.personalInfo?.phone) applicantQuery.push({ "personalDetails.phone": applicant.personalInfo.phone });
+
+    const applications = applicantQuery.length > 0
+      ? await ApplicationModel.find({ $or: applicantQuery })
+      : await ApplicationModel.find({});
+
+    const approvedApps = applications.filter((app) => app.status === "Approved");
+    const visasIssuedCount = approvedApps.length;
+    const visasIssuedDestinations = Array.from(new Set(approvedApps.map((a) => a.countryName)));
+
+    // Calculate Passport Validity live from dateOfExpiry
+    let passportValidityYears = 7;
+    let passportValidityLabel = "7 Years";
+    let isPassportExpired = false;
+    if (applicant.passportDetails?.dateOfExpiry) {
+      const expDate = new Date(applicant.passportDetails.dateOfExpiry);
+      const now = new Date();
+      const diffMs = expDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) {
+        isPassportExpired = true;
+        passportValidityLabel = "Expired";
+      } else {
+        const years = Math.floor(diffDays / 365.25);
+        const months = Math.floor((diffDays % 365.25) / 30.4375);
+        if (years >= 1) {
+          passportValidityYears = years;
+          passportValidityLabel = `${years} Year${years > 1 ? "s" : ""}${months > 0 ? ` ${months}m` : ""}`;
+        } else {
+          passportValidityLabel = `${months} Month${months > 1 ? "s" : ""}`;
+        }
+      }
+    }
+
+    // Calculate Profile Score percentage based on completeness
+    let score = 0;
+    const p = applicant.personalInfo || {};
+    if (p.firstName && p.lastName) score += 20;
+    if (p.dob) score += 10;
+    if (p.gender) score += 10;
+    if (p.nationality) score += 10;
+    if (p.phone && p.email) score += 15;
+    if (p.address || p.city) score += 10;
+    if (applicant.passportDetails?.passportNumber) score += 15;
+    if (applicant.kycDetails?.kycStatus === "Approved") score += 10;
+    const profileScore = Math.min(100, Math.max(0, score));
+
+    // Pipeline stages evaluation
+    const pipeline = {
+      stage1Complete: !!(p.firstName && p.address),
+      stage2Complete: applicant.passportDetails?.scannedStatus?.includes("Verified") || applicant.kycDetails?.kycStatus === "Approved",
+      stage3Complete: (applicant.coTravelers?.length || 0) > 0 || applications.length > 0,
+      stage4Complete: visasIssuedCount > 0
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        _id: applicant._id,
+        applicantId: applicant.applicantId,
+        memberId: applicant.applicantId,
+        userId: applicant.userId,
+        personalInfo: applicant.personalInfo,
+        passportDetails: applicant.passportDetails,
+        coTravelers: applicant.coTravelers || [],
+        preferences: applicant.preferences || {
+          twoFactorAuth: true,
+          emailNotifications: true,
+          smsNotifications: true,
+          passportReminder: true
+        },
+        kycDetails: applicant.kycDetails || { kycStatus: "Approved" },
+        metrics: {
+          kycStatus: applicant.kycDetails?.kycStatus || "Approved",
+          passportValidityLabel,
+          passportValidityYears,
+          isPassportExpired,
+          visasIssuedCount,
+          visasIssuedDestinations,
+          travelHistoryCount: applications.length,
+          coTravelersCount: (applicant.coTravelers || []).length,
+          profileScore
+        },
+        pipeline
+      }
+    });
+  } catch (error: any) {
+    console.error("❌ Fetch Profile Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to fetch profile."));
+  }
+});
+
+/**
+ * PUT /api/v1/applicant/profile
+ * Update personal identity details, passport info, or security preferences in MongoDB
+ */
+router.put("/profile", async (req: Request, res: Response) => {
+  try {
+    const { personalInfo, passportDetails, preferences, applicantId } = req.body;
+
+    let userId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const jwtSecret = process.env.JWT_SECRET || "fallback_secret";
+        const jwt = await import("jsonwebtoken");
+        const decoded = jwt.default.verify(token, jwtSecret) as any;
+        userId = decoded.userId || decoded.id;
+      } catch (e) {}
+    }
+
+    const query: any[] = [];
+    if (applicantId) query.push({ applicantId });
+    if (userId) query.push({ userId });
+
+    let applicant = query.length > 0 ? await Applicant.findOne({ $or: query }) : null;
+    if (!applicant) {
+      applicant = await Applicant.findOne({}).sort({ updatedAt: -1 });
+    }
+
+    if (!applicant) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Applicant record not found to update."));
+    }
+
+    if (personalInfo) {
+      applicant.personalInfo = {
+        ...applicant.personalInfo,
+        ...personalInfo,
+        fullName: personalInfo.fullName || `${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim() || applicant.personalInfo?.fullName
+      };
+
+      // Sync name with linked User document
+      if (applicant.userId) {
+        await User.findByIdAndUpdate(applicant.userId, {
+          name: applicant.personalInfo.fullName,
+          phone: applicant.personalInfo.phone,
+          email: applicant.personalInfo.email
+        });
+      }
+    }
+
+    if (passportDetails) {
+      applicant.passportDetails = {
+        ...applicant.passportDetails,
+        ...passportDetails
+      };
+    }
+
+    if (preferences) {
+      applicant.preferences = {
+        ...applicant.preferences,
+        ...preferences
+      };
+    }
+
+    await applicant.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Applicant profile updated successfully in MongoDB.",
+      data: applicant
+    });
+  } catch (error: any) {
+    console.error("❌ Update Profile Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to update profile."));
+  }
+});
+
+/**
+ * POST /api/v1/applicant/co-travelers
+ * Add a new co-traveler / family member to applicant's shared vault in MongoDB
+ */
+router.post("/co-travelers", async (req: Request, res: Response) => {
+  try {
+    const { fullName, relation, passportNumber, dob, applicantId } = req.body;
+
+    if (!fullName || !passportNumber) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Full Name and Passport Number are required."));
+    }
+
+    let applicant = applicantId ? await Applicant.findOne({ applicantId }) : await Applicant.findOne({}).sort({ updatedAt: -1 });
+    if (!applicant) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Applicant record not found."));
+    }
+
+    const newTraveler = {
+      id: `TRAVELER-${Date.now()}`,
+      fullName,
+      relation: relation || "Spouse",
+      passportNumber: passportNumber.toUpperCase().trim(),
+      dob: dob || "2000-01-01",
+      kycStatus: "Verified"
+    };
+
+    if (!applicant.coTravelers) {
+      applicant.coTravelers = [];
+    }
+
+    applicant.coTravelers.push(newTraveler);
+    await applicant.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Co-traveler added to your vault successfully.",
+      data: applicant.coTravelers
+    });
+  } catch (error: any) {
+    console.error("❌ Add Co-Traveler Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to add co-traveler."));
+  }
+});
+
+/**
+ * DELETE /api/v1/applicant/co-travelers/:id
+ * Remove a co-traveler from applicant's vault in MongoDB
+ */
+router.delete("/co-travelers/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { applicantId } = req.query;
+
+    let applicant = applicantId ? await Applicant.findOne({ applicantId: String(applicantId) }) : await Applicant.findOne({}).sort({ updatedAt: -1 });
+    if (!applicant) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Applicant record not found."));
+    }
+
+    applicant.coTravelers = (applicant.coTravelers || []).filter((t: any) => t.id !== id);
+    await applicant.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-traveler removed from your vault.",
+      data: applicant.coTravelers
+    });
+  } catch (error: any) {
+    console.error("❌ Remove Co-Traveler Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to remove co-traveler."));
+  }
+});
+
 export default router;
+

@@ -256,17 +256,7 @@ export default function AdminPortal() {
         "Invoices"
       ]
     },
-    {
-      type: "group",
-      name: "Appointments",
-      icon: Calendar,
-      children: [
-        "All Appointments",
-        "Upcoming",
-        "Completed",
-        "Cancelled"
-      ]
-    },
+    { type: "item", name: "All Appointments", icon: Calendar },
     { type: "item", name: "Messages", icon: MessageSquare },
     { type: "item", name: "Notifications", icon: Bell },
     {
@@ -1032,7 +1022,7 @@ export default function AdminPortal() {
                 <AllTransactionsManagement />
               ) : activeSubItem === "Invoices" ? (
                 <InvoicesManagement />
-              ) : activeSubItem === "All Appointments" || (activeSection === "Appointments" && (!activeSubItem || activeSubItem === "All Appointments")) ? (
+              ) : activeSection === "All Appointments" || activeSubItem === "All Appointments" || (activeSection === "Appointments" && (!activeSubItem || activeSubItem === "All Appointments")) ? (
                 <AllAppointmentsManagement />
               ) : activeSubItem === "Upcoming Appointments" || activeSubItem === "Upcoming" ? (
                 <UpcomingAppointmentsManagement />

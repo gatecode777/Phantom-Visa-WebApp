@@ -21,7 +21,6 @@ import ApplicantInvoices from "./ApplicantInvoices";
 import ApplicantAppointments from "./ApplicantAppointments";
 import ApplicantExploreCountries from "./ApplicantExploreCountries";
 import ApplicantVisaTypes from "./ApplicantVisaTypes";
-import ApplicantVisaRequirements from "./ApplicantVisaRequirements";
 import ApplicantVisaProcessingTime from "./ApplicantVisaProcessingTime";
 import ApplicantVisaFees from "./ApplicantVisaFees";
 import ApplicantSupport from "./ApplicantSupport";
@@ -103,17 +102,11 @@ export default function CustomerPortal() {
     } catch { }
     return "vault";
   });
-  const [paymentSubTab, setPaymentSubTab] = useState<"history" | "invoices">(() => {
+  
+  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "processing" | "fees">(() => {
     try {
       const saved = localStorage.getItem("customer_active_subtab");
-      if (localStorage.getItem("customer_active_tab") === "payments" && saved && saved !== "checkout") return saved as any;
-    } catch { }
-    return "history";
-  });
-  const [exploreSubTab, setExploreSubTab] = useState<"countries" | "types" | "requirements" | "processing" | "fees">(() => {
-    try {
-      const saved = localStorage.getItem("customer_active_subtab");
-      if (localStorage.getItem("customer_active_tab") === "explore" && saved) return saved as any;
+      if (localStorage.getItem("customer_active_tab") === "explore" && saved && saved !== "requirements") return saved as any;
     } catch { }
     return "countries";
   });
@@ -179,9 +172,7 @@ export default function CustomerPortal() {
   const [openDocs, setOpenDocs] = useState<boolean>(() => {
     try { return localStorage.getItem("customer_active_tab") === "documents"; } catch { return false; }
   });
-  const [openPayments, setOpenPayments] = useState<boolean>(() => {
-    try { return localStorage.getItem("customer_active_tab") === "payments"; } catch { return false; }
-  });
+
   const [openAppts, setOpenAppts] = useState<boolean>(() => {
     try { return localStorage.getItem("customer_active_tab") === "appointments"; } catch { return false; }
   });
@@ -203,7 +194,6 @@ export default function CustomerPortal() {
     // Close all dropdowns when switching to a top-level tab that isn't the one being opened
     if (tab !== "applications") setOpenMyApps(false);
     if (tab !== "documents") setOpenDocs(false);
-    if (tab !== "payments") setOpenPayments(false);
     if (tab !== "appointments") setOpenAppts(false);
     if (tab !== "explore") setOpenExplore(false);
   };
@@ -529,54 +519,21 @@ export default function CustomerPortal() {
 
             <div>
               <button
-                onClick={() => {
-                  handleTabChange("payments");
-                  setOpenPayments(!openPayments);
-                }}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                onClick={() => handleTabChange("payments")}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
                   customerTab === "payments"
                     ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <CreditCard size={18} className={customerTab === "payments" ? "text-[#4848F7]" : "text-slate-500"} />
-                  <span>Payments</span>
-                </div>
-                {openPayments ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                <CreditCard size={18} className={customerTab === "payments" ? "text-[#4848F7]" : "text-slate-500"} />
+                <span>Payments</span>
               </button>
-
-              {openPayments && (
-                <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
-                  {[
-                    { label: "Payment History", tab: "history" },
-                    { label: "Invoices & Receipts", tab: "invoices" }
-                  ].map((sub) => (
-                    <button
-                      key={sub.label}
-                      onClick={() => {
-                        handleTabChange("payments", sub.tab);
-                        setPaymentSubTab(sub.tab as any);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium block transition ${
-                        customerTab === "payments" && paymentSubTab === sub.tab
-                          ? "text-[#4848F7] font-bold bg-[#EEF2FF]/60"
-                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                      }`}
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
               <button
-                onClick={() => {
-                  handleTabChange("appointments");
-                  setOpenAppts(!openAppts);
-                }}
+                onClick={() => handleTabChange("appointments")}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
                   customerTab === "appointments"
                     ? "bg-[#EEF2FF] text-[#4848F7] font-bold"
@@ -585,24 +542,9 @@ export default function CustomerPortal() {
               >
                 <div className="flex items-center gap-3">
                   <Calendar size={18} className={customerTab === "appointments" ? "text-[#4848F7]" : "text-slate-500"} />
-                  <span>Appointments</span>
+                  <span>All Appointments</span>
                 </div>
-                {openAppts ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
               </button>
-
-              {openAppts && (
-                <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
-                  {["Book Appointment", "My Appointments", "Reschedule / Cancel"].map((sub) => (
-                    <button
-                      key={sub}
-                      onClick={() => handleTabChange("appointments")}
-                      className="w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-50 block transition"
-                    >
-                      {sub}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
@@ -628,8 +570,7 @@ export default function CustomerPortal() {
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
                     { label: "Countries & Fees", subTab: "countries" },
-                    { label: "Visa Types & Validity", subTab: "types" },
-                    { label: "Document Checklist", subTab: "requirements" }
+                    { label: "Visa Types & Validity", subTab: "types" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -1358,19 +1299,10 @@ export default function CustomerPortal() {
 
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
-            <div>
-              {paymentSubTab === "invoices" ? (
-                <ApplicantInvoices
-                  applications={applications}
-                  onNavigateSupport={() => setCustomerTab("support")}
-                />
-              ) : (
-                <ApplicantPaymentHistory
-                  applications={applications}
-                  onNavigateSupport={() => setCustomerTab("support")}
-                />
-              )}
-            </div>
+            <ApplicantPaymentHistory
+              applications={applications}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
           )}
 
           {/* APPOINTMENTS VIEW */}
@@ -1435,16 +1367,6 @@ export default function CustomerPortal() {
                   onNavigateSupport={() => handleTabChange("support")}
                 />
               )}
-              {exploreSubTab === "requirements" && (
-                <ApplicantVisaRequirements
-                  onNavigateApply={() => handleTabChange("apply")}
-                  onNavigateUpload={() => {
-                    handleTabChange("documents");
-                    setDocSubTab("upload");
-                  }}
-                  onNavigateSupport={() => handleTabChange("support")}
-                />
-              )}
               {exploreSubTab === "processing" && (
                 <ApplicantVisaProcessingTime
                   onNavigateApply={() => handleTabChange("apply")}
@@ -1500,7 +1422,9 @@ export default function CustomerPortal() {
                 setPaymentSubTab("history");
               }}
               onNavigateSupport={() => handleTabChange("support")}
+              onNavigateProfile={() => handleTabChange("profile")}
             />
+
           )}
 
         </main>

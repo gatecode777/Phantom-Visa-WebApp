@@ -604,7 +604,7 @@ export default function DocumentTemplatesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1-10 of 48 Document Templates</div>
+          <div>Showing {filteredTemplates.length === 0 ? 0 : 1}-{filteredTemplates.length} of {filteredTemplates.length} Document Templates</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

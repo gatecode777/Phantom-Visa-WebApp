@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Application, formatINR } from "../context/VisaContext";
+import { Application, formatINR, useVisa } from "../context/VisaContext";
 import {
   CreditCard,
   Wallet,
@@ -28,6 +28,8 @@ import {
   MessageSquare,
   FileCheck
 } from "lucide-react";
+
+import ApplicantInvoices from "./ApplicantInvoices";
 
 export type PaymentTxStatus = "success" | "pending" | "failed" | "refunded";
 
@@ -61,107 +63,46 @@ export default function ApplicantPaymentHistory({
   onNavigateMakePayment,
   onNavigateSupport
 }: ApplicantPaymentHistoryProps) {
-  // Mock Payment History Records matching wireframe
-  const [txItems, setTxItems] = useState<PaymentTxRecord[]>([
-    {
-      id: "PAY-2026-1025",
-      appId: "VO-2026-1025",
-      country: "Australia 🇦🇺",
-      visaType: "Tourist Subclass 600",
-      date: "07 Aug 2026, 10:15 AM",
-      amount: 15500,
-      method: "Credit Card (Visa •••• 8892)",
-      status: "success",
-      consularFee: 12500,
-      serviceFee: 2500,
-      gstTax: 1500,
-      discount: 1000,
-      gatewayRef: "RAZOR-9817264-AU",
-      receiptPdfName: "invoice_PAY-2026-1025.pdf"
-    },
-    {
-      id: "PAY-2026-0982",
-      appId: "VO-2026-0982",
-      country: "Schengen / France 🇫🇷",
-      visaType: "Express Short-Stay Tourist",
-      date: "01 Aug 2026, 04:30 PM",
-      amount: 22000,
-      method: "UPI Instant (Google Pay)",
-      status: "success",
-      consularFee: 18000,
-      serviceFee: 3000,
-      gstTax: 2000,
-      discount: 1000,
-      gatewayRef: "UPI-481920-FR",
-      receiptPdfName: "invoice_PAY-2026-0982.pdf"
-    },
-    {
-      id: "PAY-2026-0814",
-      appId: "VO-2026-0814",
-      country: "United Kingdom 🇬🇧",
-      visaType: "Standard Visitor 6 Months",
-      date: "25 Jul 2026, 02:10 PM",
-      amount: 14500,
-      method: "Net Banking (HDFC)",
-      status: "pending",
-      consularFee: 11000,
-      serviceFee: 2500,
-      gstTax: 1500,
-      discount: 500,
-      gatewayRef: "NETB-391827-UK",
-      receiptPdfName: "proforma_PAY-2026-0814.pdf"
-    },
-    {
-      id: "PAY-2026-0720",
-      appId: "VO-2026-0720",
-      country: "United States 🇺🇸",
-      visaType: "B1/B2 Tourist Visitor",
-      date: "15 Jul 2026, 11:00 AM",
-      amount: 18500,
-      method: "Credit Card (MasterCard)",
-      status: "failed",
-      consularFee: 15000,
-      serviceFee: 2500,
-      gstTax: 1000,
-      discount: 0,
-      gatewayRef: "CC-FAIL-77192",
-      receiptPdfName: "failed_notice_PAY-2026-0720.pdf"
-    },
-    {
-      id: "PAY-2026-0650",
-      appId: "VO-2026-0650",
-      country: "Canada 🇨🇦",
-      visaType: "Visitor Visa V-1",
-      date: "01 Jul 2026, 09:45 AM",
-      amount: 16500,
-      method: "Wallet Balance (Prepaid)",
-      status: "refunded",
-      consularFee: 13000,
-      serviceFee: 2500,
-      gstTax: 1000,
-      discount: 0,
-      gatewayRef: "WLT-RFD-55102",
-      receiptPdfName: "refund_credit_PAY-2026-0650.pdf",
-      refundAmount: 2500,
-      refundReason: "Refusal Clause 4.1 Partial Platform Refund Guarantee"
-    },
-    {
-      id: "PAY-2026-0512",
-      appId: "VO-2026-0512",
-      country: "Singapore 🇸🇬",
-      visaType: "30-Day e-Visa",
-      date: "15 Jun 2026, 03:20 PM",
-      amount: 8500,
-      method: "UPI Instant (PhonePe)",
-      status: "success",
-      consularFee: 6000,
-      serviceFee: 2000,
-      gstTax: 500,
-      discount: 0,
-      gatewayRef: "UPI-99102-SG",
-      receiptPdfName: "invoice_PAY-2026-0512.pdf"
-    }
-  ]);
+  const [activePaymentTab, setActivePaymentTab] = useState<"history" | "invoices">("history");
+  const { unifiedTransactions } = useVisa();
+
+  // Derive txItems from unifiedTransactions single ledger
+  const txItems = useMemo<PaymentTxRecord[]>(() => {
+    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
+    return unifiedTransactions.map((t) => {
+      const statusMap: Record<string, PaymentTxStatus> = {
+        Successful: "success",
+        Pending: "pending",
+        Failed: "failed",
+        Refunded: "refunded",
+        Cancelled: "failed",
+        Proforma: "pending"
+      };
+
+      const dateStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+        : "Recent";
+
+      return {
+        id: t.transactionId,
+        appId: t.applicationId,
+        country: t.country,
+        visaType: t.visaType,
+        date: dateStr,
+        amount: t.pricing?.netAmount || 15500,
+        method: t.paymentMethod || "UPI Instant",
+        status: statusMap[t.status] || "success",
+        consularFee: t.pricing?.consularFee || 12500,
+        serviceFee: t.pricing?.serviceFee || 2500,
+        gstTax: t.pricing?.totalTax || 2700,
+        discount: t.pricing?.discount || 0,
+        gatewayRef: t.paymentRef || "RAZOR-PAY",
+        receiptPdfName: `invoice_${t.transactionId}.pdf`,
+        refundAmount: t.refundDetails?.amount || t.pricing?.netAmount,
+        refundReason: t.refundDetails?.reason || "Refunded"
+      };
+    });
+  }, [unifiedTransactions]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -241,7 +182,7 @@ export default function ApplicantPaymentHistory({
           <div className="flex items-center gap-2 text-xs font-semibold text-[#4848F7] mb-1">
             <span>Payments</span>
             <span>/</span>
-            <span className="text-slate-500 font-normal">Payment History</span>
+            <span className="text-slate-500 font-normal">{activePaymentTab === "history" ? "Payment History" : "Invoices & Receipts"}</span>
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Consular Payment History & Invoices</h1>
@@ -252,18 +193,46 @@ export default function ApplicantPaymentHistory({
           <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-3xl">
             View all completed transactions, pending invoices, refund receipts, itemized GST tax statements, and payment activity logs.
           </p>
+
+          {/* Submenu Tab Switcher */}
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100">
+            <button
+              onClick={() => setActivePaymentTab("history")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activePaymentTab === "history"
+                  ? "bg-[#4848F7] text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <CreditCard size={14} />
+              <span>Payment History</span>
+            </button>
+
+            <button
+              onClick={() => setActivePaymentTab("invoices")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activePaymentTab === "invoices"
+                  ? "bg-[#4848F7] text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <FileText size={14} />
+              <span>Invoices & Receipts</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => alert("Downloading Consolidated Tax Statement (PDF/CSV)...")}
-            className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
-          >
-            <Download size={16} />
-            <span>Consolidated Tax Statement</span>
-          </button>
-        </div>
+
       </div>
+
+      {activePaymentTab === "invoices" ? (
+        <ApplicantInvoices
+          applications={applications}
+          onNavigateMakePayment={onNavigateMakePayment}
+          onNavigateSupport={onNavigateSupport}
+        />
+      ) : (
+        <>
 
       {/* ============================================================ */}
       {/* SECTION 2: DASHBOARD STATISTICS CARDS GRID (6 CARDS) */}
@@ -683,7 +652,7 @@ export default function ApplicantPaymentHistory({
           <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-1">
             <p className="font-bold text-slate-900">How can I download GST tax invoices for my business?</p>
             <p className="text-slate-600 leading-relaxed">
-              Click "Download Tax Invoice PDF" on any transaction row or download the Consolidated Tax Statement from the top header.
+              Click "Download Tax Invoice PDF" on any transaction row.
             </p>
           </div>
 
@@ -695,6 +664,8 @@ export default function ApplicantPaymentHistory({
           </div>
         </div>
       </div>
+      </>
+      )}
 
     </div>
   );

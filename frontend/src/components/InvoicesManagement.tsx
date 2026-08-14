@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useVisa } from "../context/VisaContext";
 import {
   FileText,
   Search,
@@ -231,6 +232,8 @@ const MOCK_INVOICES: InvoiceRecord[] = [
 ];
 
 export default function InvoicesManagement() {
+  const { unifiedTransactions } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -238,8 +241,82 @@ export default function InvoicesManagement() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [methodFilter, setMethodFilter] = useState("All");
 
-  // Records State
-  const [invoicesList, setInvoicesList] = useState<InvoiceRecord[]>(MOCK_INVOICES);
+  // Derive invoicesList from unifiedTransactions single ledger
+  const invoicesList = useMemo<InvoiceRecord[]>(() => {
+    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
+    return unifiedTransactions.map((t, idx) => {
+      const dateStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+        : "01 Aug 2026";
+      const dateTimeStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleString("en-GB")
+        : "01 Aug 2026 10:15 AM";
+
+      const methodClean = t.paymentMethod?.toLowerCase().includes("credit") ? "Credit Card"
+        : t.paymentMethod?.toLowerCase().includes("net") ? "Net Banking"
+        : t.paymentMethod?.toLowerCase().includes("wallet") ? "Wallet"
+        : "UPI";
+
+      const statusMap: Record<string, "Paid" | "Pending" | "Cancelled" | "Refunded"> = {
+        Successful: "Paid",
+        Pending: "Pending",
+        Proforma: "Pending",
+        Failed: "Cancelled",
+        Cancelled: "Cancelled",
+        Refunded: "Refunded"
+      };
+
+      const visaFee = t.pricing?.consularFee || 12500;
+      const serviceCharge = t.pricing?.serviceFee || 2500;
+      const cgst = t.pricing?.cgst || 1350;
+      const sgst = t.pricing?.sgst || 1350;
+      const igst = t.pricing?.igst || 0;
+      const totalTax = t.pricing?.totalTax || 2700;
+
+      return {
+        id: String(idx + 1),
+        invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId.split("-")[2] || "501"}`,
+        txnId: t.transactionId,
+        appId: t.applicationId,
+        applicantName: t.applicantName,
+        passportNumber: t.passportNumber,
+        nationality: t.nationality || "Indian",
+        appliedBy: t.paidBy || "Applicant",
+        agentName: t.agentName,
+        invoiceAmount: t.pricing?.netAmount || 16700,
+        invoiceDate: dateStr,
+        invoiceDateTime: dateTimeStr,
+        invoiceType: t.paidBy === "Agent" ? "Agent B2B Invoice" : "Tax Invoice",
+        status: statusMap[t.status] || "Paid",
+        country: t.country.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
+        visaCategory: t.visaCategory || "Tourist",
+        paymentMethod: methodClean as any,
+        sacCode: t.sacCode || "998311",
+        gstin: t.gstin || "07AAAAA0000A1Z5",
+        breakdown: {
+          visaFee,
+          serviceCharge,
+          processingFee: t.pricing?.expressSurcharge || 0,
+          discount: t.pricing?.discount || 0,
+          cgst,
+          sgst,
+          igst,
+          totalTax
+        },
+        companyDetails: {
+          name: "Phantom Visa Services Pvt Ltd",
+          gstin: "07AAAAA0000A1Z5",
+          address: t.billingAddress || "Suite 402, Trade Tower, Connaught Place, New Delhi 110001",
+          email: "billing@phantomvisa.com",
+          signatory: "Authorized Finance Officer"
+        },
+        actionNotes: [
+          { id: "n1", author: "System", text: `Automated GST Tax Invoice generated on payment completion (${t.status}).`, date: dateTimeStr }
+        ]
+      };
+    });
+  }, [unifiedTransactions]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State
@@ -286,8 +363,7 @@ export default function InvoicesManagement() {
 
   // Actions
   const handleDeleteRecord = (inv: InvoiceRecord) => {
-    setInvoicesList((prev) => prev.filter((i) => i.id !== inv.id));
-    triggerToast(`Invoice ${inv.invoiceNo} deleted.`);
+    triggerToast(`Invoice ${inv.invoiceNo} highlighted.`);
     if (activeModalInvoice?.id === inv.id) setActiveModalInvoice(null);
   };
 
@@ -327,37 +403,37 @@ export default function InvoicesManagement() {
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Invoices</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">22,420</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{metrics.total}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Invoice Archive</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Generated Today</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">180</div>
-            <span className="text-[10px] text-blue-600 font-bold">Today's Invoices</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{metrics.total}</div>
+            <span className="text-[10px] text-blue-600 font-bold">Active Invoices</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Paid Invoices</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">21,840</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{metrics.paid}</div>
             <span className="text-[10px] text-emerald-600 font-bold">Cleared Ledger</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Invoices</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">560</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{metrics.pending}</div>
             <span className="text-[10px] text-amber-600 font-bold">Unpaid Billing</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Cancelled Invoices</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">20</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{metrics.cancelled}</div>
             <span className="text-[10px] text-red-600 font-bold">Void Billing</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Total Invoiced Amount</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">₹2,98,45,000</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">₹{metrics.grossAmount.toLocaleString("en-IN")}</div>
             <span className="text-[10px] text-purple-600 font-bold">Gross Invoiced</span>
           </div>
         </div>
@@ -660,7 +736,7 @@ export default function InvoicesManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1-10 of 22,420 Invoices</div>
+          <div>Showing {filteredInvoices.length > 0 ? 1 : 0}–{Math.min(10, filteredInvoices.length)} of {filteredInvoices.length} Invoices</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

@@ -89,87 +89,6 @@ export const DOCUMENT_VERIFICATION_WORKFLOW_STEPS = [
   "Application Continues / Request Re-upload"
 ];
 
-export const SUPPORTED_DOCUMENT_TYPES = [
-  "Passport Bio Page",
-  "Passport Back Page",
-  "Recent Photograph",
-  "6-Month Bank Statement",
-  "Employment NOC Letter",
-  "Flight Round-trip Ticket",
-  "Hotel Booking Voucher",
-  "Income Tax Returns (ITR)",
-  "Salary Slips (3 Months)",
-  "Travel Insurance Policy"
-];
-
-const INITIAL_FALLBACK_DOCUMENTS: DocumentRecord[] = [
-  {
-    id: "1",
-    docId: "DOC-0001",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    documentType: "Passport Bio Page",
-    documentName: "Passport_Bio_Page_Geeta.pdf",
-    fileFormat: "PDF",
-    fileSize: "2.4 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "07 Aug 2026",
-    uploadDateTime: "07 Aug 2026 09:30 AM",
-    verificationStatus: "Verified",
-    verifiedBy: "Amardeep Sen",
-    verificationDate: "07 Aug 2026 11:15 AM",
-    expiryDate: "2033-12-20",
-    country: "Canada",
-    remarks: "Passport bio page clearly readable and valid for >6 months.",
-    actionNotes: [
-      { id: "n1", author: "Amardeep Sen", text: "Identity and passport validity confirmed.", date: "07 Aug 2026 11:15 AM" }
-    ]
-  },
-  {
-    id: "2",
-    docId: "DOC-0002",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    documentType: "6-Month Bank Statement",
-    documentName: "Bank_Statement_6M_Rahul.pdf",
-    fileFormat: "PDF",
-    fileSize: "5.1 MB",
-    uploadedBy: "Agent",
-    agentName: "Apex Travels",
-    uploadDate: "07 Aug 2026",
-    uploadDateTime: "07 Aug 2026 11:45 AM",
-    verificationStatus: "Pending",
-    country: "Australia",
-    remarks: "Awaiting financial audit verification.",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    docId: "DOC-0003",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    documentType: "Employment NOC Letter",
-    documentName: "employment_noc_blurry.pdf",
-    fileFormat: "PDF",
-    fileSize: "1.2 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "07 Aug 2026",
-    uploadDateTime: "07 Aug 2026 04:20 PM",
-    verificationStatus: "Rejected",
-    verifiedBy: "Sunil Solanki",
-    verificationDate: "07 Aug 2026 09:00 AM",
-    rejectionReason: "NOC HR wet stamp is blurry and unverified. Re-upload mandatory.",
-    country: "UAE",
-    remarks: "NOC stamp verification failed.",
-    actionNotes: [
-      { id: "n3", author: "Sunil Solanki", text: "Rejected. Re-upload requested.", date: "07 Aug 2026 09:00 AM" }
-    ]
-  }
-];
-
 export default function AllDocumentsManagement() {
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -179,7 +98,8 @@ export default function AllDocumentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records & Stats State
-  const [documentsList, setDocumentsList] = useState<DocumentRecord[]>(INITIAL_FALLBACK_DOCUMENTS);
+  const [documentsList, setDocumentsList] = useState<DocumentRecord[]>([]);
+  const [supportedDocumentTypes, setSupportedDocumentTypes] = useState<string[]>([]);
   const [apiStats, setApiStats] = useState({
     totalDocuments: 0,
     verified: 0,
@@ -214,7 +134,7 @@ export default function AllDocumentsManagement() {
     try {
       const res = await fetch(`${API_V1_URL}/applications/admin/all-documents`);
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data)) {
         setDocumentsList(json.data);
         if (json.stats) setApiStats(json.stats);
       }
@@ -227,12 +147,15 @@ export default function AllDocumentsManagement() {
 
   useEffect(() => {
     fetchAllDocuments();
+    fetch(`${API_V1_URL}/visa/requirements`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          setSupportedDocumentTypes(Array.from(new Set(json.data.map((requirement: any) => requirement.title).filter(Boolean))));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch configured requirement types:", err));
   }, []);
-
-  // Supported document types derived dynamically
-  const supportedDocumentTypes = Array.from(
-    new Set(documentsList.map((d) => d.documentType).filter(Boolean))
-  );
 
   // Computed summary metrics directly from live data
   const totalDocsCount = apiStats.totalDocuments || documentsList.length;
@@ -253,7 +176,7 @@ export default function AllDocumentsManagement() {
       (doc.documentName || "").toLowerCase().includes(q) ||
       (doc.agentName ? doc.agentName.toLowerCase().includes(q) : false);
 
-    const matchesType = docTypeFilter === "All" || doc.documentType === docTypeFilter;
+    const matchesType = docTypeFilter === "All" || doc.documentName === docTypeFilter;
     const matchesStatus = statusFilter === "All" || doc.verificationStatus === statusFilter;
     const matchesUploadedBy = uploadedByFilter === "All" || doc.uploadedBy === uploadedByFilter;
     const matchesCountry = countryFilter === "All" || !doc.country || doc.country === countryFilter;
@@ -487,7 +410,7 @@ export default function AllDocumentsManagement() {
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] font-semibold text-slate-600">
               <span className="text-slate-900 font-bold block mb-1">Supported Document Types:</span>
               <div className="grid grid-cols-2 gap-1 text-[10px] max-h-24 overflow-y-auto [scrollbar-width:thin]">
-                {SUPPORTED_DOCUMENT_TYPES.slice(0, 10).map((type, i) => (
+                {supportedDocumentTypes.slice(0, 10).map((type, i) => (
                   <div key={i} className="flex items-center gap-1 text-slate-700">
                     <Check size={11} className="text-[#2563EB]" /> {type}
                   </div>
@@ -538,13 +461,7 @@ export default function AllDocumentsManagement() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
             >
               <option value="All">All Types</option>
-              <option value="Passport">Passport</option>
-              <option value="Photograph">Passport Photograph</option>
-              <option value="Bank Statement">Bank Statement</option>
-              <option value="Travel Insurance">Travel Insurance</option>
-              <option value="Flight Ticket">Flight Ticket</option>
-              <option value="Hotel Booking">Hotel Booking</option>
-              <option value="Medical Certificate">Medical Certificate</option>
+              {supportedDocumentTypes.map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
           </div>
 
@@ -651,7 +568,8 @@ export default function AllDocumentsManagement() {
                 <th className="py-3.5 px-4 font-mono">Document ID</th>
                 <th className="py-3.5 px-4 font-mono">Application ID</th>
                 <th className="py-3.5 px-4">Applicant</th>
-                <th className="py-3.5 px-4">Document Type</th>
+                <th className="py-3.5 px-4">Requirement</th>
+                <th className="py-3.5 px-4">File Format</th>
                 <th className="py-3.5 px-4">Uploaded By</th>
                 <th className="py-3.5 px-4 font-mono">Upload Date</th>
                 <th className="py-3.5 px-4">Verification Status</th>
@@ -662,7 +580,7 @@ export default function AllDocumentsManagement() {
             <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     <FileText size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
                     <p className="font-bold text-slate-600">No documents found matching your filters.</p>
                   </td>
@@ -688,6 +606,9 @@ export default function AllDocumentsManagement() {
                       {d.applicantName}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">
+                      {d.documentName}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-700">
                       {d.documentType}
                       <span className="block text-[10px] font-normal text-slate-400">{d.fileFormat} &bull; {d.fileSize}</span>
                     </td>
@@ -789,7 +710,7 @@ export default function AllDocumentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1-10 of {documentsList.length} Uploaded Documents</div>
+          <div>Showing {filteredDocs.length === 0 ? 0 : 1}-{filteredDocs.length} of {documentsList.length} Uploaded Documents</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous

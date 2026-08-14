@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Application, formatINR } from "../context/VisaContext";
+import { Application, formatINR, useVisa } from "../context/VisaContext";
 import { API_V1_URL } from "../config/api";
+import { fetchProfileApi, CoTravelerRecord } from "../services/profileService";
 import {
   Plane,
   Clock,
@@ -115,6 +116,7 @@ export default function ApplicantApplyVisa({
   onNavigateDrafts,
   onNavigatePayment
 }: ApplicantApplyVisaProps) {
+  const visaCtx = useVisa();
   const defaultC: CountryRecord[] = [
     {
       _id: "c-1",
@@ -244,6 +246,8 @@ export default function ApplicantApplyVisa({
   const [coTravelers, setCoTravelers] = useState<CoTraveler[]>([]);
   const [newCoName, setNewCoName] = useState("");
   const [newCoRelation, setNewCoRelation] = useState("Spouse");
+  const [newCoPassport, setNewCoPassport] = useState("");
+  const [savedVaultTravelers, setSavedVaultTravelers] = useState<CoTravelerRecord[]>([]);
 
   // Step 5: Pricing & Submission
   const [termsAgreed, setTermsAgreed] = useState(true);
@@ -259,6 +263,41 @@ export default function ApplicantApplyVisa({
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
   };
+
+  // Pre-fill verified personal and passport details from canonical profile on mount
+  useEffect(() => {
+    const loadProfilePrefill = async () => {
+      try {
+        const p = await fetchProfileApi();
+        if (p) {
+          if (p.personalInfo) {
+            setGivenName((prev) => prev || p.personalInfo.firstName || "Vibhu");
+            setSurname((prev) => prev || p.personalInfo.lastName || "Sharma");
+            setDob((prev) => prev || p.personalInfo.dob || "1995-06-12");
+            setGender((prev) => prev || p.personalInfo.gender || "Male");
+            setNationality((prev) => prev || p.personalInfo.nationality || "Indian");
+            setPhone((prev) => prev || p.personalInfo.phone || "+91 98765 43210");
+            setEmail((prev) => prev || p.personalInfo.email || "vibhu@phantomvisa.com");
+            setEmployerName((prev) => prev || p.personalInfo.employer || "TechCorp Solutions Pvt Ltd");
+            setJobTitle((prev) => prev || p.personalInfo.occupation || "Senior Software Consultant");
+          }
+          if (p.passportDetails) {
+            setPassportNo((prev) => prev || p.passportDetails.passportNumber || "Z9817264");
+            setPassportType((prev) => prev || p.passportDetails.passportType || "Ordinary / Regular");
+            setIssuePlace((prev) => prev || p.passportDetails.placeOfIssue || "New Delhi");
+            setIssueDate((prev) => prev || p.passportDetails.dateOfIssue || "2023-12-21");
+            setExpiryDate((prev) => prev || p.passportDetails.dateOfExpiry || "2033-12-20");
+          }
+          if (p.coTravelers && Array.isArray(p.coTravelers)) {
+            setSavedVaultTravelers(p.coTravelers);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to prefill profile in Apply Wizard:", e);
+      }
+    };
+    loadProfilePrefill();
+  }, []);
 
   // Fetch admin-configured data from backend MongoDB
   useEffect(() => {
@@ -609,6 +648,19 @@ export default function ApplicantApplyVisa({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const supportedVerificationFormats = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!supportedVerificationFormats.includes(file.type)) {
+      const message = "Use a JPEG, PNG, WEBP, or PDF file. This format cannot be securely verified.";
+      setUploadedSlots((prev) => {
+        const copy = [...prev];
+        copy[index] = { ...copy[index], isUploading: false, isVerifying: false, isVerified: false, fileUrl: "", fileName: undefined, verifiedType: null, aiError: message };
+        return copy;
+      });
+      showToast(message);
+      e.target.value = "";
+      return;
+    }
+
     // Phase 1: Upload to ImageKit
     setUploadedSlots((prev) => {
       const copy = [...prev];
@@ -703,11 +755,12 @@ export default function ApplicantApplyVisa({
       }
     }
 
-    // Safety Fallback: ONLY if API was completely offline/unreachable AND no document rejection occurred
+    // Never treat an unavailable verifier as approval. The server is the sole
+    // authority for an AI-verified document.
     if (!verifyCompleted && !hasError) {
       setUploadedSlots((prev) => {
         const copy = [...prev];
-        copy[index] = { ...copy[index], isVerifying: false, isVerified: true, verifiedType: slotTitle || "Uploaded Scan", aiError: null };
+        copy[index] = { ...copy[index], isVerifying: false, isVerified: false, verifiedType: null, aiError: "AI verification is unavailable. This document has not been accepted; please retry." };
         return copy;
       });
     }
@@ -716,17 +769,37 @@ export default function ApplicantApplyVisa({
   // Co-Travelers Add/Remove
   const handleAddCoTraveler = () => {
     if (!newCoName.trim()) return;
+    const finalPassport = newCoPassport.trim() || `Z${Math.floor(1000000 + Math.random() * 9000000)}`;
     setCoTravelers((prev) => [
       ...prev,
       {
         id: `ct-${Date.now()}`,
         name: newCoName.trim(),
         relation: newCoRelation,
-        passportNo: `Z${Math.floor(1000000 + Math.random() * 9000000)}`,
+        passportNo: finalPassport.toUpperCase(),
         age: 30
       }
     ]);
     setNewCoName("");
+    setNewCoPassport("");
+  };
+
+  const handleSelectVaultTraveler = (t: CoTravelerRecord) => {
+    if (coTravelers.some((c) => c.name.toLowerCase() === t.fullName.toLowerCase())) {
+      showToast(`${t.fullName} is already added to this application.`);
+      return;
+    }
+    setCoTravelers((prev) => [
+      ...prev,
+      {
+        id: `ct-${Date.now()}`,
+        name: t.fullName,
+        relation: t.relation,
+        passportNo: t.passportNumber,
+        age: 30
+      }
+    ]);
+    showToast(`Added ${t.fullName} (${t.relation}) from your saved vault.`);
   };
 
   const handleRemoveCoTraveler = (id: string) => {
@@ -816,6 +889,8 @@ export default function ApplicantApplyVisa({
       for (const slot of uploadedSlots) {
         if (slot.isMandatory && (!slot.fileUrl || slot.fileUrl.trim() === "")) {
           errs[`doc_${slot.title}`] = `Mandatory document "${slot.title}" must be uploaded.`;
+        } else if (slot.isMandatory && !slot.isVerified) {
+          errs[`doc_${slot.title}`] = `Mandatory document "${slot.title}" must pass AI verification before submission.`;
         }
       }
     }
@@ -927,6 +1002,57 @@ export default function ApplicantApplyVisa({
       if (res.ok && json.success && json.data) {
         setSubmittedAppRecord(json.data);
         showToast("Visa application submitted & saved to MongoDB successfully!");
+        
+        // Add to frontend unified transaction store
+        try {
+          const appRec = json.data;
+          const appId = appRec.applicationId || `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+          const numSuffix = appId.replace(/^VO-2026-/, "").replace(/[^0-9]/g, "") || String(Math.floor(1000 + Math.random() * 9000));
+          const taxableBase = consularFee + platformFee;
+          const cgst = Math.round(taxableBase * 0.09);
+          const sgst = Math.round(taxableBase * 0.09);
+          const totalTax = cgst + sgst;
+          const netAmount = taxableBase + totalTax + expressSurcharge;
+
+          if (visaCtx?.addNewUnifiedTransaction) {
+            visaCtx.addNewUnifiedTransaction({
+              id: `tx-${numSuffix}`,
+              transactionId: `PAY-2026-${numSuffix}`,
+              invoiceNo: `INV-2026-${numSuffix}`,
+              applicationId: appId,
+              applicantName: `${givenName} ${surname}`.trim() || "Applicant",
+              passportNumber: passportNo ? passportNo.toUpperCase() : "Z9817264",
+              nationality: nationality || "Indian",
+              country: selectedCountryName,
+              visaType: selectedVisaTypeName,
+              visaCategory: selectedCategoryName?.toLowerCase().includes("business") ? "Business" : selectedCategoryName?.toLowerCase().includes("student") ? "Student" : "Tourist",
+              paidBy: "Applicant",
+              pricing: {
+                consularFee,
+                serviceFee: platformFee,
+                expressSurcharge,
+                taxableBase,
+                cgst,
+                sgst,
+                igst: 0,
+                totalTax,
+                discount: 0,
+                netAmount
+              },
+              paymentMethod: "UPI Instant (Google Pay)",
+              paymentGateway: "Razorpay",
+              paymentRef: `RAZOR-${passportNo || "9817264"}-PAY`,
+              status: "Successful",
+              gstin: "27AAACG1234H1Z5",
+              billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
+              sacCode: "998311",
+              createdAt: new Date().toISOString()
+            });
+          }
+        } catch (e) {
+          console.error("Failed to add transaction to local context:", e);
+        }
+
         if (onAddApplication) {
           onAddApplication(json.data);
         }
@@ -1901,16 +2027,57 @@ export default function ApplicantApplyVisa({
 
                 {/* Co-Travelers */}
                 <div className="space-y-3 pt-3 border-t border-slate-100">
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider text-[10px]">
-                    Co-Travelers (Family / Group Application)
-                  </h4>
-                  <div className="flex gap-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                      Co-Travelers (Family / Group Application)
+                    </h4>
+                    {savedVaultTravelers.length > 0 && (
+                      <span className="text-[10px] text-indigo-600 font-bold">
+                        {savedVaultTravelers.length} saved in your vault
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Saved Co-Travelers Quick-Select Pills from Profile Vault */}
+                  {savedVaultTravelers.length > 0 && (
+                    <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1.5">
+                      <p className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                        <Users size={13} className="text-[#4848F7]" />
+                        <span>Add from your Saved Family Vault:</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-0.5">
+                        {savedVaultTravelers.map((t) => {
+                          const isAlreadyAdded = coTravelers.some((c) => c.name.toLowerCase() === t.fullName.toLowerCase());
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => handleSelectVaultTraveler(t)}
+                              disabled={isAlreadyAdded}
+                              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                isAlreadyAdded
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300 opacity-80 cursor-default"
+                                  : "bg-white hover:bg-[#4848F7] text-slate-800 hover:text-white border border-slate-200 shadow-2xs"
+                              }`}
+                            >
+                              <span>{isAlreadyAdded ? "✓" : "+"}</span>
+                              <span>{t.fullName}</span>
+                              <span className="text-[10px] opacity-75">({t.relation} &bull; {t.passportNumber})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Custom Co-Traveler Input */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
                     <input
                       type="text"
                       value={newCoName}
                       onChange={(e) => setNewCoName(e.target.value)}
-                      placeholder="Co-Traveler Full Name"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
+                      placeholder="Full Name (as per passport)"
+                      className="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                     />
                     <select
                       value={newCoRelation}
@@ -1920,14 +2087,25 @@ export default function ApplicantApplyVisa({
                       <option value="Spouse">Spouse</option>
                       <option value="Child">Child</option>
                       <option value="Parent">Parent</option>
+                      <option value="Sibling">Sibling</option>
                       <option value="Friend">Friend</option>
                     </select>
+                    <input
+                      type="text"
+                      value={newCoPassport}
+                      onChange={(e) => setNewCoPassport(e.target.value.toUpperCase())}
+                      placeholder="Passport No (e.g. Z9817265)"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono font-bold focus:outline-none focus:border-[#4848F7]"
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={handleAddCoTraveler}
-                      className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl shrink-0 cursor-pointer transition"
+                      className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer transition flex items-center gap-1.5"
                     >
-                      Add Co-Traveler
+                      <Plus size={14} /> Add Co-Traveler
                     </button>
                   </div>
 
