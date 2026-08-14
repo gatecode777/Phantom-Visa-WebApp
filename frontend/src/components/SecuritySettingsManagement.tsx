@@ -151,13 +151,13 @@ export default function SecuritySettingsManagement() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">System Status</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Protected ðŸ›¡ï¸</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Protected</div>
           <span className="text-[10px] text-emerald-600 font-bold">Zero Threats</span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
           <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">2FA Enforcement</span>
-          <div className="text-xl font-black text-slate-900 font-mono">Active 🟢</div>
+          <div className="text-xl font-black text-slate-900 font-mono">Active</div>
           <span className="text-[10px] text-blue-600 font-bold">Mandatory Admin</span>
         </div>
 

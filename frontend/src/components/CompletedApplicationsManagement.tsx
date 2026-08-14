@@ -47,13 +47,17 @@ export interface CompletedApplicationRecord {
   completedDate: string;
   completedTime: string;
   handlingOfficer: string;
+  approvedBy?: string;
+  visaIssueDate?: string;
   deliveryStatus: "Delivered & Confirmed" | "Passport Delivered" | "E-Visa Sent & Opened";
   deliveryMethod: "Express Courier (BlueDart)" | "Digital Delivery (Email)" | "Consular Pickup";
-  trackingWaybill: string;
-  courierPartner: string;
-  deliveryDate: string;
-  amountPaid: string;
+  trackingWaybill?: string;
+  courierPartner?: string;
+  deliveryDate?: string;
+  amountPaid?: string;
+  totalAmountPaid?: string;
   transactionId: string;
+  paymentMethod?: string;
   status: "Completed" | "Archived";
   rating?: number; // e.g. 5
   feedbackComment?: string;
@@ -698,7 +702,7 @@ export default function CompletedApplicationsManagement() {
                       {a.completedDate} ({a.completedTime})
                     </td>
                     <td className="py-3.5 px-4">
-                      {a.deliveryStatus === "Delivered" ? (
+                      {a.deliveryStatus.includes("Delivered") ? (
                         <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
                           🟢 Delivered
                         </span>

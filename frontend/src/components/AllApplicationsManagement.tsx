@@ -175,7 +175,6 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     amountPaid: "₹12,350",
     transactionId: "TXN-9988112",
     paymentMethod: "UPI",
-    amountPaid: "₹12,350",
     embassyTrackingId: "CAN-EMB-8831",
     embassySubmissionDate: "2026-07-29",
     appointmentDate: "2026-08-05",
@@ -243,7 +242,6 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     amountPaid: "₹18,930",
     transactionId: "TXN-7733441",
     paymentMethod: "Credit Card",
-    amountPaid: "₹18,930",
     embassyTrackingId: "AUS-SYD-4412",
     embassySubmissionDate: "2026-07-30",
     appointmentDate: "2026-08-02",
@@ -308,7 +306,6 @@ const MOCK_APPLICATIONS: ApplicationRecord[] = [
     amountPaid: "₹8,670",
     transactionId: "TXN-PENDING",
     paymentMethod: "Net Banking",
-    amountPaid: "₹8,670",
     documents: [
       { name: "Passport Bio Page", status: "Verified" },
       { name: "Company Cover Letter & Trade License", status: "Verified" },
