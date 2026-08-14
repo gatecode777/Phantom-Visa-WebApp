@@ -126,6 +126,16 @@ export default function ApplicantVerificationStatus({
     return { total, verified, pending, rejected, resubmit, speed };
   }, [verificationItems]);
 
+  const auditHeader = useMemo(() => {
+    const datedRecords = verificationItems
+      .filter((record) => record.verificationDate && record.verificationDate !== "Pending Audit")
+      .map((record) => record.verificationDate);
+    return {
+      stage: verificationItems.length === 0 ? "No documents in verification queue" : metrics.verified === metrics.total ? "Verification complete" : "Agent audit in progress",
+      lastAuditDate: datedRecords[0] || "No audit recorded"
+    };
+  }, [metrics, verificationItems]);
+
   // Filtered List
   const filteredRecords = useMemo(() => {
     return verificationItems
@@ -332,13 +342,13 @@ export default function ApplicantVerificationStatus({
           <div>
             <span className="text-slate-500 font-medium block">Verification Stage</span>
             <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-              Agent Audit Stage 2
+              {auditHeader.stage}
             </span>
           </div>
 
           <div>
             <span className="text-slate-500 font-medium block">Last Audit Date</span>
-            <span className="font-semibold text-slate-800">07 Aug 2026</span>
+            <span className="font-semibold text-slate-800">{auditHeader.lastAuditDate}</span>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   BarChart3,
   Search,
@@ -51,7 +51,7 @@ export const REPORT_MODULES = [
   "All Modules",
   "Applications",
   "Payments",
-  "Appointments",
+  "All Appointments",
   "Documents",
   "Users & Agents"
 ];

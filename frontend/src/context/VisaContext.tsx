@@ -2,6 +2,25 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
+import {
+  UnifiedTransactionRecord,
+  INITIAL_UNIFIED_TRANSACTIONS,
+  fetchUnifiedTransactions,
+  updateTransactionStatusApi,
+  updateInvoiceGstinApi
+} from "../services/paymentService";
+import {
+  UnifiedAppointmentRecord,
+  INITIAL_UNIFIED_APPOINTMENTS,
+  fetchUnifiedAppointments,
+  createAppointmentApi,
+  updateAppointmentApi
+} from "../services/appointmentService";
+import {
+  SupportTicketRecord,
+  TicketMessage,
+  fetchTickets
+} from "../services/supportService";
 
 export function formatINR(val: number, decimals: number = 0): string {
   if (isNaN(val) || val === null || val === undefined) return "0";
@@ -215,6 +234,25 @@ interface VisaContextType {
   stopImpersonation: () => void;
   featureFlags: { key: string; name: string; percentage: number; isActive: boolean }[];
   setFeatureFlagPercentage: (key: string, percentage: number) => void;
+
+  // UNIFIED PAYMENT LEDGER STATE
+  unifiedTransactions: UnifiedTransactionRecord[];
+  updateUnifiedTransactionStatus: (id: string, status: string, reason?: string, amount?: number) => Promise<void>;
+  updateUnifiedInvoiceGstin: (id: string, gstin: string, billingAddress?: string) => Promise<void>;
+  addNewUnifiedTransaction: (txn: UnifiedTransactionRecord) => void;
+  fetchUnifiedTransactionsList: () => Promise<void>;
+
+  // UNIFIED APPOINTMENTS LEDGER STATE
+  unifiedAppointments: UnifiedAppointmentRecord[];
+  addUnifiedAppointment: (apt: UnifiedAppointmentRecord) => void;
+  updateUnifiedAppointment: (id: string, changes: Partial<UnifiedAppointmentRecord>) => void;
+
+  // UNIFIED SUPPORT TICKETS STATE
+  unifiedTickets: SupportTicketRecord[];
+  fetchSupportTickets: (userId?: string) => Promise<void>;
+  addSupportTicket: (t: SupportTicketRecord) => void;
+  updateSupportTicket: (ticketId: string, changes: Partial<SupportTicketRecord>) => void;
+  appendTicketMessage: (ticketId: string, msg: TicketMessage) => void;
 }
 
 const VisaContext = createContext<VisaContextType | undefined>(undefined);
@@ -266,6 +304,164 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     metrics: any;
     application: any;
   } | null>(null);
+
+  // Unified Payment Ledger State
+  const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransactionRecord[]>(INITIAL_UNIFIED_TRANSACTIONS);
+
+  // Unified Appointments Ledger State
+  const [unifiedAppointments, setUnifiedAppointments] = useState<UnifiedAppointmentRecord[]>(INITIAL_UNIFIED_APPOINTMENTS);
+
+  // Fetch from MongoDB on mount — same pattern as fetchUnifiedTransactionsList
+  const fetchUnifiedAppointmentsList = async () => {
+    try {
+      const data = await fetchUnifiedAppointments();
+      if (Array.isArray(data) && data.length > 0) {
+        setUnifiedAppointments(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unified appointments list:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnifiedAppointmentsList();
+  }, []);
+
+  // ── Unified Support Tickets State ──────────────────────────────────────────
+  const [unifiedTickets, setUnifiedTickets] = useState<SupportTicketRecord[]>([]);
+
+  const fetchSupportTickets = async (userId?: string) => {
+    try {
+      const data = await fetchTickets(userId);
+      if (Array.isArray(data)) {
+        setUnifiedTickets(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch support tickets:", err);
+    }
+  };
+
+  /** Optimistic-add: reflect in UI immediately */
+  const addSupportTicket = (t: SupportTicketRecord) => {
+    setUnifiedTickets((prev) => {
+      const exists = prev.some((x) => x.ticketId === t.ticketId);
+      if (exists) return prev;
+      return [t, ...prev];
+    });
+  };
+
+  /** Optimistic-update: patch an existing ticket */
+  const updateSupportTicket = (ticketId: string, changes: Partial<SupportTicketRecord>) => {
+    setUnifiedTickets((prev) =>
+      prev.map((t) => (t.ticketId === ticketId ? { ...t, ...changes } : t))
+    );
+  };
+
+  /** Optimistic-append: add a new message to a ticket's thread */
+  const appendTicketMessage = (ticketId: string, msg: TicketMessage) => {
+    setUnifiedTickets((prev) =>
+      prev.map((t) =>
+        t.ticketId === ticketId
+          ? { ...t, messages: [...t.messages, msg], updatedAt: new Date().toISOString() }
+          : t
+      )
+    );
+  };
+
+  /**
+   * Optimistic-add: update UI instantly, then persist to MongoDB.
+   * If the API call fails, the record still lives in React state for
+   * the current session (no rollback needed for a booking flow).
+   */
+  const addUnifiedAppointment = (apt: UnifiedAppointmentRecord) => {
+    setUnifiedAppointments((prev) => {
+      const exists = prev.some((a) => a.id === apt.id || a.aptId === apt.aptId);
+      if (exists) return prev;
+      return [apt, ...prev];
+    });
+    // Fire-and-forget persist to MongoDB
+    createAppointmentApi(apt).catch((err) =>
+      console.error("createAppointmentApi failed:", err)
+    );
+  };
+
+  /**
+   * Optimistic-update: reflect change in UI immediately, then persist to MongoDB.
+   */
+  const updateUnifiedAppointment = (id: string, changes: Partial<UnifiedAppointmentRecord>) => {
+    setUnifiedAppointments((prev) =>
+      prev.map((a) => (a.id === id || a.aptId === id ? { ...a, ...changes } : a))
+    );
+    // Determine the canonical aptId to send to the API
+    const aptId = id.startsWith("APT-") ? id : (unifiedAppointments.find(a => a.id === id)?.aptId ?? id);
+    updateAppointmentApi(aptId, changes).catch((err) =>
+      console.error("updateAppointmentApi failed:", err)
+    );
+  };
+
+  const fetchUnifiedTransactionsList = async () => {
+    try {
+      const data = await fetchUnifiedTransactions();
+      if (Array.isArray(data) && data.length > 0) {
+        setUnifiedTransactions(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unified transactions list:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnifiedTransactionsList();
+  }, []);
+
+  const updateUnifiedTransactionStatus = async (id: string, status: string, reason?: string, amount?: number) => {
+    setUnifiedTransactions((prev) =>
+      prev.map((t) => {
+        if (t.id === id || t.transactionId === id) {
+          const updated: UnifiedTransactionRecord = { ...t, status: status as any };
+          if (status === "Refunded") {
+            updated.refundDetails = {
+              status: "Refunded",
+              amount: amount || t.pricing.netAmount,
+              date: new Date().toISOString().split("T")[0],
+              refNo: `RFD-${Math.floor(10000 + Math.random() * 90000)}`,
+              reason: reason || "Approved Refund Request"
+            };
+          }
+          return updated;
+        }
+        return t;
+      })
+    );
+    await updateTransactionStatusApi(id, status, reason, amount);
+  };
+
+  const updateUnifiedInvoiceGstin = async (id: string, gstin: string, billingAddress?: string) => {
+    const cleanGstin = gstin.trim().toUpperCase();
+    setUnifiedTransactions((prev) =>
+      prev.map((t) => {
+        if (t.id === id || t.transactionId === id || t.invoiceNo === id) {
+          return {
+            ...t,
+            gstin: cleanGstin,
+            billingAddress: billingAddress ? billingAddress.trim() : t.billingAddress
+          };
+        }
+        return t;
+      })
+    );
+    await updateInvoiceGstinApi(id, cleanGstin, billingAddress);
+  };
+
+  const addNewUnifiedTransaction = (txn: UnifiedTransactionRecord) => {
+    setUnifiedTransactions((prev) => {
+      const exists = prev.some((t) => t.transactionId === txn.transactionId || t.applicationId === txn.applicationId);
+      if (exists) {
+        return prev.map((t) => (t.applicationId === txn.applicationId ? { ...t, ...txn } : t));
+      }
+      return [txn, ...prev];
+    });
+  };
 
   const fetchApplicantDashboardData = async () => {
     try {
@@ -1003,7 +1199,20 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         featureFlags,
         setFeatureFlagPercentage,
         applicantDashboardData,
-        fetchApplicantDashboardData
+        fetchApplicantDashboardData,
+        unifiedTransactions,
+        updateUnifiedTransactionStatus,
+        updateUnifiedInvoiceGstin,
+        addNewUnifiedTransaction,
+        fetchUnifiedTransactionsList,
+        unifiedAppointments,
+        addUnifiedAppointment,
+        updateUnifiedAppointment,
+        unifiedTickets,
+        fetchSupportTickets,
+        addSupportTicket,
+        updateSupportTicket,
+        appendTicketMessage
       }}
     >
       {children}

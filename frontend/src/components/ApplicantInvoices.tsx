@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Application, formatINR } from "../context/VisaContext";
+import { Application, formatINR, useVisa } from "../context/VisaContext";
 import {
   FileText,
   Download,
@@ -27,7 +27,9 @@ import {
   Zap,
   Tag,
   ArrowRight,
-  PackageCheck
+  PackageCheck,
+  X,
+  Check
 } from "lucide-react";
 
 export type InvoiceStatus = "paid" | "pending" | "proforma" | "cancelled";
@@ -65,135 +67,62 @@ export default function ApplicantInvoices({
   onNavigateMakePayment,
   onNavigateSupport
 }: ApplicantInvoicesProps) {
-  // Mock Invoices Dataset matching wireframe
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([
-    {
-      id: "INV-2026-0891",
-      appId: "VO-2026-1025",
-      country: "Australia 🇦🇺",
-      visaType: "Tourist Subclass 600",
-      invoiceDate: "07 Aug 2026",
-      dueDate: "07 Aug 2026",
-      amount: 15500,
-      status: "paid",
-      travelerName: "Geeta Sharma",
-      consularFee: 12500,
-      serviceFee: 2500,
-      cgst: 750,
-      sgst: 750,
-      discount: 1000,
-      paymentMethod: "Credit Card (Visa •••• 8892)",
-      paymentRef: "PAY-2026-1025",
-      gstin: "27AAACG1234H1Z5",
-      billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
-      pdfFileName: "INV-2026-0891_Geeta_Australia.pdf"
-    },
-    {
-      id: "INV-2026-0742",
-      appId: "VO-2026-0982",
-      country: "Schengen / France 🇫🇷",
-      visaType: "Express Short-Stay Tourist",
-      invoiceDate: "01 Aug 2026",
-      dueDate: "01 Aug 2026",
-      amount: 22000,
-      status: "paid",
-      travelerName: "Rohan Verma",
-      consularFee: 18000,
-      serviceFee: 3000,
-      cgst: 1000,
-      sgst: 1000,
-      discount: 1000,
-      paymentMethod: "UPI Instant (Google Pay)",
-      paymentRef: "PAY-2026-0982",
-      gstin: "27AAACG1234H1Z5",
-      billingAddress: "45, Residency Road, Bengaluru - 560025",
-      pdfFileName: "INV-2026-0742_Rohan_France.pdf"
-    },
-    {
-      id: "PRO-2026-0511",
-      appId: "VO-2026-0814",
-      country: "United Kingdom 🇬🇧",
-      visaType: "Standard Visitor 6 Months",
-      invoiceDate: "25 Jul 2026",
-      dueDate: "10 Aug 2026",
-      amount: 14500,
-      status: "pending",
-      travelerName: "Amitabh Patel",
-      consularFee: 11000,
-      serviceFee: 2500,
-      cgst: 750,
-      sgst: 750,
-      discount: 500,
-      paymentMethod: "Net Banking (HDFC Pending)",
-      paymentRef: "PAY-2026-0814",
-      gstin: "27AAACG1234H1Z5",
-      billingAddress: "12, Marine Drive, Mumbai - 400020",
-      pdfFileName: "PRO-2026-0511_Amitabh_UK.pdf"
-    },
-    {
-      id: "PRO-2026-0390",
-      appId: "VO-2026-0720",
-      country: "United States 🇺🇸",
-      visaType: "B1/B2 Tourist Visitor",
-      invoiceDate: "15 Jul 2026",
-      dueDate: "15 Jul 2026",
-      amount: 18500,
-      status: "proforma",
-      travelerName: "Priya Sundaram",
-      consularFee: 15000,
-      serviceFee: 2500,
-      cgst: 500,
-      sgst: 500,
-      discount: 0,
-      paymentMethod: "Awaiting Checkout",
-      paymentRef: "UNPAID",
-      gstin: "N/A",
-      billingAddress: "88, T. Nagar, Chennai - 600017",
-      pdfFileName: "PRO-2026-0390_Priya_US.pdf"
-    },
-    {
-      id: "INV-2026-0210",
-      appId: "VO-2026-0512",
-      country: "Singapore 🇸🇬",
-      visaType: "30-Day e-Visa",
-      invoiceDate: "15 Jun 2026",
-      dueDate: "15 Jun 2026",
-      amount: 8500,
-      status: "paid",
-      travelerName: "Karan Mehta",
-      consularFee: 6000,
-      serviceFee: 2000,
-      cgst: 250,
-      sgst: 250,
-      discount: 0,
-      paymentMethod: "UPI Instant (PhonePe)",
-      paymentRef: "PAY-2026-0512",
-      gstin: "27AAACG1234H1Z5",
-      billingAddress: "56, Sector 18, Noida - 201301",
-      pdfFileName: "INV-2026-0210_Karan_SG.pdf"
-    },
-    {
-      id: "INV-2026-0105",
-      appId: "VO-2026-0650",
-      country: "Canada 🇨🇦",
-      visaType: "Visitor Visa V-1",
-      invoiceDate: "01 Jul 2026",
-      dueDate: "01 Jul 2026",
-      amount: 16500,
-      status: "cancelled",
-      travelerName: "Vikram Malhotra",
-      consularFee: 13000,
-      serviceFee: 2500,
-      cgst: 500,
-      sgst: 500,
-      discount: 0,
-      paymentMethod: "Refunded to Wallet",
-      paymentRef: "PAY-2026-0650-RFD",
-      gstin: "27AAACG1234H1Z5",
-      billingAddress: "104, Park Street, New Delhi - 110001",
-      pdfFileName: "INV-2026-0105_CANCELLED.pdf"
-    }
-  ]);
+  const { unifiedTransactions, updateUnifiedInvoiceGstin } = useVisa();
+
+  // GSTIN Modal State
+  const [showGstinModal, setShowGstinModal] = useState(false);
+  const [inputGstin, setInputGstin] = useState("");
+  const [inputAddress, setInputAddress] = useState("");
+  const [isUpdatingGstin, setIsUpdatingGstin] = useState(false);
+
+  // Derive invoices directly from unifiedTransactions single ledger
+  const invoices = useMemo<InvoiceRecord[]>(() => {
+    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
+    return unifiedTransactions.map((t) => {
+      const statusMap: Record<string, InvoiceStatus> = {
+        Successful: "paid",
+        Pending: "pending",
+        Proforma: "proforma",
+        Cancelled: "cancelled",
+        Refunded: "cancelled",
+        Failed: "proforma"
+      };
+
+      const dateStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+        : "Recent";
+
+      // 18% GST calculation (9% CGST + 9% SGST on taxable base)
+      const consularFee = t.pricing?.consularFee || 12500;
+      const serviceFee = t.pricing?.serviceFee || 2500;
+      const taxableBase = consularFee + serviceFee;
+      const cgst = t.pricing?.cgst ?? Math.round(taxableBase * 0.09);
+      const sgst = t.pricing?.sgst ?? Math.round(taxableBase * 0.09);
+      const netAmount = t.pricing?.netAmount || (taxableBase + cgst + sgst - (t.pricing?.discount || 0));
+
+      return {
+        id: t.invoiceNo || `INV-${t.transactionId}`,
+        appId: t.applicationId,
+        country: t.country,
+        visaType: t.visaType,
+        invoiceDate: dateStr,
+        dueDate: dateStr,
+        amount: netAmount,
+        status: statusMap[t.status] || "paid",
+        travelerName: t.applicantName || "Geeta Sharma",
+        consularFee,
+        serviceFee,
+        cgst,
+        sgst,
+        discount: t.pricing?.discount || 0,
+        paymentMethod: t.paymentMethod || "UPI Instant",
+        paymentRef: t.transactionId,
+        gstin: t.gstin || "27AAACG1234H1Z5",
+        billingAddress: t.billingAddress || "104, Park Street, Connaught Place, New Delhi - 110001",
+        pdfFileName: `${t.invoiceNo || "INV"}_${(t.applicantName || "Invoice").replace(/\s+/g, "_")}.pdf`
+      };
+    });
+  }, [unifiedTransactions]);
 
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -201,11 +130,32 @@ export default function ApplicantInvoices({
   const [sortBy, setSortBy] = useState<"newest" | "amount">("newest");
 
   // Selected Invoice ID for Inspector
-  const [selectedInvId, setSelectedInvId] = useState<string>("INV-2026-0891");
+  const [selectedInvId, setSelectedInvId] = useState<string>("");
 
   const activeInv = useMemo(() => {
-    return invoices.find((i) => i.id === selectedInvId) || invoices[0];
+    if (selectedInvId) {
+      const found = invoices.find((i) => i.id === selectedInvId || i.appId === selectedInvId);
+      if (found) return found;
+    }
+    return invoices[0] || null;
   }, [invoices, selectedInvId]);
+
+  // Update GSTIN Submit Handler
+  const handleGstinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeInv || !inputGstin.trim()) return;
+
+    setIsUpdatingGstin(true);
+    try {
+      await updateUnifiedInvoiceGstin(activeInv.id, inputGstin, inputAddress);
+      setShowGstinModal(false);
+      alert(`GSTIN updated to ${inputGstin.toUpperCase()} successfully! Invoice regenerated.`);
+    } catch (err) {
+      alert("Failed to update GSTIN.");
+    } finally {
+      setIsUpdatingGstin(false);
+    }
+  };
 
   // Dynamic Dashboard Statistics
   const metrics = useMemo(() => {
@@ -669,7 +619,13 @@ export default function ApplicantInvoices({
 
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => alert("Opening GSTIN edit request modal...")}
+            onClick={() => {
+              if (activeInv) {
+                setInputGstin(activeInv.gstin !== "N/A" ? activeInv.gstin : "");
+                setInputAddress(activeInv.billingAddress || "");
+              }
+              setShowGstinModal(true);
+            }}
             className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
           >
             <Edit size={14} /> Update GSTIN
@@ -748,6 +704,72 @@ export default function ApplicantInvoices({
           </div>
         </div>
       </div>
+
+      {/* UPDATE GSTIN MODAL */}
+      {showGstinModal && activeInv && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Building className="text-[#4848F7]" size={20} />
+                <h3 className="text-base font-extrabold text-slate-900">Update GSTIN Registration</h3>
+              </div>
+              <button
+                onClick={() => setShowGstinModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Updating GSTIN for invoice <strong className="text-slate-800 font-mono">{activeInv.id}</strong> (Application: <span className="font-mono text-[#4848F7] font-bold">{activeInv.appId}</span>). A revised tax invoice will be regenerated immediately.
+            </p>
+
+            <form onSubmit={handleGstinSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">GSTIN Number (15 Digits)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 27AAACG1234H1Z5"
+                  value={inputGstin}
+                  onChange={(e) => setInputGstin(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 focus:outline-none focus:border-[#4848F7]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Company Registered Billing Address</label>
+                <textarea
+                  rows={3}
+                  placeholder="Enter full company address..."
+                  value={inputAddress}
+                  onChange={(e) => setInputAddress(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 focus:outline-none focus:border-[#4848F7]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGstinModal(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingGstin}
+                  className="px-5 py-2 bg-[#4848F7] text-white font-bold rounded-xl hover:bg-indigo-600 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isUpdatingGstin ? "Updating..." : "Save & Regenerate Invoice"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

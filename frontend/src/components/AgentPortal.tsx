@@ -538,7 +538,7 @@ export default function AgentPortal() {
             }`}
           >
             <Calendar size={18} className={agentTab === "appointments" ? "text-purple-600" : "text-slate-400"} />
-            <span>Appointments</span>
+            <span>All Appointments</span>
           </button>
 
           {/* Messages */}

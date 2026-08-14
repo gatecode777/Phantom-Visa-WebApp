@@ -5,6 +5,8 @@ import ApplicationModel from "../models/Application.js";
 import CountryModel from "../models/Country.js";
 import VisaTypeModel from "../models/VisaType.js";
 import VisaRequirementModel from "../models/VisaRequirement.js";
+import TransactionModel from "../models/Transaction.js";
+import { calculatePricing } from "./finance.js";
 import imagekit from "../lib/imagekit.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
 
@@ -15,6 +17,17 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+function deduplicateRequirementDocuments(documents: any[] = []) {
+  const unique = new Map<string, any>();
+  for (const document of documents) {
+    const key = String(document.requirementId || document.title || "").trim().toLowerCase();
+    if (!key) continue;
+    // Later values represent a re-upload/update of the same requirement slot.
+    unique.set(key, document);
+  }
+  return Array.from(unique.values());
+}
+
 /**
  * POST /api/v1/applications/upload-doc
  * Upload applicant document scan / PDF to ImageKit in folder /PHANTOM-VISA/documents/
@@ -23,6 +36,11 @@ router.post("/upload-doc", upload.single("file"), async (req: Request, res: Resp
   try {
     if (!req.file) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "No document file provided for upload."));
+    }
+
+    const supportedVerificationMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+    if (!supportedVerificationMimeTypes.has(req.file.mimetype)) {
+      return res.status(415).json(formatErrorEnvelope("UNSUPPORTED_MEDIA_TYPE", "Use a JPEG, PNG, WEBP, or PDF file. This format cannot be securely verified."));
     }
 
     const fileBase64 = req.file.buffer.toString("base64");
@@ -372,7 +390,7 @@ router.post("/submit", async (req: Request, res: Response) => {
         jobTitle: employmentDetails?.jobTitle || "",
         bankBalance: employmentDetails?.bankBalance || "₹4,50,000"
       },
-      uploadedDocuments: Array.isArray(uploadedDocuments) ? uploadedDocuments : [],
+      uploadedDocuments: deduplicateRequirementDocuments(Array.isArray(uploadedDocuments) ? uploadedDocuments : []),
       coTravelers: Array.isArray(coTravelers) ? coTravelers : [],
       pricing: {
         consularFee,
@@ -387,6 +405,41 @@ router.post("/submit", async (req: Request, res: Response) => {
     });
 
     await newApplication.save();
+
+    // Auto-create unified Transaction & Invoice record in payment ledger
+    try {
+      const numSuffix = applicationId.replace(/^VO-2026-/, "").replace(/[^0-9]/g, "") || String(Math.floor(1000 + Math.random() * 9000));
+      const transactionId = `PAY-2026-${numSuffix}`;
+      const invoiceNo = `INV-2026-${numSuffix}`;
+
+      const fullPricing = calculatePricing(consularFee, platformFee, expressSurcharge, promoDiscount);
+      const applicantFullName = `${safePersonalDetails.givenName} ${safePersonalDetails.surname}`.trim();
+
+      const newTxn = new TransactionModel({
+        transactionId,
+        invoiceNo,
+        applicationId,
+        applicantName: applicantFullName,
+        passportNumber: passportDetails?.passportNo ? passportDetails.passportNo.toUpperCase() : "Z9817264",
+        nationality: safePersonalDetails.nationality || "Indian",
+        country: `${countryName}`,
+        visaType: visaTypeName,
+        visaCategory: categoryName?.toLowerCase().includes("business") ? "Business" : categoryName?.toLowerCase().includes("student") ? "Student" : "Tourist",
+        paidBy: "Applicant",
+        pricing: fullPricing,
+        paymentMethod: "UPI Instant (Google Pay)",
+        paymentGateway: "Razorpay",
+        paymentRef: `RAZOR-${passportDetails?.passportNo || "9817264"}-PAY`,
+        status: "Successful",
+        gstin: "27AAACG1234H1Z5",
+        billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
+        sacCode: "998311"
+      });
+
+      await newTxn.save();
+    } catch (txnErr) {
+      console.error("Failed to auto-create transaction ledger record:", txnErr);
+    }
 
     return res.status(201).json({
       success: true,
@@ -467,7 +520,9 @@ router.get("/admin/all-documents", async (req: Request, res: Response) => {
 
     for (const app of applications) {
       const docs = Array.isArray(app.uploadedDocuments) ? app.uploadedDocuments : [];
-      for (const doc of docs) {
+      for (const doc of deduplicateRequirementDocuments(docs)) {
+        // Do not put unuploaded requirement placeholders into the admin archive.
+        if (!doc.fileUrl) continue;
         const statusNormalized = (doc.status || "uploaded").toLowerCase();
         let displayStatus = "Pending";
         if (statusNormalized === "verified") displayStatus = "Verified";

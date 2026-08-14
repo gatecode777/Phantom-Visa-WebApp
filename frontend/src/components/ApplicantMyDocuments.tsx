@@ -83,10 +83,11 @@ export default function ApplicantMyDocuments({
   const [loading, setLoading] = useState(true);
 
   // Fetch Vault items from Backend API
-  const fetchVaultData = async () => {
+  const fetchVaultData = async (applicationId?: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_V1_URL}/applicant/vault`);
+      const query = applicationId ? `?applicationId=${encodeURIComponent(applicationId)}` : "";
+      const res = await fetch(`${API_V1_URL}/applicant/vault${query}`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setVaultItems(json.data);
@@ -118,8 +119,9 @@ export default function ApplicantMyDocuments({
   };
 
   React.useEffect(() => {
-    fetchVaultData();
-  }, []);
+    const applicationId = applications[0]?.id || applications[0]?.applicationId;
+    fetchVaultData(applicationId);
+  }, [applications]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,7 +152,7 @@ export default function ApplicantMyDocuments({
     const expired = vaultItems.filter((d) => d.status === "expired").length;
     const storageUsed = `${(total * 4.2).toFixed(1)} MB / 500 MB`;
 
-    return { total: vaultMetrics.totalStored || total, activeValid: vaultMetrics.activeValid || activeValid, verified, pending, rejected, expired, storageUsed };
+    return { total: vaultMetrics.totalStored, activeValid: vaultMetrics.activeValid, verified, pending, rejected, expired, storageUsed };
   }, [vaultItems, vaultMetrics]);
 
   // Filtered List
@@ -371,6 +373,7 @@ export default function ApplicantMyDocuments({
       {/* ============================================================ */}
       {/* SECTION 5: EXPIRY ALERTS & NOTIFICATIONS PANEL */}
       {/* ============================================================ */}
+      {vaultItems.some((doc) => doc.status === "expired") && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Expiry Warning Alert */}
         <div className="lg:col-span-8 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-amber-900">
@@ -379,7 +382,7 @@ export default function ApplicantMyDocuments({
             <div>
               <p className="font-extrabold text-amber-950">Document Expiry Alert</p>
               <p className="text-[11px] text-amber-800 mt-0.5">
-                Your <strong>Travel Insurance Policy</strong> expired on 01 Sep 2026. Passport <strong>{activeApp.passportNumber}</strong> is valid until 2033.
+                Your <strong>{vaultItems.find((doc) => doc.status === "expired")?.name}</strong> has expired. Passport <strong>{activeApp?.passportNumber}</strong> is valid until {activeApp?.passportExpiry || "its recorded expiry date"}.
               </p>
             </div>
           </div>
@@ -411,6 +414,7 @@ export default function ApplicantMyDocuments({
           </div>
         </div>
       </div>
+      )}
 
       {/* ============================================================ */}
       {/* SECTION 6: SEARCH & MULTI-FILTER CONTROL BAR */}

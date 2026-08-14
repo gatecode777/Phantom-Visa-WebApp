@@ -11,6 +11,7 @@ import { issueTokens, hashRefreshToken, getRefreshTokenExpiry, TokenPayload } fr
 import { documentUploadFields } from "../middleware/upload.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
+import { parseUserAgent, formatLastSeen } from "../lib/security/ua-parser.js";
 
 const router = Router();
 
@@ -326,12 +327,19 @@ router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
 
     const tokens = issueTokens(tokenPayload);
 
-    // Save Refresh Token Hash in DB
+    // Save Refresh Token Hash in DB with session metadata
     const refreshTokenHash = hashRefreshToken(tokens.refreshToken);
+    const { deviceName, browser } = parseUserAgent(req.headers["user-agent"] || "");
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "";
     await RefreshToken.create({
       userId: user._id,
       tokenHash: refreshTokenHash,
-      expiresAt: getRefreshTokenExpiry()
+      expiresAt: getRefreshTokenExpiry(),
+      deviceName,
+      browser,
+      ipAddress,
+      location: "",
+      lastSeenAt: new Date()
     });
 
     // Set HTTP-Only Cookie for Refresh Token
@@ -550,12 +558,19 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
 
     const tokens = issueTokens(tokenPayload);
 
-    // Save Refresh Token Hash in DB
+    // Save Refresh Token Hash in DB with session metadata
     const refreshTokenHash = hashRefreshToken(tokens.refreshToken);
+    const { deviceName: devName, browser: brName } = parseUserAgent(req.headers["user-agent"] || "");
+    const ipAddr = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "";
     await RefreshToken.create({
       userId: user._id,
       tokenHash: refreshTokenHash,
-      expiresAt: getRefreshTokenExpiry()
+      expiresAt: getRefreshTokenExpiry(),
+      deviceName: devName,
+      browser: brName,
+      ipAddress: ipAddr,
+      location: "",
+      lastSeenAt: new Date()
     });
 
     // Set HTTP-Only Cookie for Refresh Token
@@ -720,6 +735,123 @@ router.post("/logout-all", async (req: Request, res: Response) => {
       message: "All sessions logged out successfully."
     });
   } catch (error: any) {
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * POST /api/v1/auth/change-password
+ * Change password for authenticated applicant/user
+ */
+router.post("/change-password", async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "New password must be at least 6 characters long."));
+    }
+
+    let userId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const jwtSecret = process.env.JWT_SECRET || "fallback_secret";
+        const jwt = await import("jsonwebtoken");
+        const decoded = jwt.default.verify(token, jwtSecret) as any;
+        userId = decoded.userId || decoded.id;
+      } catch (e) {}
+    }
+
+    let user = userId ? await User.findById(userId) : null;
+    if (!user) {
+      user = await User.findOne({ role: "Applicant" }).sort({ updatedAt: -1 });
+    }
+
+    if (!user) {
+      return res.status(404).json(formatErrorEnvelope("USER_NOT_FOUND", "User account not found."));
+    }
+
+    if (user.passwordHash && currentPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json(formatErrorEnvelope("INVALID_PASSWORD", "Current password is incorrect."));
+      }
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const newHash = await bcrypt.hash(newPassword, salt);
+    user.passwordHash = newHash;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully."
+    });
+  } catch (error: any) {
+    console.error("❌ Change Password Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to change password."));
+  }
+});
+
+/**
+ * GET /api/v1/auth/sessions
+ * List all active (non-revoked, non-expired) sessions for the logged-in user.
+ * Each session row includes device name, browser, IP, lastSeenAt.
+ * The "current" session is identified by matching the incoming refresh token hash.
+ */
+router.get("/sessions", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const currentRefreshToken = req.cookies?.refreshToken || "";
+    const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null;
+
+    const sessions = await RefreshToken.find({
+      userId: req.user?.userId,
+      revoked: false,
+      expiresAt: { $gt: new Date() }
+    }).sort({ lastSeenAt: -1 });
+
+    const data = sessions.map((s) => ({
+      id: (s._id as any).toString(),
+      deviceName: s.deviceName || "Unknown Device",
+      browser: s.browser || "Unknown Browser",
+      ipAddress: s.ipAddress || "—",
+      location: s.location || "Unknown Location",
+      lastActive: formatLastSeen(s.lastSeenAt || s.createdAt),
+      isCurrent: currentHash ? s.tokenHash === currentHash : false
+    }));
+
+    return res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    console.error("❌ Sessions fetch error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
+  }
+});
+
+/**
+ * DELETE /api/v1/auth/sessions/:id
+ * Revoke a specific session by its RefreshToken document _id.
+ * Users can only revoke their own sessions.
+ */
+router.delete("/sessions/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const session = await RefreshToken.findOne({
+      _id: id,
+      userId: req.user?.userId
+    });
+
+    if (!session) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Session not found or does not belong to your account."));
+    }
+
+    session.revoked = true;
+    await session.save();
+
+    return res.status(200).json({ success: true, message: "Session revoked successfully." });
+  } catch (error: any) {
+    console.error("❌ Session revoke error:", error);
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message));
   }
 });

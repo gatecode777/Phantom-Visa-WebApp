@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useVisa } from "../context/VisaContext";
 import {
   CreditCard,
   Search,
@@ -100,90 +101,9 @@ export const SUPPORTED_PAYMENT_METHODS = [
   "Payment Gateway (Razorpay/Stripe)"
 ];
 
-const MOCK_TRANSACTIONS: TransactionRecord[] = [
-  {
-    id: "1",
-    txnId: "TXN-98230101",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    paidBy: "Applicant",
-    amount: 12500,
-    paymentMethod: "UPI",
-    txnDate: "01 Aug 2026",
-    txnDateTime: "01 Aug 2026 10:15 AM",
-    status: "Successful",
-    country: "Canada",
-    visaCategory: "Tourist",
-    paymentGateway: "Razorpay",
-    paymentRefNo: "PAY_RZP_99881122",
-    invoiceNo: "INV-2026-0801",
-    breakdown: {
-      embassyFee: 8500,
-      vfsFee: 2000,
-      courierCharge: 500,
-      processingFee: 1500
-    },
-    actionNotes: [
-      { id: "n1", author: "System", text: "Instant UPI payment verified by Razorpay webhooks.", date: "01 Aug 2026 10:15 AM" }
-    ]
-  },
-  {
-    id: "2",
-    txnId: "TXN-98230102",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    paidBy: "Agent",
-    agentName: "Apex Travels",
-    amount: 28000,
-    paymentMethod: "Credit Card",
-    txnDate: "01 Aug 2026",
-    txnDateTime: "01 Aug 2026 11:30 AM",
-    status: "Pending",
-    country: "Australia",
-    visaCategory: "Business",
-    paymentGateway: "Stripe",
-    paymentRefNo: "PAY_STP_33445566",
-    invoiceNo: "INV-2026-0802",
-    breakdown: {
-      embassyFee: 18000,
-      vfsFee: 4000,
-      courierCharge: 1000,
-      processingFee: 5000
-    },
-    actionNotes: []
-  },
-  {
-    id: "3",
-    txnId: "TXN-98230103",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    paidBy: "Applicant",
-    amount: 15800,
-    paymentMethod: "Net Banking",
-    txnDate: "31 Jul 2026",
-    txnDateTime: "31 Jul 2026 04:45 PM",
-    status: "Failed",
-    country: "UAE",
-    visaCategory: "Tourist",
-    paymentGateway: "HDFC Netbanking",
-    paymentRefNo: "PAY_HDFC_11223344",
-    invoiceNo: "INV-2026-0799",
-    breakdown: {
-      embassyFee: 10000,
-      vfsFee: 2500,
-      courierCharge: 500,
-      processingFee: 2800
-    },
-    actionNotes: [
-      { id: "n3", author: "System", text: "Transaction timed out at bank server.", date: "31 Jul 2026 04:46 PM" }
-    ]
-  }
-];
-
 export default function AllTransactionsManagement() {
+  const { unifiedTransactions, updateUnifiedTransactionStatus } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -192,8 +112,54 @@ export default function AllTransactionsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  // Records State
-  const [transactionsList, setTransactionsList] = useState<TransactionRecord[]>(MOCK_TRANSACTIONS);
+  // Map unifiedTransactions to TransactionRecord list
+  const transactionsList = useMemo<TransactionRecord[]>(() => {
+    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
+    return unifiedTransactions.map((t) => {
+      const dateStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+        : "01 Aug 2026";
+      const dateTimeStr = t.createdAt
+        ? new Date(t.createdAt).toLocaleString("en-GB")
+        : "01 Aug 2026 10:15 AM";
+
+      const methodClean = t.paymentMethod?.toLowerCase().includes("credit") ? "Credit Card"
+        : t.paymentMethod?.toLowerCase().includes("net") ? "Net Banking"
+        : t.paymentMethod?.toLowerCase().includes("wallet") ? "Wallet"
+        : "UPI";
+
+      return {
+        id: t.id || t.transactionId,
+        txnId: t.transactionId,
+        appId: t.applicationId,
+        applicantName: t.applicantName,
+        passportNumber: t.passportNumber,
+        paidBy: t.paidBy || "Applicant",
+        agentName: t.agentName,
+        amount: t.pricing?.netAmount || 15500,
+        paymentMethod: methodClean as any,
+        txnDate: dateStr,
+        txnDateTime: dateTimeStr,
+        status: (t.status === "Proforma" ? "Pending" : t.status) as any,
+        country: t.country.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
+        visaCategory: t.visaCategory || "Tourist",
+        paymentGateway: (t.paymentGateway || "Razorpay") as any,
+        paymentRefNo: t.paymentRef || "RAZOR-PAY",
+        invoiceNo: t.invoiceNo || `INV-${t.transactionId}`,
+        breakdown: {
+          embassyFee: t.pricing?.consularFee || 12500,
+          vfsFee: t.pricing?.serviceFee || 2500,
+          courierCharge: t.pricing?.expressSurcharge || 0,
+          processingFee: t.pricing?.totalTax || 2700
+        },
+        refundDetails: t.refundDetails,
+        actionNotes: [
+          { id: "n1", author: "System", text: `Payment record logged via unified ledger (${t.status}).`, date: dateTimeStr }
+        ]
+      };
+    });
+  }, [unifiedTransactions]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State
@@ -232,7 +198,7 @@ export default function AllTransactionsManagement() {
     const matchesStatus = statusFilter === "All" || txn.status === statusFilter;
     const matchesMethod = methodFilter === "All" || txn.paymentMethod === methodFilter;
     const matchesPaidBy = paidByFilter === "All" || txn.paidBy === paidByFilter;
-    const matchesCountry = countryFilter === "All" || txn.country === countryFilter;
+    const matchesCountry = countryFilter === "All" || txn.country.toLowerCase().includes(countryFilter.toLowerCase());
     const matchesCategory = categoryFilter === "All" || txn.visaCategory === categoryFilter;
 
     return matchesQuery && matchesStatus && matchesMethod && matchesPaidBy && matchesCountry && matchesCategory;
@@ -252,20 +218,16 @@ export default function AllTransactionsManagement() {
   };
 
   // Actions
-  const handleVerifyPayment = (txn: TransactionRecord) => {
-    setTransactionsList((prev) =>
-      prev.map((t) => (t.id === txn.id ? { ...t, status: "Successful" } : t))
-    );
+  const handleVerifyPayment = async (txn: TransactionRecord) => {
+    await updateUnifiedTransactionStatus(txn.txnId, "Successful");
     triggerToast(`Payment ${txn.txnId} verified successfully!`);
     if (activeModalTxn?.id === txn.id) {
       setActiveModalTxn((prev) => (prev ? { ...prev, status: "Successful" } : null));
     }
   };
 
-  const handleProcessRefund = (txn: TransactionRecord) => {
-    setTransactionsList((prev) =>
-      prev.map((t) => (t.id === txn.id ? { ...t, status: "Refunded" } : t))
-    );
+  const handleProcessRefund = async (txn: TransactionRecord) => {
+    await updateUnifiedTransactionStatus(txn.txnId, "Refunded", "Admin Approved Refund", txn.amount);
     triggerToast(`Refund processed for ${txn.txnId} (₹${txn.amount.toLocaleString()}).`);
     if (activeModalTxn?.id === txn.id) {
       setActiveModalTxn((prev) => (prev ? { ...prev, status: "Refunded" } : null));
@@ -273,8 +235,7 @@ export default function AllTransactionsManagement() {
   };
 
   const handleDeleteRecord = (txn: TransactionRecord) => {
-    setTransactionsList((prev) => prev.filter((t) => t.id !== txn.id));
-    triggerToast(`Transaction record ${txn.txnId} deleted.`);
+    triggerToast(`Transaction record ${txn.txnId} highlighted.`);
     if (activeModalTxn?.id === txn.id) setActiveModalTxn(null);
   };
 
@@ -322,7 +283,7 @@ export default function AllTransactionsManagement() {
             }`}
           >
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Transactions</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">{transactionsList.length || 23450}</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{transactionsList.length}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Central Ledger (Click to view all)</span>
           </div>
 
@@ -337,7 +298,7 @@ export default function AllTransactionsManagement() {
           >
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Successful Payments</span>
             <div className="text-2xl font-black text-[#059669] font-mono">
-              {transactionsList.filter((t) => t.status === "Successful").length || 21840}
+              {transactionsList.filter((t) => t.status === "Successful").length}
             </div>
             <span className="text-[10px] text-emerald-600 font-bold">Cleared Revenue (Click to filter)</span>
           </div>
@@ -353,7 +314,7 @@ export default function AllTransactionsManagement() {
           >
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Payments</span>
             <div className="text-2xl font-black text-[#D97706] font-mono">
-              {transactionsList.filter((t) => t.status === "Pending").length || 824}
+              {transactionsList.filter((t) => t.status === "Pending").length}
             </div>
             <span className="text-[10px] text-amber-600 font-bold">Awaiting Gateway (Click to filter)</span>
           </div>
@@ -369,7 +330,7 @@ export default function AllTransactionsManagement() {
           >
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Failed Payments</span>
             <div className="text-2xl font-black text-[#DC2626] font-mono">
-              {transactionsList.filter((t) => t.status === "Failed").length || 580}
+              {transactionsList.filter((t) => t.status === "Failed").length}
             </div>
             <span className="text-[10px] text-red-600 font-bold">Gateway Timeouts (Click to filter)</span>
           </div>
@@ -385,7 +346,7 @@ export default function AllTransactionsManagement() {
           >
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Refund Requests / Refunded</span>
             <div className="text-2xl font-black text-[#7C3AED] font-mono">
-              {transactionsList.filter((t) => t.status === "Refunded").length || 206}
+              {transactionsList.filter((t) => t.status === "Refunded").length}
             </div>
             <span className="text-[10px] text-purple-600 font-bold">Processed Payouts (Click to filter)</span>
           </div>
@@ -398,7 +359,7 @@ export default function AllTransactionsManagement() {
               {transactionsList
                 .filter((t) => t.status === "Successful")
                 .reduce((sum, t) => sum + (t.amount || 0), 0)
-                .toLocaleString("en-IN") || "18,74,500"}
+                .toLocaleString("en-IN")}
             </div>
             <span className="text-[10px] text-blue-600 font-bold">Total Collection</span>
           </div>
@@ -716,7 +677,7 @@ export default function AllTransactionsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1-10 of {transactionsList.length || 23450} Transactions</div>
+          <div>Showing {filteredTxns.length > 0 ? 1 : 0}–{Math.min(10, filteredTxns.length)} of {filteredTxns.length} Transactions</div>
           <div className="flex items-center gap-1 font-mono font-bold">
             <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
               Previous
