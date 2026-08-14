@@ -980,10 +980,6 @@ export default function ActiveAgents() {
                 </div>
               )}
 
-                  </div>
-                </div>
-              )}
-
               {/* 4. RECENT ACTIVITIES TAB */}
               {modalTab === "activities" && (
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">

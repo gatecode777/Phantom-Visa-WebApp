@@ -745,7 +745,7 @@ export default function AllAgents() {
   };
 
   // Edit Agent modal opener & handler
-  const openEditModal = (agent: AgentRecord) => {
+  const openEditModal = (agent: any) => {
     setEditingAgent(agent);
     setEditActiveTab("personal");
     setEditCountrySearch("");
@@ -797,6 +797,7 @@ export default function AllAgents() {
       altPhone: cleanAltDigits,
       city: agent.city || "New Delhi",
       country: agent.country || "India",
+      postalCode: agent.postalCode || "",
       officeAddress: (agent.officeAddress && agent.officeAddress !== "N/A" ? agent.officeAddress : agent.agencyDetails?.officeAddress && agent.agencyDetails?.officeAddress !== "N/A" ? agent.agencyDetails?.officeAddress : ""),
       businessLicense: (agent.businessLicense && agent.businessLicense !== "N/A" ? agent.businessLicense : agent.agencyDetails?.licenseNo && agent.agencyDetails?.licenseNo !== "N/A" ? agent.agencyDetails?.licenseNo : ""),
       gstTaxNo: (agent.gstTaxNo && agent.gstTaxNo !== "N/A" ? agent.gstTaxNo : agent.agencyDetails?.taxRegNo && agent.agencyDetails?.taxRegNo !== "N/A" ? agent.agencyDetails?.taxRegNo : ""),
@@ -854,7 +855,7 @@ export default function AllAgents() {
               commissionRate: `${editForm.commissionRate}% (${editForm.commissionType})`,
               supportedVisaCountries: editForm.supportedVisaCountries,
               agencyDetails: {
-                ...a.agencyDetails,
+                ...(a as any).agencyDetails,
                 licenseNo: editForm.businessLicense,
                 taxRegNo: editForm.gstTaxNo,
                 officeAddress: editForm.officeAddress,
@@ -1947,7 +1948,7 @@ export default function AllAgents() {
                       </span>
                       <strong className="text-2xl font-black text-amber-600 font-mono flex items-center justify-center gap-1 mt-0.5">
                         <Star size={20} className="fill-amber-400 text-amber-400" />
-                        <span>{viewAgent.performance?.customerRating ?? (viewAgent.rating ? `${viewAgent.rating} / 5` : "4.8 / 5")}</span>
+                        <span>{(viewAgent as any).performance?.customerRating ?? (viewAgent.rating ? `${viewAgent.rating} / 5` : "4.8 / 5")}</span>
                       </strong>
                     </div>
                   </div>

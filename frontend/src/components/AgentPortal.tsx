@@ -36,6 +36,7 @@ import EmailConfigurationManagement from "./EmailConfigurationManagement";
 import SMSConfigurationManagement from "./SMSConfigurationManagement";
 import RolesPermissionsManagement from "./RolesPermissionsManagement";
 import SupportManagement from "./SupportManagement";
+import MyProfileManagement from "./MyProfileManagement";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -1230,6 +1231,12 @@ export default function AgentPortal() {
           {agentTab === "support" && (
             <div className="space-y-6">
               <SupportManagement />
+            </div>
+          )}
+
+          {agentTab === "profile" && (
+            <div className="space-y-6">
+              <MyProfileManagement />
             </div>
           )}
         </main>

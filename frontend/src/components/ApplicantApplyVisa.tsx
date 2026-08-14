@@ -164,9 +164,9 @@ export default function ApplicantApplyVisa({
   ];
 
   const defaultVt: VisaTypeRecord[] = [
-    { _id: "vt-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, status: "Active" },
-    { _id: "vt-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, status: "Active" },
-    { _id: "vt-3", name: "Standard Visitor Visa", code: "SVV", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 6, maxStayDays: 180, status: "Active" }
+    { _id: "vt-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, processingTimeDays: 15, status: "Active" },
+    { _id: "vt-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, processingTimeDays: 15, status: "Active" },
+    { _id: "vt-3", name: "Standard Visitor Visa", code: "SVV", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 6, maxStayDays: 180, processingTimeDays: 15, status: "Active" }
   ];
 
   // Active step state (1 to 5)
@@ -343,9 +343,9 @@ export default function ApplicantApplyVisa({
         ];
 
         const finalVt: VisaTypeRecord[] = activeVt.length > 0 ? activeVt : [
-          { _id: "vt-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, status: "Active" },
-          { _id: "vt-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, status: "Active" },
-          { _id: "vt-3", name: "Standard Visitor Visa", code: "SVV", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 6, maxStayDays: 180, status: "Active" }
+          { _id: "vt-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, processingTimeDays: 15, status: "Active" },
+          { _id: "vt-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, processingTimeDays: 15, status: "Active" },
+          { _id: "vt-3", name: "Standard Visitor Visa", code: "SVV", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 6, maxStayDays: 180, processingTimeDays: 15, status: "Active" }
         ];
 
         setCountries(finalC);
@@ -422,8 +422,8 @@ export default function ApplicantApplyVisa({
           { _id: "cat-fb-2", name: "Business Visa", code: "BUSINESS", status: "Active" }
         ];
         const fallbackVt: VisaTypeRecord[] = [
-          { _id: "vt-fb-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, status: "Active" },
-          { _id: "vt-fb-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, status: "Active" }
+          { _id: "vt-fb-1", name: "Tourist Short Stay", code: "TSS", categoryName: "Tourist Visa", entryType: "Single Entry", validityMonths: 6, maxStayDays: 60, processingTimeDays: 15, status: "Active" },
+          { _id: "vt-fb-2", name: "Visitor Visa Subclass 600", code: "SUB600", categoryName: "Tourist Visa", entryType: "Multiple Entry", validityMonths: 12, maxStayDays: 90, processingTimeDays: 15, status: "Active" }
         ];
 
         setCountries(fallbackC);
