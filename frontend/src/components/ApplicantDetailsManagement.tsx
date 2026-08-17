@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mockApplicants, ApplicantRecord } from "./AllApplicants";
+import { ApplicantRecord } from "./AllApplicants";
+import { API_V1_URL } from "@/config/api";
 import {
   User,
   Users,
@@ -49,8 +50,9 @@ export default function ApplicantDetailsManagement({
   onSelectApplicant,
   onBackToList
 }: ApplicantDetailsManagementProps) {
-  const [currentApplicant, setCurrentApplicant] = useState<ApplicantRecord>(
-    initialApplicant || mockApplicants[0]
+  const [applicantsList, setApplicantsList] = useState<ApplicantRecord[]>([]);
+  const [currentApplicant, setCurrentApplicant] = useState<ApplicantRecord | null>(
+    initialApplicant || null
   );
   const [activeTab, setActiveTab] = useState<"all" | "personal" | "passport" | "visa" | "documents" | "payments" | "timeline">("all");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -73,6 +75,24 @@ export default function ApplicantDetailsManagement({
     address: ""
   });
 
+  useEffect(() => {
+    const fetchApplicants = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/applicant/all`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setApplicantsList(json.data);
+          if (!initialApplicant) {
+            setCurrentApplicant(json.data[0]);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load applicants for dossier:", e);
+      }
+    };
+    fetchApplicants();
+  }, [initialApplicant]);
+
   // Sync when currentApplicant changes
   useEffect(() => {
     if (initialApplicant) {
@@ -81,17 +101,19 @@ export default function ApplicantDetailsManagement({
   }, [initialApplicant]);
 
   useEffect(() => {
-    setEditForm({
-      name: currentApplicant.name,
-      email: currentApplicant.email,
-      mobile: currentApplicant.mobile,
-      country: currentApplicant.country,
-      passportNumber: currentApplicant.passportNumber || "Z9876543",
-      passportExpiry: currentApplicant.passportExpiry || "12 Dec 2031",
-      dob: currentApplicant.dob || "14 May 1994",
-      gender: currentApplicant.gender || "Female",
-      address: currentApplicant.address || "B-402, Green Park Avenue, New Delhi, India"
-    });
+    if (currentApplicant) {
+      setEditForm({
+        name: currentApplicant.name || "",
+        email: currentApplicant.email || "",
+        mobile: currentApplicant.mobile || "",
+        country: currentApplicant.country || "",
+        passportNumber: currentApplicant.passportNumber || "",
+        passportExpiry: currentApplicant.passportExpiry || "",
+        dob: currentApplicant.dob || "",
+        gender: currentApplicant.gender || "",
+        address: currentApplicant.address || ""
+      });
+    }
   }, [currentApplicant]);
 
   const triggerToast = (msg: string) => {
@@ -100,7 +122,7 @@ export default function ApplicantDetailsManagement({
   };
 
   const handleApplicantChange = (appId: string) => {
-    const found = mockApplicants.find((a) => a.id === appId);
+    const found = applicantsList.find((a) => a.id === appId);
     if (found) {
       setCurrentApplicant(found);
       if (onSelectApplicant) onSelectApplicant(found);
@@ -127,6 +149,31 @@ export default function ApplicantDetailsManagement({
   };
 
   const applicant = currentApplicant;
+
+  if (!applicant) {
+    return (
+      <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
+        <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-xs text-center py-16">
+          <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-4">
+            <Users size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">No Applicant Selected</h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-6">
+            There are no applicant records found in the database. When an applicant registers or submits a visa application, their complete dossier will appear here.
+          </p>
+          {onBackToList && (
+            <button
+              onClick={onBackToList}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-2"
+            >
+              <ChevronLeft size={16} />
+              <span>Back to Applicant List</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
@@ -168,7 +215,7 @@ export default function ApplicantDetailsManagement({
               onChange={(e) => handleApplicantChange(e.target.value)}
               className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-purple-500 focus:bg-white transition cursor-pointer appearance-none"
             >
-              {mockApplicants.map((app) => (
+              {applicantsList.map((app) => (
                 <option key={app.id} value={app.id}>
                   {app.id} - {app.name} ({app.country})
                 </option>

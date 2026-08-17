@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
-import { ALL_VISA_DESTINATION_COUNTRIES } from "./AddNewAgent";
 import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
 import {
   Briefcase,
@@ -94,256 +93,7 @@ export interface AgentRecord {
   }[];
 }
 
-const mockAgents: AgentRecord[] = [
-  {
-    id: "AGT-1001",
-    name: "Geeta Bisht",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-    agencyName: "Global Visa Services",
-    email: "geeta@gmail.com",
-    mobile: "+91 9876543210",
-    assignedApps: 52,
-    completedApps: 45,
-    activeCases: 7,
-    rating: 4.9,
-    status: "Active",
-    country: "India",
-    flag: "🇮🇳",
-    dob: "14 May 1990",
-    gender: "Female",
-    address: "B-402, Connaught Place, New Delhi, India",
-    agencyRegNo: "REG-IND-99120",
-    businessLicense: "LIC-DEL-88912",
-    officeAddress: "Suite 401, Global Tower, CP, New Delhi",
-    website: "https://globalvisa.com",
-    gstTaxNo: "07AAAAA0000A1Z5",
-    performance: {
-      assigned: 52,
-      completed: 45,
-      pending: 7,
-      rejected: 0,
-      approvalRate: "92%",
-      avgProcessingTime: "4.2 Days"
-    },
-    kyc: {
-      identityProof: true,
-      businessRegistration: true,
-      officeAddressProof: true,
-      bankDetails: true,
-      taxCertificate: true,
-      status: "Verified"
-    },
-    accountInfo: {
-      regDate: "12 Jan 2025",
-      lastLogin: "10 mins ago",
-      emailVerified: true,
-      mobileVerified: true
-    },
-    recentActivities: [
-      { title: "Logged in from Chrome (Windows)", time: "10 mins ago" },
-      { title: "Reviewed Application APP-1025 for Tourist Visa", time: "1 hour ago" },
-      { title: "Verified Documents for 3 new applicants", time: "Yesterday" },
-      { title: "Updated Visa Status to Embassy Under Review", time: "2 days ago" },
-      { title: "Sent Direct Notification to Geeta Bisht", time: "3 days ago" }
-    ]
-  },
-  {
-    id: "AGT-1002",
-    name: "Rahul Sharma",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256",
-    agencyName: "Visa Experts Ltd",
-    email: "rahul@gmail.com",
-    mobile: "+91 9812345678",
-    assignedApps: 34,
-    completedApps: 30,
-    activeCases: 4,
-    rating: 4.8,
-    status: "Active",
-    country: "India",
-    flag: "🇮🇳",
-    dob: "22 Aug 1988",
-    gender: "Male",
-    address: "A-12, Sector 62, Noida, UP, India",
-    agencyRegNo: "REG-UP-44512",
-    businessLicense: "LIC-NOI-33219",
-    officeAddress: "2nd Floor, Visa Plaza, Noida Sector 62",
-    website: "https://visaexperts.in",
-    gstTaxNo: "09BBBBB1111B2Y6",
-    performance: {
-      assigned: 34,
-      completed: 30,
-      pending: 4,
-      rejected: 0,
-      approvalRate: "88%",
-      avgProcessingTime: "5.1 Days"
-    },
-    kyc: {
-      identityProof: true,
-      businessRegistration: true,
-      officeAddressProof: true,
-      bankDetails: true,
-      taxCertificate: true,
-      status: "Verified"
-    },
-    accountInfo: {
-      regDate: "05 Feb 2025",
-      lastLogin: "1 hour ago",
-      emailVerified: true,
-      mobileVerified: true
-    },
-    recentActivities: [
-      { title: "Logged in from Safari (macOS)", time: "1 hour ago" },
-      { title: "Uploaded Embassy Submission Slip", time: "3 hours ago" },
-      { title: "Approved Student Visa Application", time: "1 day ago" }
-    ]
-  },
-  {
-    id: "AGT-1003",
-    name: "Balram Suman",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256",
-    agencyName: "World Travel Agency",
-    email: "balram@gmail.com",
-    mobile: "+91 9988776655",
-    assignedApps: 21,
-    completedApps: 18,
-    activeCases: 3,
-    rating: 4.6,
-    status: "Pending Approval",
-    country: "India",
-    flag: "🇮🇳",
-    dob: "10 Apr 1985",
-    gender: "Male",
-    address: "C-88, Malviya Nagar, Jaipur, Rajasthan",
-    agencyRegNo: "REG-RAJ-88123",
-    businessLicense: "LIC-JAI-11209",
-    officeAddress: "G-10, Travel Hub, MI Road, Jaipur",
-    website: "https://worldtravel.co.in",
-    gstTaxNo: "08CCCCC2222C3X7",
-    performance: {
-      assigned: 21,
-      completed: 18,
-      pending: 3,
-      rejected: 0,
-      approvalRate: "85%",
-      avgProcessingTime: "5.8 Days"
-    },
-    kyc: {
-      identityProof: true,
-      businessRegistration: true,
-      officeAddressProof: false,
-      bankDetails: true,
-      taxCertificate: false,
-      status: "Pending Audit"
-    },
-    accountInfo: {
-      regDate: "20 Jul 2026",
-      lastLogin: "2 hours ago",
-      emailVerified: true,
-      mobileVerified: false
-    },
-    recentActivities: [
-      { title: "Agent Account Registered", time: "20 Jul 2026" },
-      { title: "Uploaded Agency License Documents", time: "20 Jul 2026" }
-    ]
-  },
-  {
-    id: "AGT-1004",
-    name: "Sarah Jenkins",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=256",
-    agencyName: "Pacific Migration Partners",
-    email: "sarah@pacificvisa.com",
-    mobile: "+1 4155552671",
-    assignedApps: 68,
-    completedApps: 62,
-    activeCases: 6,
-    rating: 4.95,
-    status: "Active",
-    country: "USA",
-    flag: "🇺🇸",
-    dob: "18 Mar 1991",
-    gender: "Female",
-    address: "500 Market St, San Francisco, CA, USA",
-    agencyRegNo: "REG-US-10293",
-    businessLicense: "LIC-CA-99182",
-    officeAddress: "Suite 1200, Financial District, SF",
-    website: "https://pacificmigration.com",
-    gstTaxNo: "US-EIN-9928120",
-    performance: {
-      assigned: 68,
-      completed: 62,
-      pending: 6,
-      rejected: 0,
-      approvalRate: "96%",
-      avgProcessingTime: "3.5 Days"
-    },
-    kyc: {
-      identityProof: true,
-      businessRegistration: true,
-      officeAddressProof: true,
-      bankDetails: true,
-      taxCertificate: true,
-      status: "Verified"
-    },
-    accountInfo: {
-      regDate: "10 Mar 2025",
-      lastLogin: "30 mins ago",
-      emailVerified: true,
-      mobileVerified: true
-    },
-    recentActivities: [
-      { title: "Logged in from Chrome (MacBook)", time: "30 mins ago" },
-      { title: "Completed Express Entry PR Audit", time: "2 hours ago" }
-    ]
-  },
-  {
-    id: "AGT-1005",
-    name: "David Chen",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256",
-    agencyName: "Apex Immigrations",
-    email: "david@apexvisa.ca",
-    mobile: "+1 6045558912",
-    assignedApps: 15,
-    completedApps: 10,
-    activeCases: 5,
-    rating: 4.2,
-    status: "Inactive",
-    country: "Canada",
-    flag: "🇨🇦",
-    dob: "05 Nov 1986",
-    gender: "Male",
-    address: "700 W Georgia St, Vancouver, BC, Canada",
-    agencyRegNo: "REG-CAN-88192",
-    businessLicense: "LIC-BC-77281",
-    officeAddress: "Pacific Centre, Vancouver",
-    website: "https://apexvisa.ca",
-    gstTaxNo: "CA-BN-8829102",
-    performance: {
-      assigned: 15,
-      completed: 10,
-      pending: 5,
-      rejected: 0,
-      approvalRate: "75%",
-      avgProcessingTime: "7.1 Days"
-    },
-    kyc: {
-      identityProof: true,
-      businessRegistration: true,
-      officeAddressProof: true,
-      bankDetails: true,
-      taxCertificate: false,
-      status: "Verified"
-    },
-    accountInfo: {
-      regDate: "15 Nov 2025",
-      lastLogin: "15 days ago",
-      emailVerified: true,
-      mobileVerified: true
-    },
-    recentActivities: [
-      { title: "Logged in from Chrome (Windows)", time: "15 days ago" }
-    ]
-  }
-];
+const mockAgents: AgentRecord[] = [];
 
 export default function AllAgents() {
   // Search & Filter States
@@ -397,7 +147,7 @@ export default function AllAgents() {
   const fetchDatabaseCountries = async () => {
     try {
       setIsLoadingDbCountries(true);
-      const res = await fetch(`${API_V1_URL}/countries`);
+      const res = await fetch(`${API_V1_URL}/country`);
       const json = await res.json();
 
       if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -415,13 +165,13 @@ export default function AllAgents() {
             flag: c.flag || "🌐",
             code: c.code || ""
           }));
-        setAvailableDbCountries(activeDbCountries.length > 0 ? activeDbCountries : ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries(activeDbCountries);
       } else {
-        setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries([]);
       }
     } catch (err) {
-      console.warn("Could not fetch database countries in AllAgents, using fallback list:", err);
-      setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+      console.warn("Could not fetch database countries in AllAgents:", err);
+      setAvailableDbCountries([]);
     } finally {
       setIsLoadingDbCountries(false);
     }
@@ -1214,7 +964,7 @@ export default function AllAgents() {
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition font-semibold"
             >
               <option value="All">All Countries</option>
-              {(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES).map((c) => (
+              {availableDbCountries.map((c) => (
                 <option key={c.name} value={c.name}>
                   {c.name}
                 </option>
@@ -2343,10 +2093,9 @@ export default function AllAgents() {
                       <button
                         type="button"
                         onClick={() => {
-                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
                           setEditForm((prev) => ({
                             ...prev,
-                            supportedVisaCountries: dbList.slice(0, 10).map((c) => c.name)
+                            supportedVisaCountries: availableDbCountries.slice(0, 10).map((c) => c.name)
                           }));
                           setEditErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
                         }}
@@ -2357,16 +2106,15 @@ export default function AllAgents() {
                       <button
                         type="button"
                         onClick={() => {
-                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
                           setEditForm((prev) => ({
                             ...prev,
-                            supportedVisaCountries: dbList.map((c) => c.name)
+                            supportedVisaCountries: availableDbCountries.map((c) => c.name)
                           }));
                           setEditErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
                         }}
                         className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 cursor-pointer"
                       >
-                        Select All ({(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES).length})
+                        Select All ({availableDbCountries.length})
                       </button>
                       <button
                         type="button"
@@ -2396,8 +2144,7 @@ export default function AllAgents() {
                         <span className="text-[11px] text-slate-400 italic px-1">No countries selected yet. Click options below to choose.</span>
                       ) : (
                         (editForm.supportedVisaCountries || []).map((cName) => {
-                          const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
-                          const cObj = dbList.find((c) => c.name === cName);
+                          const cObj = availableDbCountries.find((c) => c.name === cName);
                           return (
                             <span
                               key={cName}
@@ -2425,9 +2172,13 @@ export default function AllAgents() {
                       <RefreshCw size={14} className="animate-spin text-[#2563EB]" />
                       <span>Loading active destination countries from database...</span>
                     </div>
+                  ) : availableDbCountries.length === 0 ? (
+                    <div className="p-4 text-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                      No active visa destination countries configured yet in Country Management.
+                    </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-white [scrollbar-width:thin]">
-                      {(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES)
+                      {availableDbCountries
                         .filter(
                           (c) =>
                             c.name &&

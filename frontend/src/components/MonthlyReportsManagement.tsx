@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart3,
   Calendar,
@@ -26,6 +26,7 @@ import {
   Layers,
   PieChart
 } from "lucide-react";
+import { useReportAnalytics } from "../hooks/useReportAnalytics";
 
 export interface MonthlyCountryRecord {
   id: string;
@@ -41,34 +42,12 @@ export interface MonthlyCountryRecord {
   targetStatus: "Target Exceeded" | "Target Achieved" | "Behind Schedule";
 }
 
-export interface MonthlyCategoryStat {
-  categoryName: string;
-  icon: string;
-  applicationsCount: number;
-  revenue: number;
-  approvalRate: number;
-}
-
-const MOCK_MONTHLY_COUNTRIES: MonthlyCountryRecord[] = [
-  { id: "1", country: "Canada", flag: "🇨🇦", embassy: "High Commission of Canada", totalApplications: 1450, approvedCount: 1280, rejectedCount: 170, avgSlaDays: 4.2, revenue: 3625000, revenueSharePercent: 41.0, targetStatus: "Target Exceeded" },
-  { id: "2", country: "Australia", flag: "🇦🇺", embassy: "Australian High Commission", totalApplications: 1100, approvedCount: 950, rejectedCount: 150, avgSlaDays: 3.5, revenue: 2750000, revenueSharePercent: 31.1, targetStatus: "Target Exceeded" },
-  { id: "3", country: "United Kingdom", flag: "🇬🇧", embassy: "British High Commission", totalApplications: 850, approvedCount: 720, rejectedCount: 130, avgSlaDays: 2.8, revenue: 1700000, revenueSharePercent: 19.2, targetStatus: "Target Achieved" },
-  { id: "4", country: "UAE", flag: "🇦🇪", embassy: "Embassy of the UAE", totalApplications: 500, approvedCount: 480, rejectedCount: 20, avgSlaDays: 1.2, revenue: 500000, revenueSharePercent: 5.6, targetStatus: "Target Achieved" },
-  { id: "5", country: "USA", flag: "🇺🇸", embassy: "US Embassy & Consulates", totalApplications: 350, approvedCount: 150, rejectedCount: 200, avgSlaDays: 6.5, revenue: 275000, revenueSharePercent: 3.1, targetStatus: "Behind Schedule" }
-];
-
-const MOCK_MONTHLY_CATEGORIES: MonthlyCategoryStat[] = [
-  { categoryName: "Tourist Visa", icon: "✈️", applicationsCount: 2100, revenue: 4200000, approvalRate: 88.5 },
-  { categoryName: "Business Visa", icon: "💼", applicationsCount: 1250, revenue: 3125000, approvalRate: 86.0 },
-  { categoryName: "Student Visa", icon: "🎓", applicationsCount: 600, revenue: 1200000, approvalRate: 79.2 },
-  { categoryName: "Work Permit", icon: "🛠️", applicationsCount: 300, revenue: 325000, approvalRate: 74.0 }
-];
-
 export default function MonthlyReportsManagement() {
-  const [selectedMonth, setSelectedMonth] = useState("July 2026");
+  const { data: liveData, loading, refresh, formatINR } = useReportAnalytics();
+
+  const [selectedMonth, setSelectedMonth] = useState("Current Month");
   const [monthPreset, setMonthPreset] = useState("Current Month");
   const [searchQuery, setSearchQuery] = useState("");
-  const [countryList] = useState<MonthlyCountryRecord[]>(MOCK_MONTHLY_COUNTRIES);
   const [selectedCountry, setSelectedCountry] = useState<MonthlyCountryRecord | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -77,11 +56,43 @@ export default function MonthlyReportsManagement() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  const totalApps = liveData ? liveData.totalApplications : 0;
+  const approvedApps = liveData ? liveData.approvedApplications : 0;
+  const rejectedApps = liveData ? liveData.rejectedApplications : 0;
+  const pendingApps = liveData ? liveData.pendingApplications : 0;
+  const totalRevenue = liveData ? formatINR(liveData.totalRevenue) : "₹0";
+
+  const monthlyApprovalRate = totalApps > 0
+    ? ((approvedApps / totalApps) * 100).toFixed(1)
+    : "0.0";
+
+  const countryList: MonthlyCountryRecord[] = useMemo(() => {
+    if (!liveData || !liveData.countryBreakdown) return [];
+    return liveData.countryBreakdown.map((c, i) => {
+      const share = totalApps > 0 ? (c.applications / totalApps) * 100 : 0;
+      return {
+        id: `m-cnt-${i + 1}`,
+        country: c.country,
+        flag: "🌐",
+        embassy: `${c.country} Embassy Consular`,
+        totalApplications: c.applications,
+        approvedCount: c.approved,
+        rejectedCount: c.rejected,
+        avgSlaDays: 7,
+        revenue: c.revenue,
+        revenueSharePercent: parseFloat(share.toFixed(1)),
+        targetStatus: "Target Achieved"
+      };
+    });
+  }, [liveData, totalApps]);
+
   const filteredCountries = countryList.filter(
     (c) =>
       c.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.embassy.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const visaCategories = liveData?.visaTypeBreakdown || [];
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
@@ -100,12 +111,13 @@ export default function MonthlyReportsManagement() {
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <PieChart size={15} />
-            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold flex items-center gap-1.5">
               Strategic Executive Insights
+              {loading && <span className="w-2 h-2 rounded-full bg-blue-300 animate-ping" />}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-            Monthly Report & Analytics
+            Monthly Report &amp; Analytics
           </h1>
           <p className="text-xs text-blue-100 font-medium mt-1">
             High-level monthly performance analytics, application growth trends, monthly revenue breakdown, and embassy processing SLA tracking.
@@ -115,7 +127,7 @@ export default function MonthlyReportsManagement() {
         {/* MONTH PRESETS & EXPORT CONTROLS */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="bg-white/10 border border-white/20 backdrop-blur-md p-1.5 rounded-2xl flex items-center gap-1">
-            {["Current Month", "Previous Month", "Q1 2026", "Q2 2026", "YTD 2026"].map((preset) => (
+            {["Current Month", "Previous Month", "Q1", "Q2", "YTD"].map((preset) => (
               <button
                 key={preset}
                 onClick={() => {
@@ -134,6 +146,12 @@ export default function MonthlyReportsManagement() {
           </div>
 
           <button
+            onClick={() => refresh()}
+            className="bg-white/10 hover:bg-white/20 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition border border-white/20"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button
             onClick={() => triggerToast("Exporting Executive Monthly PDF Report...")}
             className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition"
           >
@@ -142,7 +160,7 @@ export default function MonthlyReportsManagement() {
         </div>
       </div>
 
-      {/* EXECUTIVE STATISTICS CARDS (4 METRICS MATCHING WIREFRAME) */}
+      {/* EXECUTIVE STATISTICS CARDS (4 METRICS DYNAMIC) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* CARD 1: TOTAL MONTHLY APPLICATIONS */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
@@ -154,9 +172,9 @@ export default function MonthlyReportsManagement() {
               <FileText size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">4,250</div>
-          <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 mt-2">
-            <ArrowUpRight size={14} /> +18.5% MoM Growth
+          <div className="text-3xl font-black text-slate-900 font-mono">{totalApps.toLocaleString()}</div>
+          <div className="flex items-center gap-1 text-[11px] font-extrabold text-blue-600 mt-2">
+            <span>{totalApps} Total Inflow</span>
           </div>
         </div>
 
@@ -170,9 +188,9 @@ export default function MonthlyReportsManagement() {
               <CheckCircle2 size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">3,580</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{approvedApps.toLocaleString()}</div>
           <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 mt-2">
-            <TrendingUp size={14} /> 84.2% Monthly Approval Rate
+            <TrendingUp size={14} /> {monthlyApprovalRate}% Monthly Approval Rate
           </div>
         </div>
 
@@ -186,66 +204,105 @@ export default function MonthlyReportsManagement() {
               <DollarSign size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">₹88,50,000</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{totalRevenue}</div>
           <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 mt-2">
-            Visa Fees & Service Charges
+            Visa Fees &amp; Service Charges
           </div>
         </div>
 
-        {/* CARD 4: AVG PROCESSING SLA */}
+        {/* CARD 4: PENDING PROCESSING */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600">
-              Avg Processing SLA
+              Pending in Pipeline
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
               <Clock size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">3.4 Days</div>
-          <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 mt-2">
-            <ArrowDownRight size={14} /> -0.8 Days Faster MoM
+          <div className="text-3xl font-black text-slate-900 font-mono">{pendingApps.toLocaleString()}</div>
+          <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 mt-2">
+            <span>{pendingApps} Cases Pending</span>
           </div>
         </div>
       </div>
 
-      {/* DASHBOARD MIDDLE SECTION: VISA CATEGORY PERFORMANCE */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6">
-        <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Layers size={16} className="text-[#2563EB]" /> Monthly Visa Category Performance
-        </h3>
+      {/* DASHBOARD MIDDLE SECTION: CATEGORY SHARE & REGIONAL BREAKDOWN */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* MONTHLY VISA CATEGORY BREAKDOWN */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
+          <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Layers size={16} className="text-[#2563EB]" /> Visa Category Distribution
+          </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {MOCK_MONTHLY_CATEGORIES.map((cat, idx) => (
-            <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{cat.icon}</span>
-                <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  {cat.approvalRate}% Approval
-                </span>
+          <div className="space-y-3">
+            {visaCategories.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 font-medium text-xs">
+                No visa category data recorded in database.
               </div>
-              <div>
-                <span className="text-xs font-extrabold text-slate-900 block">{cat.categoryName}</span>
-                <span className="text-xl font-black text-slate-900 font-mono block">{cat.applicationsCount} Apps</span>
+            ) : (
+              visaCategories.map((cat, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📄</span>
+                    <div>
+                      <span className="text-xs font-extrabold text-slate-900 block">{cat.visaType}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{cat.applications} Applications</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs font-black text-slate-900 font-mono block">₹{cat.revenue.toLocaleString()}</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">{cat.approvalRate} Approval</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* DESTINATION COUNTRY MONTHLY SHARE */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
+          <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Globe size={16} className="text-[#2563EB]" /> Destination Country Share
+          </h3>
+
+          <div className="space-y-3">
+            {countryList.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 font-medium text-xs">
+                No destination country applications recorded in database.
               </div>
-              <div className="pt-2 border-t border-slate-200/60 flex justify-between text-[11px] text-slate-500 font-bold">
-                <span>Revenue Generated:</span>
-                <span className="font-mono text-slate-900">₹{cat.revenue.toLocaleString()}</span>
-              </div>
-            </div>
-          ))}
+            ) : (
+              countryList.map((c, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{c.flag}</span>
+                    <div>
+                      <span className="text-xs font-extrabold text-slate-900 block">{c.country}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{c.totalApplications} Cases</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs font-black text-blue-600 font-mono block">{c.revenueSharePercent}% Share</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">₹{c.revenue.toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* MONTHLY COUNTRY & EMBASSY PERFORMANCE TABLE */}
+      {/* MONTHLY COUNTRY BREAKDOWN TABLE */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
           <div>
             <h3 className="text-sm font-extrabold text-slate-900 font-outfit flex items-center gap-2">
-              <Globe size={16} className="text-[#2563EB]" /> Country & Embassy SLA Breakdown
+              <Building size={16} className="text-[#2563EB]" /> Embassy Processing &amp; Destination Report
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              Monthly applications, approval ratios, average SLA days, and target status per destination
+              Monthly breakdown by destination country, approvals, and revenue share
             </span>
           </div>
 
@@ -253,7 +310,7 @@ export default function MonthlyReportsManagement() {
             <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search country / embassy..."
+              placeholder="Search destination..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-slate-50 border border-slate-200 text-xs pl-9 pr-3 py-1.5 rounded-xl focus:outline-none focus:border-[#2563EB] w-56 font-semibold"
@@ -265,109 +322,48 @@ export default function MonthlyReportsManagement() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] font-extrabold uppercase text-slate-500 bg-slate-50/50">
-                <th className="py-3 px-4">Country & Embassy</th>
-                <th className="py-3 px-4">Total Apps</th>
+                <th className="py-3 px-4">Destination Country</th>
+                <th className="py-3 px-4">Applications</th>
                 <th className="py-3 px-4">Approved</th>
                 <th className="py-3 px-4">Rejected</th>
                 <th className="py-3 px-4">Avg SLA</th>
-                <th className="py-3 px-4">Monthly Revenue</th>
-                <th className="py-3 px-4">Target Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4">Revenue</th>
+                <th className="py-3 px-4">Share %</th>
+                <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCountries.map((c) => (
-                <tr key={c.id} className="hover:bg-blue-50/30 transition">
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{c.flag}</span>
-                      <div>
-                        <span className="font-extrabold text-[#0E1A2C] block">{c.country}</span>
-                        <span className="text-[10px] text-slate-400">{c.embassy}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-800">{c.totalApplications}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">{c.approvedCount}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-red-600">{c.rejectedCount}</td>
-                  <td className="py-3.5 px-4 font-mono text-slate-600">{c.avgSlaDays} Days</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900">₹{c.revenue.toLocaleString()} ({c.revenueSharePercent}%)</td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        c.targetStatus === "Target Exceeded"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : c.targetStatus === "Target Achieved"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : "bg-red-50 text-red-700 border-red-200"
-                      }`}
-                    >
-                      {c.targetStatus}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <button
-                      onClick={() => setSelectedCountry(c)}
-                      className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                      title="View Country Monthly Details"
-                    >
-                      <Eye size={15} />
-                    </button>
+              {filteredCountries.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500 font-medium">
+                    No country performance records logged for this month.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredCountries.map((c) => (
+                  <tr key={c.id} className="hover:bg-blue-50/30 transition">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+                      <span>{c.flag}</span>
+                      <span>{c.country}</span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-800">{c.totalApplications.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">{c.approvedCount.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-red-600">{c.rejectedCount.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-500">{c.avgSlaDays} Days</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600">₹{c.revenue.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{c.revenueSharePercent}%</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {c.targetStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* MONTHLY DETAIL MODAL */}
-      {selectedCountry && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 space-y-4 text-xs shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{selectedCountry.flag}</span>
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase text-blue-600 block">Monthly Country Audit</span>
-                  <h3 className="font-extrabold text-base text-slate-900">{selectedCountry.country}</h3>
-                </div>
-              </div>
-              <button onClick={() => setSelectedCountry(null)} className="text-slate-400 hover:text-slate-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Total Applications</span>
-                <span className="text-lg font-black text-slate-900 font-mono">{selectedCountry.totalApplications}</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Approved Visas</span>
-                <span className="text-lg font-black text-emerald-600 font-mono">{selectedCountry.approvedCount}</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Monthly Revenue</span>
-                <span className="text-lg font-black text-purple-600 font-mono">₹{selectedCountry.revenue.toLocaleString()}</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Average SLA</span>
-                <span className="text-lg font-black text-blue-600 font-mono">{selectedCountry.avgSlaDays} Days</span>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
-              <button
-                onClick={() => setSelectedCountry(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
-              >
-                Close Audit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

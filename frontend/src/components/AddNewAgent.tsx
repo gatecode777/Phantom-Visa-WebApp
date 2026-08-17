@@ -24,47 +24,20 @@ import {
   Globe,
   MapPin,
   HelpCircle,
-  Sparkles,
   Info,
-  Search
+  Search,
+  Copy,
+  ExternalLink
 } from "lucide-react";
+import { uploadImageToImageKit } from "../services/imageKitService";
 
-export const ALL_VISA_DESTINATION_COUNTRIES = [
-  { name: "Canada", flag: "🇨🇦", code: "CA" },
-  { name: "Australia", flag: "🇦🇺", code: "AU" },
-  { name: "United Kingdom", flag: "🇬🇧", code: "GB" },
-  { name: "United States", flag: "🇺🇸", code: "US" },
-  { name: "Schengen (Germany)", flag: "🇩🇪", code: "DE" },
-  { name: "Schengen (France)", flag: "🇫🇷", code: "FR" },
-  { name: "Schengen (Italy)", flag: "🇮🇹", code: "IT" },
-  { name: "Schengen (Spain)", flag: "🇪🇸", code: "ES" },
-  { name: "Schengen (Netherlands)", flag: "🇳🇱", code: "NL" },
-  { name: "Schengen (Switzerland)", flag: "🇨🇭", code: "CH" },
-  { name: "United Arab Emirates", flag: "🇦🇪", code: "AE" },
-  { name: "Singapore", flag: "🇸🇬", code: "SG" },
-  { name: "Japan", flag: "🇯🇵", code: "JP" },
-  { name: "South Korea", flag: "🇰🇷", code: "KR" },
-  { name: "Thailand", flag: "🇹🇭", code: "TH" },
-  { name: "Malaysia", flag: "🇲🇾", code: "MY" },
-  { name: "Indonesia", flag: "🇮🇩", code: "ID" },
-  { name: "Vietnam", flag: "🇻🇳", code: "VN" },
-  { name: "Turkey", flag: "🇹🇷", code: "TR" },
-  { name: "Saudi Arabia", flag: "🇸🇦", code: "SA" },
-  { name: "Qatar", flag: "🇶🇦", code: "QA" },
-  { name: "Oman", flag: "🇴🇲", code: "OM" },
-  { name: "Kuwait", flag: "🇰🇼", code: "KW" },
-  { name: "Bahrain", flag: "🇧🇭", code: "BH" },
-  { name: "New Zealand", flag: "🇳🇿", code: "NZ" },
-  { name: "China", flag: "🇨🇳", code: "CN" },
-  { name: "Brazil", flag: "🇧🇷", code: "BR" },
-  { name: "South Africa", flag: "🇿🇦", code: "ZA" },
-  { name: "Egypt", flag: "🇪🇬", code: "EG" },
-  { name: "Sri Lanka", flag: "🇱🇰", code: "LK" },
-  { name: "Nepal", flag: "🇳🇵", code: "NP" },
-  { name: "Bangladesh", flag: "🇧🇩", code: "BD" },
-  { name: "Pakistan", flag: "🇵🇰", code: "PK" },
-  { name: "India", flag: "🇮🇳", code: "IN" }
-];
+export interface DestinationCountryItem {
+  name: string;
+  flag: string;
+  code: string;
+}
+
+export const ALL_VISA_DESTINATION_COUNTRIES: DestinationCountryItem[] = [];
 
 interface AddNewAgentProps {
   onSuccess?: () => void;
@@ -76,21 +49,20 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
     // Step 1: Personal Information
     firstName: "",
     lastName: "",
-    dob: "",
-    gender: "Male",
-    nationality: "Indian",
+    fullName: "",
     email: "",
     phone: "",
     altPhone: "",
-    password: "",
-    confirmPassword: "",
+    dob: "",
+    gender: "Male",
+    nationality: "Indian",
     address: "",
     city: "",
     state: "",
     country: "India",
     postalCode: "",
 
-    // Step 2: Agency Information
+    // Step 2: Agency Details
     agencyName: "",
     agencyRegNo: "",
     businessLicense: "",
@@ -101,88 +73,52 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
     officeCountry: "India",
     officePostalCode: "",
     website: "",
-    yearsInBusiness: "3",
+    yearsInBusiness: "1 to 3 Years",
+    agencyTypes: ["B2C Travel Agency"] as string[],
+    supportedVisaCountries: ["Canada", "Australia", "United Kingdom", "United States", "Schengen (Germany)"] as string[],
+    employeeCount: "5 - 15 Staff",
+    monthlyCapacity: "25 - 50 Applications",
 
-    // Step 3: Business Details
-    agencyType: "Travel Agency",
-    supportedVisaCountries: [] as string[],
-    employeeCount: "10-50",
-    monthlyCapacity: "100",
-    officePhone: "",
-
-    // Step 4: KYC Verification Files (Real file metadata)
-    kycFiles: {
-      businessReg: null as { name: string; size: string } | null,
-      govtId: null as { name: string; size: string } | null,
-      addressProof: null as { name: string; size: string } | null,
-      taxCert: null as { name: { name: string; size: string } | null } | null,
-      verificationDocs: null as { name: string; size: string } | null,
-      agencyLogo: null as { name: string; size: string } | null
-    },
-
-    // Step 5: Bank Details
+    // Step 3: Banking & Commission
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
     ifscSwiftCode: "",
-    branchName: "",
-
-    // Step 6: Commission Details
     commissionType: "Percentage",
-    commissionValue: "15",
-    paymentMethod: "Bank Transfer (NEFT/RTGS)",
-    paymentFrequency: "Monthly",
+    commissionValue: 15,
+    status: "Active",
+    adminNotes: "",
 
-    // Step 7: Account Status
-    accountStatus: "Pending Approval",
-
-    // Step 8: Notes
-    adminNotes: ""
+    // Step 4: KYC Files
+    kycFiles: {
+      businessReg: null,
+      govtId: null,
+      addressProof: null,
+      taxCert: null,
+      verificationDocs: null,
+      agencyLogo: null
+    } as Record<string, { name: string; size: string; url?: string; fileId?: string } | null>
   });
 
-  // Phone Country Code Dial Code States
   const [phoneDialCode, setPhoneDialCode] = useState<string>("+91");
   const [altPhoneDialCode, setAltPhoneDialCode] = useState<string>("+91");
 
-  // Country Search State for Multiple Choice Selector
-  const [countrySearchQuery, setCountrySearchQuery] = useState<string>("");
+  // Database-driven visa destination countries state
+  const [availableDbCountries, setAvailableDbCountries] = useState<{ name: string; flag: string; code: string }[]>([]);
+  const [isLoadingDbCountries, setIsLoadingDbCountries] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
 
-  const handleToggleVisaCountry = (countryName: string) => {
-    setFormData((prev) => {
-      const current = prev.supportedVisaCountries || [];
-      const updated = current.includes(countryName)
-        ? current.filter((c) => c !== countryName)
-        : [...current, countryName];
-      return { ...prev, supportedVisaCountries: updated };
-    });
-    if (errors.supportedVisaCountries) {
-      setErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
-    }
-  };
-
-  // Dynamic Destination Countries Loaded directly from MongoDB Database API (/api/v1/countries)
-  const [availableDbCountries, setAvailableDbCountries] = useState<{ name: string; flag: string; code?: string }[]>([]);
-  const [isLoadingDbCountries, setIsLoadingDbCountries] = useState<boolean>(true);
-
-  const renderCountryFlag = (flag?: string) => {
-    if (!flag) return <span>🌐</span>;
-    if (flag.startsWith("http://") || flag.startsWith("https://") || flag.startsWith("data:")) {
-      return <img src={flag} alt="" className="w-4 h-3 object-cover rounded shrink-0 inline-block" />;
-    }
-    return <span>{flag}</span>;
-  };
-
+  // Fetch live countries created in MongoDB Country Management
   useEffect(() => {
     fetchDatabaseCountries();
   }, []);
 
   const fetchDatabaseCountries = async () => {
+    setIsLoadingDbCountries(true);
     try {
-      setIsLoadingDbCountries(true);
-      const res = await fetch(`${API_V1_URL}/countries`);
+      const res = await fetch(`${API_V1_URL}/country`);
       const json = await res.json();
-
-      if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         const activeDbCountries = json.data
           .filter(
             (c: any) =>
@@ -197,29 +133,48 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
             flag: c.flag || "🌐",
             code: c.code || ""
           }));
-        setAvailableDbCountries(activeDbCountries.length > 0 ? activeDbCountries : ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries(activeDbCountries);
       } else {
-        setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries([]);
       }
     } catch (err) {
-      console.warn("Could not fetch database countries, using default list:", err);
-      setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+      console.warn("Could not fetch database countries:", err);
+      setAvailableDbCountries([]);
     } finally {
       setIsLoadingDbCountries(false);
     }
   };
 
+  const handleToggleVisaCountry = (countryName: string) => {
+    setFormData((prev) => {
+      const current = prev.supportedVisaCountries || [];
+      const updated = current.includes(countryName)
+        ? current.filter((c) => c !== countryName)
+        : [...current, countryName];
+      return { ...prev, supportedVisaCountries: updated };
+    });
+    if (errors.supportedVisaCountries) {
+      setErrors((prev) => ({ ...prev, supportedVisaCountries: "" }));
+    }
+  };
+
+  const renderCountryFlag = (flag?: string) => {
+    if (!flag) return <span>🌐</span>;
+    if (flag.startsWith("http://") || flag.startsWith("https://") || flag.startsWith("data:")) {
+      return <img src={flag} alt="" className="w-4 h-3 object-cover rounded shrink-0 inline-block" />;
+    }
+    return <span>{flag}</span>;
+  };
+
   const handleSelectPopularVisaCountries = () => {
     const popular = ["Canada", "Australia", "United Kingdom", "United States", "Germany", "France", "United Arab Emirates", "Singapore", "Japan", "India"];
-    const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
-    const matched = dbList.filter((c) => popular.some((p) => c.name.toLowerCase().includes(p.toLowerCase()))).map((c) => c.name);
-    setFormData((prev) => ({ ...prev, supportedVisaCountries: matched.length > 0 ? matched : dbList.slice(0, 10).map((c) => c.name) }));
-    triggerToast("Selected Top 10 popular visa countries.");
+    const matched = availableDbCountries.filter((c) => popular.some((p) => c.name.toLowerCase().includes(p.toLowerCase()))).map((c) => c.name);
+    setFormData((prev) => ({ ...prev, supportedVisaCountries: matched.length > 0 ? matched : availableDbCountries.slice(0, 10).map((c) => c.name) }));
+    triggerToast("Selected popular visa countries.");
   };
 
   const handleSelectAllVisaCountries = () => {
-    const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
-    const allNames = dbList.map((c) => c.name);
+    const allNames = availableDbCountries.map((c) => c.name);
     setFormData((prev) => ({ ...prev, supportedVisaCountries: allNames }));
     triggerToast(`Selected all ${allNames.length} database visa countries.`);
   };
@@ -352,8 +307,10 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
     }
   };
 
-  // Handle Real Local File Selection
-  const handleRealFileSelect = (docKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploadingDocKey, setUploadingDocKey] = useState<string | null>(null);
+
+  // Handle Real ImageKit File Upload
+  const handleRealFileSelect = async (docKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -368,14 +325,22 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
       ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
       : `${(file.size / 1024).toFixed(1)} KB`;
 
-    setFormData((prev) => ({
-      ...prev,
-      kycFiles: {
-        ...prev.kycFiles,
-        [docKey]: { name: file.name, size: sizeStr }
-      }
-    }));
-    triggerToast(`Local file attached: ${file.name} (${sizeStr})`);
+    setUploadingDocKey(docKey);
+    try {
+      const res = await uploadImageToImageKit(file, "/PHANTOM-VISA/agents/");
+      setFormData((prev: any) => ({
+        ...prev,
+        kycFiles: {
+          ...prev.kycFiles,
+          [docKey]: { name: file.name, size: sizeStr, url: res.url, fileId: res.fileId }
+        }
+      }));
+      triggerToast(`Uploaded '${file.name}' to ImageKit successfully!`);
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to upload file to ImageKit.");
+    } finally {
+      setUploadingDocKey(null);
+    }
   };
 
   const handleRemoveFile = (docKey: string) => {
@@ -1167,8 +1132,7 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                       </span>
                     ) : (
                       (formData.supportedVisaCountries || []).map((cName) => {
-                        const dbList = availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES;
-                        const countryObj = dbList.find((c) => c.name === cName);
+                        const countryObj = availableDbCountries.find((c) => c.name === cName);
                         return (
                           <span
                             key={cName}
@@ -1197,9 +1161,13 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                     <RefreshCw size={14} className="animate-spin text-[#2563EB]" />
                     <span>Loading active destination countries from database...</span>
                   </div>
+                ) : availableDbCountries.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    No active visa destination countries configured yet in Country Management.
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-white [scrollbar-width:thin]">
-                    {(availableDbCountries.length > 0 ? availableDbCountries : ALL_VISA_DESTINATION_COUNTRIES)
+                    {availableDbCountries
                       .filter((c) => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase().trim()))
                       .map((c) => {
                         const isChecked = (formData.supportedVisaCountries || []).includes(c.name);
@@ -1250,50 +1218,85 @@ export default function AddNewAgent({ onSuccess }: AddNewAgentProps) {
                 { key: "verificationDocs", label: "Additional Verification Docs" },
                 { key: "agencyLogo", label: "Agency Official Logo" }
               ].map((doc) => {
-                const attached = formData.kycFiles[doc.key as keyof typeof formData.kycFiles] as { name: string; size: string } | null;
+                const attached = formData.kycFiles?.[doc.key] as { name: string; size: string; url?: string } | null;
 
                 return (
                   <div
                     key={doc.key}
-                    className={`p-4 rounded-xl border flex items-center justify-between transition ${
+                    className={`p-4 rounded-xl border space-y-2 transition ${
                       attached ? "bg-emerald-50/40 border-emerald-200" : "bg-slate-50 border-dashed border-slate-200"
                     }`}
                   >
-                    <div className="overflow-hidden pr-2">
-                      <span className="font-extrabold text-slate-800 block mb-0.5">{doc.label}</span>
-                      {attached ? (
-                        <span className="text-[11px] text-emerald-600 font-mono font-bold flex items-center gap-1">
-                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                          <span className="truncate max-w-[150px]">{attached.name}</span>
-                          <span className="text-slate-400 font-normal shrink-0">({attached.size})</span>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-mono">PDF, PNG, JPG (Max 10MB)</span>
-                      )}
+                    <div className="flex items-center justify-between">
+                      <div className="overflow-hidden pr-2">
+                        <span className="font-extrabold text-slate-800 block mb-0.5">{doc.label}</span>
+                        {attached ? (
+                          <span className="text-[11px] text-emerald-600 font-mono font-bold flex items-center gap-1">
+                            <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                            <span className="truncate max-w-[150px]">{attached.name}</span>
+                            <span className="text-slate-400 font-normal shrink-0">({attached.size})</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-mono">PDF, PNG, JPG (Max 10MB)</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <label className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition shadow-2xs">
+                          <Upload size={13} className={uploadingDocKey === doc.key ? "animate-spin" : ""} />
+                          <span>{uploadingDocKey === doc.key ? "Uploading..." : attached ? "Change" : "Upload"}</span>
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            disabled={uploadingDocKey === doc.key}
+                            className="hidden"
+                            onChange={(e) => handleRealFileSelect(doc.key, e)}
+                          />
+                        </label>
+                        {attached && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(doc.key)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                            title="Remove File"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <label className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition shadow-2xs">
-                        <Upload size={13} />
-                        <span>{attached ? "Change" : "Upload"}</span>
+                    {attached?.url && (
+                      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1.5 text-[10px]">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0">CDN:</span>
                         <input
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          className="hidden"
-                          onChange={(e) => handleRealFileSelect(doc.key, e)}
+                          type="text"
+                          readOnly
+                          value={attached.url}
+                          className="w-full bg-transparent font-mono text-slate-600 outline-none select-all truncate"
                         />
-                      </label>
-                      {attached && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveFile(doc.key)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                          title="Remove File"
+                          onClick={() => {
+                            navigator.clipboard.writeText(attached.url!);
+                            triggerToast("ImageKit URL copied to clipboard!");
+                          }}
+                          className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                          title="Copy URL"
                         >
-                          <X size={14} />
+                          <Copy size={11} />
                         </button>
-                      )}
-                    </div>
+                        <a
+                          href={attached.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                          title="Open in new tab"
+                        >
+                          <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 );
               })}

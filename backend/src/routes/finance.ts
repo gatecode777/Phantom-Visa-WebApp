@@ -31,156 +31,11 @@ export function calculatePricing(consularFee: number, serviceFee: number = 2500,
 }
 
 /**
- * Seed canonical default transactions tied to default applications if DB is empty
- */
-async function seedDefaultTransactions() {
-  try {
-    const count = await TransactionModel.countDocuments();
-    if (count > 0) return;
-
-    const defaultTxns = [
-      {
-        transactionId: "PAY-2026-1025",
-        invoiceNo: "INV-2026-1025",
-        applicationId: "VO-2026-1025",
-        applicantName: "Geeta Sharma",
-        passportNumber: "Z9817264",
-        nationality: "Indian",
-        country: "Australia 🇦🇺",
-        visaType: "Subclass 600 Tourist Visa",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(12500, 2500, 2000, 1000),
-        paymentMethod: "Credit Card (Visa •••• 8892)",
-        paymentGateway: "Razorpay",
-        paymentRef: "RAZOR-9817264-AU",
-        status: "Successful",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
-        sacCode: "998311"
-      },
-      {
-        transactionId: "PAY-2026-9841",
-        invoiceNo: "INV-2026-9841",
-        applicationId: "VO-2026-9841",
-        applicantName: "Geeta Sharma",
-        passportNumber: "Z9817264",
-        nationality: "Indian",
-        country: "Canada 🇨🇦",
-        visaType: "Canada Express Visitor Visa",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(8500, 2500, 2000, 0),
-        paymentMethod: "UPI Instant (Google Pay)",
-        paymentGateway: "Razorpay",
-        paymentRef: "UPI-481920-CA",
-        status: "Successful",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
-        sacCode: "998311"
-      },
-      {
-        transactionId: "PAY-2026-1229",
-        invoiceNo: "INV-2026-1229",
-        applicationId: "VO-2026-1229",
-        applicantName: "Vikram Mehta",
-        passportNumber: "Z4481920",
-        nationality: "Indian",
-        country: "Australia 🇦🇺",
-        visaType: "Subclass 600 Tourist Visa",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(12500, 2500, 2000, 1000),
-        paymentMethod: "Credit Card (MasterCard)",
-        paymentGateway: "Stripe",
-        paymentRef: "PAY-STP-33445566",
-        status: "Successful",
-        gstin: "27BBBBB1111B1Z2",
-        billingAddress: "45, Residency Road, Bengaluru - 560025",
-        sacCode: "998311"
-      },
-      {
-        transactionId: "PAY-2026-0814",
-        invoiceNo: "PRO-2026-0814",
-        applicationId: "VO-2026-0814",
-        applicantName: "Amitabh Patel",
-        passportNumber: "P8812301",
-        nationality: "Indian",
-        country: "United Kingdom 🇬🇧",
-        visaType: "Standard Visitor 6 Months",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(11000, 2500, 0, 500),
-        paymentMethod: "Net Banking (HDFC)",
-        paymentGateway: "HDFC Netbanking",
-        paymentRef: "NETB-391827-UK",
-        status: "Pending",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "12, Marine Drive, Mumbai - 400020",
-        sacCode: "998311"
-      },
-      {
-        transactionId: "PAY-2026-0720",
-        invoiceNo: "PRO-2026-0720",
-        applicationId: "VO-2026-0720",
-        applicantName: "Priya Sundaram",
-        passportNumber: "K9928172",
-        nationality: "Indian",
-        country: "United States 🇺🇸",
-        visaType: "B1/B2 Tourist Visitor",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(15000, 2500, 0, 0),
-        paymentMethod: "Awaiting Checkout",
-        paymentGateway: "Razorpay",
-        paymentRef: "UNPAID",
-        status: "Proforma",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "88, T. Nagar, Chennai - 600017",
-        sacCode: "998311"
-      },
-      {
-        transactionId: "PAY-2026-0650",
-        invoiceNo: "INV-2026-0650",
-        applicationId: "VO-2026-0650",
-        applicantName: "Vikram Malhotra",
-        passportNumber: "S8817263",
-        nationality: "Indian",
-        country: "Canada 🇨🇦",
-        visaType: "Visitor Visa V-1",
-        visaCategory: "Tourist",
-        paidBy: "Applicant",
-        pricing: calculatePricing(13000, 2500, 0, 0),
-        paymentMethod: "Wallet Balance (Prepaid)",
-        paymentGateway: "Prepaid Wallet",
-        paymentRef: "WLT-RFD-55102",
-        status: "Refunded",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "104, Park Street, New Delhi - 110001",
-        sacCode: "998311",
-        refundDetails: {
-          status: "Refunded",
-          amount: 18290, // Full fee + tax refunded
-          date: new Date().toISOString().split("T")[0],
-          refNo: "RFD-55102",
-          reason: "Refusal Clause 4.1 Platform Refund Guarantee"
-        }
-      }
-    ];
-
-    await TransactionModel.insertMany(defaultTxns);
-  } catch (err) {
-    console.error("Failed to seed default transactions:", err);
-  }
-}
-
-/**
  * GET /api/v1/finance/transactions
  * Retrieve unified transactions list from MongoDB
  */
 router.get("/transactions", async (req: Request, res: Response) => {
   try {
-    await seedDefaultTransactions();
     const transactions = await TransactionModel.find().sort({ createdAt: -1 });
 
     const totalCount = transactions.length;
@@ -264,21 +119,21 @@ router.post("/transactions", async (req: Request, res: Response) => {
       transactionId,
       invoiceNo,
       applicationId: cleanAppId,
-      applicantName: applicantName || "Applicant",
-      passportNumber: passportNumber || "Z9817264",
-      nationality: nationality || "Indian",
-      country: country || "Canada 🇨🇦",
-      visaType: visaType || "Express Visitor Visa",
+      applicantName: applicantName || "",
+      passportNumber: passportNumber || "",
+      nationality: nationality || "",
+      country: country || "",
+      visaType: visaType || "",
       visaCategory: visaCategory || "Tourist",
       paidBy: paidBy || "Applicant",
       agentName: agentName || "",
       pricing,
-      paymentMethod: paymentMethod || "UPI Instant (Google Pay)",
+      paymentMethod: paymentMethod || "UPI",
       paymentGateway: paymentGateway || "Razorpay",
-      paymentRef: paymentRef || `RAZOR-${passportNumber || "9817264"}-PAY`,
+      paymentRef: paymentRef || `REF-${Date.now()}`,
       status: status || "Successful",
-      gstin: gstin || "27AAACG1234H1Z5",
-      billingAddress: billingAddress || "104, Park Street, Connaught Place, New Delhi - 110001",
+      gstin: gstin || "",
+      billingAddress: billingAddress || "",
       sacCode: "998311"
     });
 
@@ -378,18 +233,297 @@ router.put("/invoices/:id/gstin", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /analytics/summary
+ *
+ * Aggregates live data from TransactionModel and ApplicationModel.
+ * This is the single source of live dynamic reporting for all 7 report pages.
+ */
+router.get("/analytics/summary", async (req: Request, res: Response) => {
+  try {
+    // ── 1. Comprehensive Payment Aggregation ──────────────────────────────────
+    const paymentStatusAgg = await TransactionModel.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$pricing.netAmount" },
+        },
+      },
+    ]);
+
+    const paymentBreakdown: Record<string, { count: number; totalAmount: number }> = {
+      Successful: { count: 0, totalAmount: 0 },
+      Pending: { count: 0, totalAmount: 0 },
+      Failed: { count: 0, totalAmount: 0 },
+      Refunded: { count: 0, totalAmount: 0 },
+      Proforma: { count: 0, totalAmount: 0 },
+      Cancelled: { count: 0, totalAmount: 0 },
+    };
+
+    let totalTransactions = 0;
+    for (const row of paymentStatusAgg) {
+      if (row._id) {
+        paymentBreakdown[row._id] = {
+          count: row.count,
+          totalAmount: row.totalAmount || 0,
+        };
+        totalTransactions += row.count;
+      }
+    }
+
+    const successfulPayments = paymentBreakdown.Successful.count;
+    const totalGrossRevenue = paymentBreakdown.Successful.totalAmount;
+    const pendingPayments = paymentBreakdown.Pending.count;
+    const failedPayments = paymentBreakdown.Failed.count;
+    const refundedPayments = paymentBreakdown.Refunded.count;
+    const refundedAmount = paymentBreakdown.Refunded.totalAmount;
+
+    // ── 2. Revenue Sources Breakdown (From Successful Transactions) ───────────
+    const feeSourcesAgg = await TransactionModel.aggregate([
+      { $match: { status: "Successful" } },
+      {
+        $group: {
+          _id: null,
+          consularFee: { $sum: "$pricing.consularFee" },
+          serviceFee: { $sum: "$pricing.serviceFee" },
+          expressSurcharge: { $sum: "$pricing.expressSurcharge" },
+          totalTax: { $sum: "$pricing.totalTax" },
+          discount: { $sum: "$pricing.discount" },
+          netAmount: { $sum: "$pricing.netAmount" },
+        },
+      },
+    ]);
+
+    const feeData = feeSourcesAgg[0] || {
+      consularFee: 0,
+      serviceFee: 0,
+      expressSurcharge: 0,
+      totalTax: 0,
+      discount: 0,
+      netAmount: 0,
+    };
+
+    const revenueSources = [
+      { source: "Visa / Consular Fees", amount: feeData.consularFee },
+      { source: "Platform Service Charges", amount: feeData.serviceFee },
+      { source: "Express Processing Surcharges", amount: feeData.expressSurcharge },
+      { source: "GST & Taxes Collected", amount: feeData.totalTax },
+      { source: "Discounts & Promos", amount: -feeData.discount },
+    ];
+
+    // ── 3. Application Aggregation ────────────────────────────────────────────
+    const appStatusAgg = await ApplicationModel.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const applicationBreakdown: Record<string, number> = {
+      Approved: 0,
+      Rejected: 0,
+      Submitted: 0,
+      "Docs Pending": 0,
+      "Embassy Processing": 0,
+      Draft: 0,
+      Cancelled: 0,
+    };
+
+    let totalApplications = 0;
+    for (const row of appStatusAgg) {
+      if (row._id) {
+        applicationBreakdown[row._id] = row.count;
+        totalApplications += row.count;
+      }
+    }
+
+    const approvedApps = applicationBreakdown["Approved"] || 0;
+    const rejectedApps = applicationBreakdown["Rejected"] || 0;
+    const pendingApps =
+      (applicationBreakdown["Submitted"] || 0) +
+      (applicationBreakdown["Docs Pending"] || 0) +
+      (applicationBreakdown["Embassy Processing"] || 0) +
+      (applicationBreakdown["Draft"] || 0);
+
+    const approvalRate =
+      totalApplications > 0
+        ? parseFloat(((approvedApps / totalApplications) * 100).toFixed(1))
+        : 0;
+
+    // ── 4. Country Breakdown with Live Applications & Revenue ────────────────
+    const countryAppAgg = await ApplicationModel.aggregate([
+      {
+        $group: {
+          _id: "$countryName",
+          applications: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "Approved"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] },
+          },
+          pending: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    ["Submitted", "Docs Pending", "Embassy Processing", "Draft"],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      { $sort: { applications: -1 } },
+    ]);
+
+    const countryTxnAgg = await TransactionModel.aggregate([
+      { $match: { status: "Successful" } },
+      {
+        $group: {
+          _id: "$country",
+          revenue: { $sum: "$pricing.netAmount" },
+        },
+      },
+    ]);
+
+    const countryRevMap: Record<string, number> = {};
+    for (const r of countryTxnAgg) {
+      if (r._id) {
+        // Strip flag emoji and whitespace to normalize matching ("Australia 🇦🇺" -> "Australia")
+        const normalized = (r._id as string).replace(/[\uD83C-\uDBFF\uDC00-\uDFFF\s]+/g, "").trim().toLowerCase();
+        countryRevMap[normalized] = r.revenue;
+      }
+    }
+
+    const countryBreakdown = countryAppAgg.map((c) => {
+      const normalizedCountry = (c._id || "").replace(/[\uD83C-\uDBFF\uDC00-\uDFFF\s]+/g, "").trim().toLowerCase();
+      const rev = countryRevMap[normalizedCountry] || 0;
+      const rate =
+        c.applications > 0
+          ? ((c.approved / c.applications) * 100).toFixed(1) + "%"
+          : "0.0%";
+      return {
+        country: c._id || "Unknown",
+        applications: c.applications,
+        approved: c.approved,
+        rejected: c.rejected,
+        pending: c.pending,
+        revenue: rev,
+        approvalRate: rate,
+      };
+    });
+
+    // ── 5. Visa Type Breakdown ────────────────────────────────────────────────
+    const visaAgg = await ApplicationModel.aggregate([
+      {
+        $group: {
+          _id: "$categoryName",
+          applications: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "Approved"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] },
+          },
+          pending: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    ["Submitted", "Docs Pending", "Embassy Processing", "Draft"],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      { $sort: { applications: -1 } },
+    ]);
+
+    const visaTxnAgg = await TransactionModel.aggregate([
+      { $match: { status: "Successful" } },
+      {
+        $group: {
+          _id: "$visaCategory",
+          revenue: { $sum: "$pricing.netAmount" },
+        },
+      },
+    ]);
+    const visaRevMap: Record<string, number> = {};
+    for (const v of visaTxnAgg) {
+      if (v._id) {
+        visaRevMap[v._id.toLowerCase()] = v.revenue;
+      }
+    }
+
+    const visaTypeBreakdown = visaAgg.map((v) => {
+      const catKey = (v._id || "").toLowerCase();
+      const rev = visaRevMap[catKey] || 0;
+      const rate =
+        v.applications > 0
+          ? ((v.approved / v.applications) * 100).toFixed(1) + "%"
+          : "0.0%";
+      return {
+        visaType: v._id || "General Visa",
+        applications: v.applications,
+        approved: v.approved,
+        rejected: v.rejected,
+        pending: v.pending,
+        revenue: rev,
+        approvalRate: rate,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalRevenue: totalGrossRevenue,
+        netRevenue: totalGrossRevenue - refundedAmount,
+        totalApplications,
+        approvedApplications: approvedApps,
+        rejectedApplications: rejectedApps,
+        pendingApplications: pendingApps,
+        approvalRate,
+        totalTransactions,
+        successfulPayments,
+        pendingPayments,
+        failedPayments,
+        refundedPayments,
+        refundedAmount,
+        applicationBreakdown,
+        paymentBreakdown,
+        revenueSources,
+        countryBreakdown,
+        visaTypeBreakdown,
+      },
+    });
+  } catch (error: any) {
+    console.error("Analytics Summary Error:", error);
+    return res.status(500).json(
+      formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to compute analytics.")
+    );
+  }
+});
+
+/**
  * Legacy Finance compatibility endpoints
  */
 router.get("/", (req: Request, res: Response) => {
-  const headers = getRateLimitHeaders("Growth");
-  res.set(headers);
+
   return res.status(200).json({
-    invoices: [
-      { id: "INV-2026-1025", amount: 16700, tax: 2700, status: "issued", date: "2026-08-07" }
-    ],
-    commissions: [
-      { id: "COM-991", applicationId: "VO-2026-1025", amount: 3750, status: "paid" }
-    ]
+    invoices: [],
+    commissions: []
   });
 });
 

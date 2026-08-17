@@ -12,9 +12,9 @@ router.get("/", (req: Request, res: Response) => {
     wallet: {
       companyId: "comp_001",
       currency: "INR",
-      balance: 45000,
-      creditLimit: 100000,
-      availableFunds: 145000
+      balance: 0,
+      creditLimit: 0,
+      availableFunds: 0
     }
   });
 });

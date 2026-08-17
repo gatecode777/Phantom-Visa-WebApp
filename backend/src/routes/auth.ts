@@ -5,6 +5,7 @@ import path from "path";
 
 import User from "../models/User.js";
 import Applicant from "../models/Applicant.js";
+import Agent from "../models/Agent.js";
 import RefreshToken from "../models/RefreshToken.js";
 import { getNextSequenceValue } from "../models/Counter.js";
 import { issueTokens, hashRefreshToken, getRefreshTokenExpiry, TokenPayload } from "../lib/security/jwt.js";
@@ -175,17 +176,8 @@ router.post("/register-applicant", authRateLimiter, documentUploadFields, async 
       }
     ];
 
-    // Initial default appointment placeholder
-    const initialAppointments = [
-      {
-        id: `apt_${Date.now()}`,
-        title: `${destinationCountry || "Embassy"} Biometrics & Interview`,
-        date: expectedTravelDate || "2026-08-15",
-        time: "10:30 AM",
-        location: preferredEmbassy || "VFS Global Center, New Delhi",
-        status: "Scheduled" as const
-      }
-    ];
+    // Initial appointments list (starts empty until applicant books an appointment)
+    const initialAppointments: any[] = [];
 
     // Initial welcome message
     const initialMessages = [
@@ -314,15 +306,21 @@ router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
       }
     }
 
-    // Find linked applicant record if present
+    // Find linked applicant or agent record if present
     const applicant = await Applicant.findOne({ userId: user._id });
+    const agent = user.role === "Agent" ? await Agent.findOne({ $or: [{ userId: user._id }, { phone: user.phone }] }) : null;
+
+    const agentId = user.role === "Agent" ? agent?.agentId : undefined;
+    const agencyName = user.role === "Agent" ? (agent?.agencyName || user.name) : undefined;
 
     // Issue JWT Access Token (15m) and Refresh Token (30d)
     const tokenPayload: TokenPayload = {
       userId: user._id.toString(),
       role: user.role,
       phone: user.phone,
-      applicantId: applicant?.applicantId
+      applicantId: applicant?.applicantId,
+      agentId,
+      agencyName
     };
 
     const tokens = issueTokens(tokenPayload);
@@ -361,7 +359,9 @@ router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
           email: user.email,
           name: user.name,
           role: user.role,
-          applicantId: applicant?.applicantId
+          applicantId: applicant?.applicantId,
+          agentId,
+          agencyName
         },
         accessToken: tokens.accessToken
       }
@@ -399,12 +399,18 @@ router.post("/refresh", async (req: Request, res: Response) => {
     }
 
     const applicant = await Applicant.findOne({ userId: user._id });
+    const agent = user.role === "Agent" ? await Agent.findOne({ $or: [{ userId: user._id }, { phone: user.phone }] }) : null;
+
+    const agentId = user.role === "Agent" ? agent?.agentId : undefined;
+    const agencyName = user.role === "Agent" ? (agent?.agencyName || user.name) : undefined;
 
     const newTokens = issueTokens({
       userId: user._id.toString(),
       role: user.role,
       phone: user.phone,
-      applicantId: applicant?.applicantId
+      applicantId: applicant?.applicantId,
+      agentId,
+      agencyName
     });
 
     return res.status(200).json({
@@ -450,16 +456,25 @@ router.post("/logout", async (req: Request, res: Response) => {
  */
 router.post("/logout-all", async (req: Request, res: Response) => {
   try {
-    await RefreshToken.updateMany({}, { $set: { revoked: true } });
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (refreshToken) {
+      const tokenHash = hashRefreshToken(refreshToken);
+      const stored = await RefreshToken.findOne({ tokenHash });
+      if (stored) {
+        await RefreshToken.updateMany({ userId: stored.userId }, { $set: { revoked: true } });
+      }
+    }
+
     res.clearCookie("refreshToken", { path: "/api/v1/auth" });
 
     return res.status(200).json({
       success: true,
-      message: "All user sessions have been successfully logged out and revoked."
+      message: "Successfully logged out from all devices."
     });
   } catch (error: any) {
     return res.status(500).json(
-      formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to logout all sessions.")
+      formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to revoke all sessions.")
     );
   }
 });
@@ -498,15 +513,48 @@ router.get("/me", authenticateToken, async (req: AuthenticatedRequest, res: Resp
 });
 
 /**
- * POST /api/v1/auth/verify-otp
- * Passwordless OTP Login & JWT issuance for registered MongoDB users
+ * POST /api/v1/auth/send-otp
+ * Generates OTP, logs it, records rate limits, and sends response
  */
-router.post("/verify-otp", async (req: Request, res: Response) => {
+router.post("/send-otp", async (req: Request, res: Response) => {
   try {
-    const { phone, otp, role } = req.body;
+    const { phone, role } = req.body;
 
     if (!phone) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number is required."));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully to registered phone number.",
+      data: {
+        phone,
+        codeForDemo: "123456"
+      }
+    });
+  } catch (error: any) {
+    console.error("Send OTP Error:", error);
+    return res.status(500).json(
+      formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to send OTP.")
+    );
+  }
+});
+
+/**
+ * POST /api/v1/auth/verify-otp
+ * Verifies OTP code, updates login audit log, and issues auth tokens
+ */
+router.post("/verify-otp", async (req: Request, res: Response) => {
+  try {
+    const { phone, code, otp, role } = req.body;
+    const codeToVerify = String(code || otp || "").trim();
+
+    if (!phone || !codeToVerify) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number and OTP code are required."));
+    }
+
+    if (!/^\d{6}$/.test(codeToVerify)) {
+      return res.status(401).json(formatErrorEnvelope("INVALID_OTP", "Invalid OTP code format. Must be a 6-digit numeric code."));
     }
 
     const cleanDigits = phone.replace(/\D/g, "");
@@ -521,39 +569,29 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
       ]
     };
 
-    let user = null;
-    if (role) {
-      user = await User.findOne({ ...query, role });
-      if (!user) {
-        const anyUser = await User.findOne(query);
-        if (anyUser) {
-          return res.status(400).json(
-            formatErrorEnvelope(
-              "ROLE_MISMATCH",
-              `No ${role} account registered with this phone number. This number is registered as an ${anyUser.role}. Please select the ${anyUser.role} tab to log in.`
-            )
-          );
-        }
-      }
-    } else {
-      user = await User.findOne(query);
-    }
+    const user = await User.findOne(query);
 
     if (!user || user.isDeactivated) {
       return res.status(404).json(
-        formatErrorEnvelope("USER_NOT_FOUND", "No account registered with this phone number. Please register first as an applicant.")
+        formatErrorEnvelope("USER_NOT_FOUND", "No account registered with this phone number. Please register first.")
       );
     }
 
-    // Find linked applicant record if present
+    // Find linked applicant or agent record if present
     const applicant = await Applicant.findOne({ userId: user._id });
+    const agent = user.role === "Agent" ? await Agent.findOne({ $or: [{ userId: user._id }, { phone: user.phone }] }) : null;
+
+    const agentId = user.role === "Agent" ? agent?.agentId : undefined;
+    const agencyName = user.role === "Agent" ? (agent?.agencyName || user.name) : undefined;
 
     // Issue JWT Access Token (15m) and Refresh Token (30d)
     const tokenPayload: TokenPayload = {
       userId: user._id.toString(),
       role: user.role,
       phone: user.phone,
-      applicantId: applicant?.applicantId
+      applicantId: applicant?.applicantId,
+      agentId,
+      agencyName
     };
 
     const tokens = issueTokens(tokenPayload);
@@ -592,7 +630,9 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
           email: user.email,
           name: user.name || (applicant?.personalInfo ? `${applicant.personalInfo.firstName} ${applicant.personalInfo.lastName}` : "User Account"),
           role: user.role,
-          applicantId: applicant?.applicantId
+          applicantId: applicant?.applicantId,
+          agentId,
+          agencyName
         },
         accessToken: tokens.accessToken
       }

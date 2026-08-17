@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   FileText,
   Search,
@@ -106,94 +106,11 @@ export const PROFESSIONAL_VERIFICATION_RULES = [
   "Ensure embassy compliance"
 ];
 
-const MOCK_PENDING_VERIFICATION: PendingVerificationRecord[] = [
-  {
-    id: "1",
-    docId: "DOC-00045",
-    appId: "APP-20261045",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    documentType: "Passport",
-    documentName: "Geeta_Passport_Scan.pdf",
-    fileFormat: "PDF",
-    fileSize: "2.8 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "01 Aug 2026",
-    uploadDateTime: "01 Aug 2026 09:30 AM",
-    priority: "High",
-    status: "Pending Verification",
-    expiryDate: "2032-10-15",
-    country: "Canada",
-    verificationChecklist: {
-      documentIsClear: true,
-      infoMatchesApp: true,
-      documentIsValid: true,
-      notExpired: true,
-      noAlterations: true,
-      meetsEmbassyReqs: false
-    },
-    verificationNotes: [
-      { id: "n1", author: "Amardeep Sen", text: "Identity scan uploaded. Check embassy stamp requirement.", date: "01 Aug 2026 10:00 AM" }
-    ]
-  },
-  {
-    id: "2",
-    docId: "DOC-00046",
-    appId: "APP-20261046",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    documentType: "Bank Statement",
-    documentName: "Rahul_HDFC_Bank_6M.pdf",
-    fileFormat: "PDF",
-    fileSize: "4.5 MB",
-    uploadedBy: "Agent",
-    agentName: "Apex Travels",
-    uploadDate: "01 Aug 2026",
-    uploadDateTime: "01 Aug 2026 11:15 AM",
-    priority: "Normal",
-    status: "Pending Verification",
-    expiryDate: "N/A",
-    country: "Australia",
-    verificationChecklist: {
-      documentIsClear: true,
-      infoMatchesApp: true,
-      documentIsValid: false,
-      notExpired: true,
-      noAlterations: true,
-      meetsEmbassyReqs: false
-    },
-    verificationNotes: []
-  },
-  {
-    id: "3",
-    docId: "DOC-00047",
-    appId: "APP-20261047",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    documentType: "Travel Insurance",
-    documentName: "Travel_Policy_UAE.jpg",
-    fileFormat: "JPG",
-    fileSize: "1.6 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "31 Jul 2026",
-    uploadDateTime: "31 Jul 2026 04:45 PM",
-    priority: "Urgent",
-    status: "Pending Verification",
-    expiryDate: "2026-12-31",
-    country: "UAE",
-    verificationChecklist: {
-      documentIsClear: true,
-      infoMatchesApp: true,
-      documentIsValid: true,
-      notExpired: true,
-      noAlterations: true,
-      meetsEmbassyReqs: true
-    },
-    verificationNotes: []
-  }
-];
+const MOCK_PENDING_VERIFICATION: PendingVerificationRecord[] = [];
 
 export default function PendingVerificationManagement() {
+  const { applications: contextApps } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("All");
@@ -201,8 +118,55 @@ export default function PendingVerificationManagement() {
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [countryFilter, setCountryFilter] = useState("All");
 
+  // Category Pill Filter Tabs State
+  const [activeCategoryTab, setActiveCategoryTab] = useState<
+    "all" | "pending" | "verified" | "reupload" | "rejected" | "priority"
+  >("all");
+
   // Records State
-  const [pendingDocs, setPendingDocs] = useState<PendingVerificationRecord[]>(MOCK_PENDING_VERIFICATION);
+  const [pendingDocs, setPendingDocs] = useState<PendingVerificationRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const allDocs: PendingVerificationRecord[] = [];
+      contextApps.forEach((app: any) => {
+        if (Array.isArray(app.uploadedDocuments)) {
+          app.uploadedDocuments.forEach((doc: any, idx: number) => {
+            allDocs.push({
+              id: `${app.id || app._id}-${idx}`,
+              docId: `DOC-${String(idx + 1).padStart(5, "0")}`,
+              appId: app.id || app.applicationId || "VO-2026-1045",
+              applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+              passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+              documentType: doc.documentType || doc.title || "Document",
+              documentName: doc.fileName || `${(doc.title || "document").toLowerCase().replace(/\s+/g, "_")}.pdf`,
+              fileFormat: doc.format?.includes("Image") ? "JPG" : "PDF",
+              fileSize: doc.fileSize || "2.4 MB",
+              fileUrl: doc.fileUrl || "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+              uploadedBy: "Applicant",
+              uploadDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-IN") : "01 Aug 2026",
+              uploadDateTime: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString("en-IN") : "01 Aug 2026 10:00 AM",
+              priority: "High",
+              status: doc.status === "verified" ? "Verified" : doc.status === "rejected" ? "Rejected" : "Pending Verification",
+              expiryDate: "2032-10-15",
+              country: app.destination || app.countryName || "Canada",
+              verificationChecklist: {
+                documentIsClear: true,
+                infoMatchesApp: true,
+                documentIsValid: true,
+                notExpired: true,
+                noAlterations: true,
+                meetsEmbassyReqs: true
+              },
+              verificationNotes: []
+            });
+          });
+        }
+      });
+      setPendingDocs(allDocs);
+    }
+  }, [contextApps]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Popup Modal State
@@ -223,6 +187,14 @@ export default function PendingVerificationManagement() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  // Dynamic Category Counts
+  const allCount = pendingDocs.length;
+  const pendingCount = pendingDocs.filter((d) => d.status === "Pending Verification").length;
+  const verifiedCount = pendingDocs.filter((d) => d.status === "Verified").length;
+  const reuploadCount = pendingDocs.filter((d) => d.status === "Re-upload Requested").length;
+  const rejectedCount = pendingDocs.filter((d) => d.status === "Rejected").length;
+  const priorityCount = pendingDocs.filter((d) => d.priority === "High" || d.priority === "Urgent").length;
+
   // Filter Logic
   const filteredDocs = pendingDocs.filter((doc) => {
     const q = searchQuery.toLowerCase();
@@ -234,12 +206,26 @@ export default function PendingVerificationManagement() {
       doc.documentName.toLowerCase().includes(q) ||
       (doc.agentName && doc.agentName.toLowerCase().includes(q));
 
+    let matchesCategory = true;
+    if (activeCategoryTab === "pending") matchesCategory = doc.status === "Pending Verification";
+    else if (activeCategoryTab === "verified") matchesCategory = doc.status === "Verified";
+    else if (activeCategoryTab === "reupload") matchesCategory = doc.status === "Re-upload Requested";
+    else if (activeCategoryTab === "rejected") matchesCategory = doc.status === "Rejected";
+    else if (activeCategoryTab === "priority") matchesCategory = doc.priority === "High" || doc.priority === "Urgent";
+
     const matchesType = docTypeFilter === "All" || doc.documentType === docTypeFilter;
     const matchesUploadedBy = uploadedByFilter === "All" || doc.uploadedBy === uploadedByFilter;
     const matchesPriority = priorityFilter === "All" || doc.priority === priorityFilter;
     const matchesCountry = countryFilter === "All" || doc.country === countryFilter;
 
-    return matchesQuery && matchesType && matchesUploadedBy && matchesPriority && matchesCountry;
+    return (
+      matchesQuery &&
+      matchesCategory &&
+      matchesType &&
+      matchesUploadedBy &&
+      matchesPriority &&
+      matchesCountry
+    );
   });
 
   // Selection Logic
@@ -319,7 +305,7 @@ export default function PendingVerificationManagement() {
       prev.map((d) => (d.id === activeModalDoc.id ? { ...d, verificationNotes: updatedNotes } : d))
     );
     setNewNoteText("");
-    triggerToast("Verification remark saved.");
+    triggerToast("Verification note added.");
   };
 
   const handleBulkVerify = () => {
@@ -360,53 +346,101 @@ export default function PendingVerificationManagement() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-            Pending Verification
+            Document Verification
           </h1>
           <p className="text-xs text-blue-100 font-medium mt-1">
-            Review and verify documents submitted by applicants and agents before processing visa applications.
+            Review, verify, and audit documents submitted by applicants and agents before processing visa applications.
           </p>
         </div>
       </div>
 
-      {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
+      {/* TOP INTERACTIVE STATISTICS CARDS (CLICK TO FILTER) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* LEFT CARDS: 6 METRICS */}
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("pending")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "pending"
+                ? "bg-blue-50/50 border-[#2563EB] ring-2 ring-[#2563EB]/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Pending Documents</span>
             <div className="text-2xl font-black text-slate-900 font-mono">3,054</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Total Verification Queue</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Uploaded Today</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">165</div>
-            <span className="text-[10px] text-blue-600 font-bold">Fresh Intake</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("all")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "all"
+                ? "bg-blue-50/50 border-[#2563EB] ring-2 ring-[#2563EB]/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
+            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">All Documents</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{allCount}</div>
+            <span className="text-[10px] text-blue-600 font-bold">Total File Registry</span>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("verified")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "verified"
+                ? "bg-emerald-50/50 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Verified Today</span>
             <div className="text-2xl font-black text-slate-900 font-mono">128</div>
             <span className="text-[10px] text-emerald-600 font-bold">Audited & Approved</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("rejected")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "rejected"
+                ? "bg-red-50/50 border-red-500 ring-2 ring-red-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected Today</span>
             <div className="text-2xl font-black text-slate-900 font-mono">24</div>
             <span className="text-[10px] text-red-600 font-bold">Non-Compliant Files</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("reupload")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "reupload"
+                ? "bg-purple-50/50 border-purple-500 ring-2 ring-purple-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Re-upload Requested</span>
             <div className="text-2xl font-black text-slate-900 font-mono">58</div>
             <span className="text-[10px] text-purple-600 font-bold">Deficiency Notice Sent</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("priority")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "priority"
+                ? "bg-amber-50/50 border-amber-500 ring-2 ring-amber-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">High Priority Cases</span>
             <div className="text-2xl font-black text-slate-900 font-mono">32</div>
             <span className="text-[10px] text-amber-600 font-bold">Express Fast-Track</span>
-          </div>
+          </button>
         </div>
 
         {/* RIGHT CARD: RECOMMENDED TABS, WORKFLOW & VERIFICATION RULES (FROM WIREFRAME) */}
@@ -440,6 +474,113 @@ export default function PendingVerificationManagement() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* CATEGORY FILTER PILL TABS BAR (MERGED SUB-MENU IN PLACE) */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-3 shadow-2xs mb-6 overflow-x-auto">
+        <div className="flex items-center gap-2 min-w-max">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("all")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "all"
+                ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>All Documents</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+            }`}>
+              {allCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("pending")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "pending"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Pending Verification</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "pending" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-800"
+            }`}>
+              {pendingCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("verified")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "verified"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Verified Documents</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "verified" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+            }`}>
+              {verifiedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("reupload")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "reupload"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Re-upload Requested</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "reupload" ? "bg-white/20 text-white" : "bg-purple-100 text-purple-800"
+            }`}>
+              {reuploadCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("rejected")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "rejected"
+                ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Rejected Documents</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "rejected" ? "bg-white/20 text-white" : "bg-rose-100 text-rose-800"
+            }`}>
+              {rejectedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("priority")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "priority"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>High Priority</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "priority" ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800"
+            }`}>
+              {priorityCount}
+            </span>
+          </button>
         </div>
       </div>
 

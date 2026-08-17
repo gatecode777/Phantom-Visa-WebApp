@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   XCircle,
   Search,
@@ -33,6 +33,7 @@ import {
   RefreshCw,
   FileCheck
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface RejectedApplicationRecord {
   id: string;
@@ -51,7 +52,8 @@ export interface RejectedApplicationRecord {
     | "Travel Purpose Unclear"
     | "Past Overstay History"
     | "Security & Background Check"
-    | "Embassy Discretion";
+    | "Embassy Discretion"
+    | "Insufficient Documentation";
   rejectedBy: string;
   rejectedDate: string;
   rejectedTime: string;
@@ -106,7 +108,7 @@ export const RECOMMENDED_REJECTED_TABS = [
 ];
 
 export const REJECTION_WORKFLOW_STEPS = [
-  "Consular Refusal Decision Issued",
+  "Application Rejected by Embassy",
   "Refusal Grounds & Code Categorized",
   "Official Refusal Letter Generated",
   "Applicant Notified with Grounds",
@@ -114,183 +116,15 @@ export const REJECTION_WORKFLOW_STEPS = [
   "Re-Application / Closed Archive"
 ];
 
-const MOCK_REJECTED_APPLICATIONS: RejectedApplicationRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20269001",
-    refusalCode: "SEC-214B-FIN",
-    applicantName: "Geeta Bisht",
-    firstName: "Geeta",
-    lastName: "Bisht",
-    passportNumber: "Z9876543",
-    appliedBy: "Applicant",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "V-1 Visitor Visa",
-    rejectionReason: "Insufficient Financial Proof",
-    rejectedBy: "Rahul Sharma (Consular Officer)",
-    rejectedDate: "01 Aug 2026",
-    rejectedTime: "11:30 AM",
-    reApplyAllowed: true,
-    appealEligibility: "Eligible for Appeal",
-    coolingPeriodDays: 15,
-    detailedRemarks: "Applicant failed to submit certified bank statement for the last 6 months showing sufficient liquidity for the duration of stay in Canada.",
-    amountPaid: "₹12,350",
-    transactionId: "TXN-9988112",
-    status: "Rejected",
-    dob: "1994-08-12",
-    gender: "Female",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    address: "B-42, South Extension Part II",
-    cityState: "New Delhi, Delhi",
-    passportIssueDate: "15 Jan 2020",
-    passportExpiryDate: "14 Jan 2030",
-    passportIssuingAuthority: "Passport Office New Delhi",
-    passportPlaceOfIssue: "New Delhi",
-    travelDate: "2026-09-20",
-    expectedDepartureDate: "2026-10-15",
-    durationOfStay: "25 Days",
-    purposeOfVisit: "Tourism & Sightseeing",
-    portOfEntry: "Toronto Pearson Intl (YYZ)",
-    accommodationDetails: "Marriott Downtown Toronto",
-    occupation: "Senior Product Designer",
-    employerName: "TechCorp Global",
-    annualIncome: "₹6,50,000 INR",
-    sponsorType: "Self Sponsored",
-    embassyRefId: "CAN-REF-88190",
-    uploadedDocs: [
-      { name: "Certified Bank Statement 6 Months", status: "Rejected", reason: "Insufficient closing balance under $5,000 CAD" },
-      { name: "Passport Bio Page Copy", status: "Verified" },
-      { name: "Flight Itinerary Reservation", status: "Verified" },
-      { name: "Hotel Booking Voucher", status: "Verified" }
-    ],
-    actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Refusal notice generated under Section 214(b). Applicant allowed to re-apply with updated financial proof after 15 days.", date: "01 Aug 2026 11:30 AM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20269002",
-    refusalCode: "SUB-500-GTE",
-    applicantName: "Bikram Suman",
-    firstName: "Bikram",
-    lastName: "Suman",
-    passportNumber: "K4567890",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    country: "Australia",
-    category: "Student",
-    visaType: "Subclass 500 Student Visa",
-    rejectionReason: "Travel Purpose Unclear",
-    rejectedBy: "David Thomas (Consular Officer)",
-    rejectedDate: "31 Jul 2026",
-    rejectedTime: "03:45 PM",
-    reApplyAllowed: fontBoolean(false),
-    appealEligibility: "Non-Appealable",
-    coolingPeriodDays: 90,
-    detailedRemarks: "Applicant failed to satisfy Genuine Student (GS) criteria. Unexplained 5-year academic gap without relevant work experience.",
-    amountPaid: "₹18,930",
-    transactionId: "TXN-7733441",
-    status: "Permanently Refused",
-    dob: "1988-06-25",
-    gender: "Male",
-    maritalStatus: "Married",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    address: "H.No 108, Sector 15",
-    cityState: "Gurugram, Haryana",
-    passportIssueDate: "05 Jun 2019",
-    passportExpiryDate: "04 Jun 2029",
-    passportIssuingAuthority: "Passport Office Gurgaon",
-    passportPlaceOfIssue: "Gurgaon",
-    travelDate: "2026-10-01",
-    expectedDepartureDate: "2028-07-30",
-    durationOfStay: "24 Months",
-    purposeOfVisit: "Higher Education",
-    portOfEntry: "Sydney Kingsford Smith (SYD)",
-    accommodationDetails: "University Campus Residence",
-    occupation: "Manager",
-    employerName: "Self Employed",
-    annualIncome: "₹5,00,000 INR",
-    sponsorType: "Self Sponsored",
-    embassyRefId: "AUS-REF-55102",
-    uploadedDocs: [
-      { name: "Statement of Purpose (SOP)", status: "Rejected", reason: "GS requirement not met" },
-      { name: "Academic Degree Certificates", status: "Incomplete", reason: "5-year gap unverified" },
-      { name: "Financial Guarantee Letter", status: "Verified" }
-    ],
-    actionNotes: [
-      { id: "n2", author: "David Thomas", text: "Permanent refusal logged under Subclass 500 GTE provisions. Appeal non-admissible.", date: "31 Jul 2026 03:45 PM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20269003",
-    refusalCode: "UAE-DOC-INV",
-    applicantName: "Rahul Sharma",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    passportNumber: "M1234567",
-    appliedBy: "Applicant",
-    country: "UAE",
-    category: "Business",
-    visaType: "30 Days Multiple Entry",
-    rejectionReason: "Incomplete / Fraudulent Documents",
-    rejectedBy: "Sarah Johnston (Consular Officer)",
-    rejectedDate: "30 Jul 2026",
-    rejectedTime: "01:20 PM",
-    reApplyAllowed: true,
-    appealEligibility: "Re-Application Submitted",
-    coolingPeriodDays: 0,
-    detailedRemarks: "Company trade license provided was unverified by Dubai Chamber of Commerce.",
-    amountPaid: "₹8,670",
-    transactionId: "TXN-5511223",
-    status: "Allowing Re-Application",
-    dob: "1999-02-15",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    address: "Flat 301, Sunshine Heights",
-    cityState: "Mumbai, Maharashtra",
-    passportIssueDate: "10 Mar 2021",
-    passportExpiryDate: "09 Mar 2031",
-    passportIssuingAuthority: "Passport Office Mumbai",
-    passportPlaceOfIssue: "Mumbai",
-    travelDate: "2026-08-12",
-    expectedDepartureDate: "2026-08-25",
-    durationOfStay: "13 Days",
-    purposeOfVisit: "Business Conference",
-    portOfEntry: "Dubai Intl Airport (DXB)",
-    accommodationDetails: "Grand Hyatt Dubai",
-    occupation: "Business Executive",
-    employerName: "Apex Consultants",
-    annualIncome: "₹14,00,000 INR",
-    sponsorType: "Company Sponsored",
-    embassyRefId: "UAE-REF-11982",
-    uploadedDocs: [
-      { name: "Trade License Document", status: "Rejected", reason: "Unverified registration number" },
-      { name: "Passport Bio Copy", status: "Verified" }
-    ],
-    actionNotes: [
-      { id: "n3", author: "Sarah Johnston", text: "Applicant advised to resubmit with verified Dubai Chamber certificate.", date: "30 Jul 2026 01:20 PM" }
-    ]
-  }
-];
+const MOCK_REJECTED_APPLICATIONS: RejectedApplicationRecord[] = [];
 
 function fontBoolean(val: boolean) {
   return val;
 }
 
 export default function RejectedApplicationsManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [rejectionReasonFilter, setRejectionReasonFilter] = useState("All");
@@ -300,7 +134,71 @@ export default function RejectedApplicationsManagement() {
   const [appealFilter, setAppealFilter] = useState("All");
 
   // Records State
-  const [rejectedList, setRejectedList] = useState<RejectedApplicationRecord[]>(MOCK_REJECTED_APPLICATIONS);
+  const [rejectedList, setRejectedList] = useState<RejectedApplicationRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const rejected = contextApps.filter((a: any) => a.status === "Rejected");
+      const mapped: RejectedApplicationRecord[] = rejected.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-9001",
+        refusalCode: "SEC-214B-FIN",
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
+        lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        appliedBy: app.appliedBy || "Applicant",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        rejectionReason: "Insufficient Documentation",
+        rejectedBy: authSession?.user?.name ? `${authSession.user.name} (Consular Officer)` : "Consular Officer",
+        rejectedDate: app.submissionDate || "01 Aug 2026",
+        rejectedTime: "11:30 AM",
+        reApplyAllowed: true,
+        appealEligibility: "Eligible for Appeal",
+        coolingPeriodDays: 15,
+        detailedRemarks: "Applicant documentation did not meet embassy requirements.",
+        amountPaid: `₹${app.fees || 12350}`,
+        transactionId: "TXN-9988112",
+        status: "Rejected",
+        dob: app.dob || "1994-08-12",
+        gender: "Female",
+        maritalStatus: "Single",
+        nationality: app.nationality || "Indian",
+        residenceCountry: "India",
+        email: app.email || "",
+        phone: app.phone || "",
+        address: app.address || "",
+        cityState: "New Delhi, Delhi",
+        passportIssueDate: "15 Jan 2020",
+        passportExpiryDate: app.passportExpiry || "14 Jan 2030",
+        passportIssuingAuthority: "Passport Office New Delhi",
+        passportPlaceOfIssue: "New Delhi",
+        travelDate: app.travelDates || "2026-09-20",
+        expectedDepartureDate: "2026-10-15",
+        durationOfStay: "25 Days",
+        purposeOfVisit: "Tourism",
+        portOfEntry: "YYZ",
+        accommodationDetails: "Hotel",
+        occupation: "Professional",
+        employerName: "TechCorp Global",
+        annualIncome: "₹6,50,000 INR",
+        sponsorType: "Self Sponsored",
+        embassyRefId: "CAN-REF-88190",
+        uploadedDocs: Array.isArray(app.uploadedDocuments) && app.uploadedDocuments.length > 0
+          ? app.uploadedDocuments.map((d: any) => ({
+              name: d.title || d.fileName || "Document",
+              status: "Rejected",
+              reason: "Document rejected during embassy review"
+            }))
+          : [],
+        actionNotes: []
+      }));
+      setRejectedList(mapped);
+    }
+  }, [contextApps, authSession]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

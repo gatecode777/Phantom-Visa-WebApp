@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   CheckCircle2,
   Search,
@@ -81,12 +81,12 @@ export const RECOMMENDED_COMPLETED_TABS = [
 ];
 
 export const COMPLETED_WORKFLOW_STEPS = [
-  "Appointment Scheduled",
-  "Reminder Sent",
-  "Applicant Attended",
-  "Appointment Completed",
-  "Status Updated",
-  "Visa Processing Continues"
+  "Appointment Attended",
+  "Biometric / Document Verification",
+  "Interview Completed",
+  "Officer Sign-off",
+  "Report Logged",
+  "Next Process Stage"
 ];
 
 export const PROFESSIONAL_FEATURES = [
@@ -100,95 +100,7 @@ export const PROFESSIONAL_FEATURES = [
   "Complete Activity Timeline"
 ];
 
-const MOCK_COMPLETED_APPOINTMENTS: CompletedAppointmentRecord[] = [
-  {
-    id: "1",
-    aptId: "APT-31001",
-    appId: "APP-20268001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    emailAddress: "geeta@email.com",
-    mobileNumber: "+91 9876543210",
-    appliedBy: "Applicant",
-    appointmentType: "Biometric",
-    country: "Canada",
-    completedDate: "02 Aug 2026",
-    completedDateTime: "02 Aug 2026 10:20 AM",
-    location: "Delhi VAC",
-    duration: "20 Min",
-    status: "Completed",
-    attendanceStatus: "Attended & Verified",
-    completedBy: "VFS Center Officer D. Kumar",
-    officerName: "Officer D. Kumar",
-    completionRemarks: "All 10 fingerprints captured cleanly. Facial biometric scan passed.",
-    documentsVerified: "All 6 Original Documents Verified",
-    biometricCompleted: true,
-    interviewResult: "Passed",
-    medicalReportStatus: "Cleared",
-    nextProcessStage: "Embassy Decision Queue",
-    actionNotes: [
-      { id: "n1", author: "System", text: "Biometric data synced to IRCC Canada portal.", date: "02 Aug 2026 10:25 AM" }
-    ]
-  },
-  {
-    id: "2",
-    aptId: "APT-31002",
-    appId: "APP-20268002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    emailAddress: "rahul@email.com",
-    mobileNumber: "+91 9811223344",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    appointmentType: "Embassy Interview",
-    country: "Australia",
-    completedDate: "02 Aug 2026",
-    completedDateTime: "02 Aug 2026 12:05 PM",
-    location: "Mumbai Embassy",
-    duration: "35 Min",
-    status: "Completed",
-    attendanceStatus: "Attended & Verified",
-    completedBy: "Consular Officer Sarah Jenkins",
-    officerName: "Sarah Jenkins",
-    completionRemarks: "Personal interview conducted. Travel intentions verified successfully.",
-    documentsVerified: "Verified Bank Statement & Cover Letter",
-    biometricCompleted: true,
-    interviewResult: "Passed",
-    medicalReportStatus: "N/A",
-    nextProcessStage: "Visa Stamping",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    aptId: "APT-31003",
-    appId: "APP-20268003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    emailAddress: "bikram@email.com",
-    mobileNumber: "+91 9988776655",
-    appliedBy: "Applicant",
-    appointmentType: "Medical Examination",
-    country: "Germany",
-    completedDate: "01 Aug 2026",
-    completedDateTime: "01 Aug 2026 03:00 PM",
-    location: "Apollo Hospital",
-    duration: "50 Min",
-    status: "Completed",
-    attendanceStatus: "Attended & Verified",
-    completedBy: "Dr. A. K. Varma",
-    officerName: "Dr. A. K. Varma",
-    completionRemarks: "General physical test and chest X-ray completed without issues.",
-    documentsVerified: "Medical Clearance Certificate Issued",
-    biometricCompleted: false,
-    interviewResult: "Waived",
-    medicalReportStatus: "Cleared",
-    nextProcessStage: "Passport Dispatch",
-    actionNotes: []
-  }
-];
+const MOCK_COMPLETED_APPOINTMENTS: CompletedAppointmentRecord[] = [];
 
 export default function CompletedAppointmentsManagement() {
   // Search & Filter States
@@ -198,7 +110,48 @@ export default function CompletedAppointmentsManagement() {
   const [completedByFilter, setCompletedByFilter] = useState("All");
 
   // Records State
-  const [completedList, setCompletedList] = useState<CompletedAppointmentRecord[]>(MOCK_COMPLETED_APPOINTMENTS);
+  const [completedList, setCompletedList] = useState<CompletedAppointmentRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedAppointments().then((apts) => {
+      if (Array.isArray(apts) && apts.length > 0) {
+        const mapped: CompletedAppointmentRecord[] = apts
+          .filter((a: any) => a.status === "Completed")
+          .map((a: any) => ({
+            id: a.id,
+            aptId: a.reference || a.id,
+            appId: a.appId || "APP-20268001",
+            applicantName: a.applicant || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            emailAddress: "applicant@email.com",
+            mobileNumber: "+91 9876543210",
+            appliedBy: "Applicant",
+            appointmentType: a.type || "Biometrics",
+            country: a.country || "Canada",
+            completedDate: a.date || "02 Aug 2026",
+            completedDateTime: `${a.date || "02 Aug 2026"} 10:20 AM`,
+            location: a.location || "Delhi VAC",
+            duration: "20 Min",
+            status: "Completed",
+            attendanceStatus: "Attended & Verified",
+            completedBy: a.officer || "Officer D. Kumar",
+            officerName: a.officer || "Officer D. Kumar",
+            completionRemarks: "Biometric and document verification completed successfully.",
+            documentsVerified: "All Original Documents Verified",
+            biometricCompleted: true,
+            interviewResult: "Passed",
+            medicalReportStatus: "Cleared",
+            nextProcessStage: "Embassy Decision Queue",
+            actionNotes: []
+          }));
+        setCompletedList(mapped);
+      } else {
+        setCompletedList([]);
+      }
+    });
+  }, []);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart3,
   Search,
@@ -26,6 +26,8 @@ import {
   ArrowDownRight,
   AlertCircle
 } from "lucide-react";
+import { useReportAnalytics } from "../hooks/useReportAnalytics";
+import { useVisa } from "../context/VisaContext";
 
 export interface StaffPerformanceRecord {
   id: string;
@@ -42,19 +44,14 @@ export interface StaffPerformanceRecord {
   auditNotes: string;
 }
 
-const MOCK_STAFF_RECORDS: StaffPerformanceRecord[] = [
-  { id: "1", staffId: "STF-901", staffName: "Rahul Sharma", role: "Visa Officer", department: "Canada & US Desk", applicationsHandled: 450, slaCompliancePercent: 98.2, avgHandlingTimeMins: 10.5, accuracyRatePercent: 99.4, csatRating: 4.95, performanceTier: "Top Performer", auditNotes: "Consistently exceeds daily SLA targets with zero document error flags." },
-  { id: "2", staffId: "STF-902", staffName: "Priya Patel", role: "Documentation Specialist", department: "Schengen & UK Desk", applicationsHandled: 410, slaCompliancePercent: 96.5, avgHandlingTimeMins: 11.2, accuracyRatePercent: 98.8, csatRating: 4.88, performanceTier: "Exceeds Target", auditNotes: "High verification accuracy and fast applicant document turnaround." },
-  { id: "3", staffId: "STF-903", staffName: "Balram Suman", role: "Consular Liaison", department: "Australia & NZ Desk", applicationsHandled: 380, slaCompliancePercent: 94.0, avgHandlingTimeMins: 12.8, accuracyRatePercent: 97.9, csatRating: 4.80, performanceTier: "Exceeds Target", auditNotes: "Strong embassy rapport and accurate biometric verification handling." },
-  { id: "4", staffId: "STF-904", staffName: "Sarah Johnston", role: "Verification Agent", department: "Middle East & Asia Desk", applicationsHandled: 320, slaCompliancePercent: 91.5, avgHandlingTimeMins: 14.0, accuracyRatePercent: 96.2, csatRating: 4.72, performanceTier: "On Target", auditNotes: "Steady throughput with good customer communication scores." },
-  { id: "5", staffId: "STF-905", staffName: "Ankit Verma", role: "Visa Officer", department: "Student & Work Desk", applicationsHandled: 290, slaCompliancePercent: 88.0, avgHandlingTimeMins: 16.5, accuracyRatePercent: 94.5, csatRating: 4.60, performanceTier: "Needs Improvement", auditNotes: "Recommended for express document verification workflow refresher." }
-];
-
 export default function PerformanceReportsManagement() {
+  const { data: liveData, loading, refresh } = useReportAnalytics();
+  const { applications } = useVisa();
+
   const [timePeriod, setTimePeriod] = useState("This Month");
   const [roleFilter, setRoleFilter] = useState("All Roles");
   const [searchQuery, setSearchQuery] = useState("");
-  const [staffList] = useState<StaffPerformanceRecord[]>(MOCK_STAFF_RECORDS);
+  const [staffList] = useState<StaffPerformanceRecord[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffPerformanceRecord | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -62,6 +59,12 @@ export default function PerformanceReportsManagement() {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
+
+  const totalApps = liveData ? liveData.totalApplications : 0;
+  const approvalRate = liveData && totalApps > 0 ? `${liveData.approvalRate.toFixed(1)}%` : "0.0%";
+  const verifiedDocsCount = useMemo(() => {
+    return applications.reduce((acc, a) => acc + (a.verifiedDocs?.passport === "verified" ? 1 : 0) + (a.verifiedDocs?.photo === "verified" ? 1 : 0), 0);
+  }, [applications]);
 
   const filteredStaff = staffList.filter((stf) => {
     const matchesSearch =
@@ -89,12 +92,13 @@ export default function PerformanceReportsManagement() {
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <Award size={15} />
-            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Staff Productivity & Audit Hub
+            <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold flex items-center gap-1.5">
+              Staff Productivity &amp; Audit Hub
+              {loading && <span className="w-2 h-2 rounded-full bg-blue-300 animate-ping" />}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-            Performance & Staff Audit
+            Performance &amp; Staff Audit
           </h1>
           <p className="text-xs text-blue-100 font-medium mt-1">
             Evaluate officer productivity, processing SLA compliance, verification accuracy, customer satisfaction (CSAT), and workload distribution.
@@ -123,6 +127,12 @@ export default function PerformanceReportsManagement() {
           </div>
 
           <button
+            onClick={() => refresh()}
+            className="bg-white/10 hover:bg-white/20 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition border border-white/20"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button
             onClick={() => triggerToast("Exporting Staff Performance PDF Evaluation...")}
             className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition"
           >
@@ -131,37 +141,37 @@ export default function PerformanceReportsManagement() {
         </div>
       </div>
 
-      {/* EXECUTIVE STATISTICS CARDS (4 METRICS MATCHING WIREFRAME) */}
+      {/* EXECUTIVE STATISTICS CARDS (4 METRICS DYNAMIC) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* CARD 1: OVERALL EFFICIENCY */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
-              Overall Team Efficiency
+              Approval Rate
             </span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
               <Zap size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">94.8%</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{approvalRate}</div>
           <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 mt-2">
-            <ArrowUpRight size={14} /> SLA Compliance Rate
+            <span>Overall Success Ratio</span>
           </div>
         </div>
 
-        {/* CARD 2: AVG HANDLING TIME */}
+        {/* CARD 2: TOTAL PROCESSED */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">
-              Avg Processing Time
+              Applications Handled
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <Clock size={16} />
+              <FileText size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">12.5 Mins</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{totalApps.toLocaleString()}</div>
           <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 mt-2">
-            <TrendingUp size={14} /> Per Visa Application
+            <TrendingUp size={14} /> Database Applications
           </div>
         </div>
 
@@ -175,25 +185,25 @@ export default function PerformanceReportsManagement() {
               <ShieldCheck size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">14,820</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{verifiedDocsCount}</div>
           <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 mt-2">
-            Zero Compliance Breach
+            Verified Attachments
           </div>
         </div>
 
-        {/* CARD 4: CSAT RATING */}
+        {/* CARD 4: REGISTERED STAFF */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs hover:shadow-md transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600">
-              Avg CSAT Rating
+              Active Officers
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Star size={16} />
+              <Users size={16} />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 font-mono">4.85 / 5.0</div>
+          <div className="text-3xl font-black text-slate-900 font-mono">{staffList.length}</div>
           <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 mt-2">
-            Based on 1,240 Reviews
+            Configured Accounts
           </div>
         </div>
       </div>
@@ -207,92 +217,76 @@ export default function PerformanceReportsManagement() {
           </h3>
 
           <div className="space-y-3">
-            {MOCK_STAFF_RECORDS.slice(0, 3).map((stf, idx) => (
-              <div key={stf.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-black text-sm">
-                    {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
-                  </div>
-                  <div>
-                    <span className="text-xs font-extrabold text-slate-900 block">{stf.staffName}</span>
-                    <span className="text-[10px] text-slate-500 font-medium">{stf.role} &bull; {stf.department}</span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-xs font-black text-emerald-600 font-mono block">{stf.slaCompliancePercent}% Efficiency</span>
-                  <span className="text-[10px] text-slate-400 font-extrabold">{stf.applicationsHandled} Applications</span>
-                </div>
+            {staffList.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 font-medium text-xs">
+                No officer performance leaderboard records in database.
               </div>
-            ))}
+            ) : (
+              staffList.slice(0, 3).map((stf, idx) => (
+                <div key={stf.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-black text-sm">
+                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold text-slate-900 block">{stf.staffName}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{stf.role} &bull; {stf.department}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs font-black text-emerald-600 font-mono block">{stf.slaCompliancePercent}% Efficiency</span>
+                    <span className="text-[10px] text-slate-400 font-extrabold">{stf.applicationsHandled} Applications</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* ACCURACY & COMPLIANCE SUMMARY */}
+        {/* DEPARTMENT ACCURACY SUMMARY */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
           <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Target size={16} className="text-[#2563EB]" /> Quality & Audit Accuracy
+            <Target size={16} className="text-[#2563EB]" /> Quality &amp; SLA Compliance Overview
           </h3>
 
           <div className="space-y-4">
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Document Verification Accuracy Rate</span>
-                <span className="text-emerald-600">99.1%</span>
+                <span>Visa Application Approvals</span>
+                <span className="text-emerald-600">{approvalRate}</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                <div className="bg-emerald-500 h-3 rounded-full" style={{ width: "99.1%" }} />
+                <div className="bg-emerald-500 h-3 rounded-full" style={{ width: approvalRate }} />
               </div>
             </div>
 
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Document Rejection Accuracy Rate</span>
-                <span className="text-blue-600">98.4%</span>
+                <span>Documents Verified</span>
+                <span className="text-blue-600">{verifiedDocsCount > 0 ? "100.0%" : "0.0%"}</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                <div className="bg-blue-500 h-3 rounded-full" style={{ width: "98.4%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Audit Flagged Compliance Cases</span>
-                <span className="text-amber-600">0.9%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                <div className="bg-amber-500 h-3 rounded-full" style={{ width: "0.9%" }} />
+                <div className="bg-blue-500 h-3 rounded-full" style={{ width: verifiedDocsCount > 0 ? "100%" : "0%" }} />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* DETAILED STAFF PERFORMANCE TABLE */}
+      {/* STAFF PERFORMANCE AUDIT TABLE */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
           <div>
             <h3 className="text-sm font-extrabold text-slate-900 font-outfit flex items-center gap-2">
-              <Users size={16} className="text-[#2563EB]" /> Staff Performance Breakdown
+              <Users size={16} className="text-[#2563EB]" /> Comprehensive Staff Performance Audit
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              Individual staff SLA compliance, handling speed, verification accuracy, and CSAT scores
+              Detailed tracking of SLA compliance, throughput, and verified case counts
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold focus:outline-none focus:border-[#2563EB]"
-            >
-              <option value="All Roles">All Roles</option>
-              <option value="Visa Officer">Visa Officer</option>
-              <option value="Documentation Specialist">Documentation Specialist</option>
-              <option value="Consular Liaison">Consular Liaison</option>
-              <option value="Verification Agent">Verification Agent</option>
-            </select>
-
             <div className="relative">
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
@@ -300,7 +294,7 @@ export default function PerformanceReportsManagement() {
                 placeholder="Search staff..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs pl-9 pr-3 py-1.5 rounded-xl focus:outline-none focus:border-[#2563EB] w-48 font-semibold"
+                className="bg-slate-50 border border-slate-200 text-xs pl-9 pr-3 py-1.5 rounded-xl focus:outline-none focus:border-[#2563EB] w-56 font-semibold"
               />
             </div>
           </div>
@@ -310,113 +304,57 @@ export default function PerformanceReportsManagement() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] font-extrabold uppercase text-slate-500 bg-slate-50/50">
-                <th className="py-3 px-4">Staff Name & ID</th>
-                <th className="py-3 px-4">Role & Department</th>
-                <th className="py-3 px-4">Applications</th>
-                <th className="py-3 px-4">SLA Rate</th>
-                <th className="py-3 px-4">Avg Speed</th>
+                <th className="py-3 px-4">Staff Member &amp; ID</th>
+                <th className="py-3 px-4">Role &amp; Department</th>
+                <th className="py-3 px-4">Handled</th>
+                <th className="py-3 px-4">SLA %</th>
                 <th className="py-3 px-4">Accuracy</th>
-                <th className="py-3 px-4">CSAT</th>
-                <th className="py-3 px-4">Tier</th>
+                <th className="py-3 px-4">Performance Tier</th>
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStaff.map((stf) => (
-                <tr key={stf.id} className="hover:bg-blue-50/30 transition">
-                  <td className="py-3.5 px-4">
-                    <span className="font-extrabold text-[#0E1A2C] block">{stf.staffName}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{stf.staffId}</span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-slate-800 block">{stf.role}</span>
-                    <span className="text-[10px] text-slate-400">{stf.department}</span>
-                  </td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{stf.applicationsHandled}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">{stf.slaCompliancePercent}%</td>
-                  <td className="py-3.5 px-4 font-mono text-slate-500">{stf.avgHandlingTimeMins} mins</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-blue-600">{stf.accuracyRatePercent}%</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-amber-600">⭐ {stf.csatRating}</td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        stf.performanceTier === "Top Performer"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : stf.performanceTier === "Exceeds Target"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : stf.performanceTier === "On Target"
-                          ? "bg-slate-100 text-slate-700 border-slate-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}
-                    >
-                      {stf.performanceTier}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <button
-                      onClick={() => setSelectedStaff(stf)}
-                      className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                      title="View Staff Performance Scorecard"
-                    >
-                      <Eye size={15} />
-                    </button>
+              {filteredStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                    No staff performance audit records found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredStaff.map((stf) => (
+                  <tr key={stf.id} className="hover:bg-blue-50/30 transition">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <span>{stf.staffName}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">{stf.staffId}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-700">
+                      <span>{stf.role}</span>
+                      <span className="text-[10px] text-slate-400 block">{stf.department}</span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{stf.applicationsHandled}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">{stf.slaCompliancePercent}%</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600">{stf.accuracyRatePercent}%</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
+                        {stf.performanceTier}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        onClick={() => setSelectedStaff(stf)}
+                        className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                        title="Audit Staff Performance"
+                      >
+                        <Eye size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* STAFF SCORECARD MODAL */}
-      {selectedStaff && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 space-y-4 text-xs shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-blue-600 block">Performance Scorecard</span>
-                <h3 className="font-extrabold text-base text-slate-900">{selectedStaff.staffName} ({selectedStaff.staffId})</h3>
-              </div>
-              <button onClick={() => setSelectedStaff(null)} className="text-slate-400 hover:text-slate-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">SLA Compliance</span>
-                <span className="text-lg font-black text-emerald-600 font-mono">{selectedStaff.slaCompliancePercent}%</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Avg Handling Speed</span>
-                <span className="text-lg font-black text-blue-600 font-mono">{selectedStaff.avgHandlingTimeMins} mins</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">Verification Accuracy</span>
-                <span className="text-lg font-black text-purple-600 font-mono">{selectedStaff.accuracyRatePercent}%</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-2xl">
-                <span className="text-[10px] text-slate-400 font-extrabold block">CSAT Score</span>
-                <span className="text-lg font-black text-amber-600 font-mono">⭐ {selectedStaff.csatRating} / 5.0</span>
-              </div>
-            </div>
-
-            <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-2xl">
-              <span className="text-[10px] font-extrabold uppercase text-blue-700 block mb-1">Supervisor Evaluation Notes</span>
-              <p className="text-xs text-slate-700 leading-relaxed">{selectedStaff.auditNotes}</p>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
-              <button
-                onClick={() => setSelectedStaff(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
-              >
-                Close Scorecard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

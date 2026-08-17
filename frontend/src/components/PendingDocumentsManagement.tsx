@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Search,
@@ -33,6 +33,7 @@ import {
   HelpCircle,
   UploadCloud
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface PendingDocumentRecord {
   id: string;
@@ -78,88 +79,19 @@ export const RECOMMENDED_PENDING_DOCS_TABS = [
 ];
 
 export const PENDING_DOCS_WORKFLOW_STEPS = [
-  "Application Submitted",
-  "Document Verification (Missing Docs ⚠️ï¸)",
-  "Request Additional Documents",
+  "Application Intake",
+  "Missing Documents Identified",
+  "Request Sent to Applicant",
   "Applicant Uploads Documents",
   "Document Verification",
   "Ready for Processing"
 ];
 
-const MOCK_PENDING_DOCUMENTS: PendingDocumentRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20263001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    appliedBy: "Applicant",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "eVisa",
-    missingDocs: ["Bank Statement (6 Months)"],
-    requestedDate: "01 Jul 2026",
-    deadline: "05 Aug 2026",
-    requestedBy: "Amardeep Sen",
-    reminderSentCount: 2,
-    emailStatus: "Opened",
-    status: "Pending Upload",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    nationality: "Indian",
-    actionNotes: [
-      { id: "n1", author: "Amardeep Sen", text: "Sent email reminder for bank statement.", date: "02 Jul 2026 10:00 AM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20263002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    country: "Australia",
-    category: "Student",
-    visaType: "Sticker Visa",
-    missingDocs: ["Admission Letter", "IELTS Scorecard"],
-    requestedDate: "02 Jul 2026",
-    deadline: "06 Aug 2026",
-    requestedBy: "Devender Sharma",
-    reminderSentCount: 1,
-    emailStatus: "Delivered",
-    status: "Additional Documents Requested",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    nationality: "Indian",
-    actionNotes: [
-      { id: "n2", author: "Devender Sharma", text: "Requested original CoE and IELTS transcript.", date: "02 Jul 2026 02:15 PM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20263003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    appliedBy: "Applicant",
-    country: "UAE",
-    category: "Business",
-    visaType: "Multiple Entry",
-    missingDocs: ["Passport Bio Copy"],
-    requestedDate: "30 Jul 2026",
-    deadline: "01 Aug 2026",
-    requestedBy: "Sunil Solanki",
-    reminderSentCount: 3,
-    emailStatus: "Opened",
-    status: "Overdue",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    nationality: "Indian",
-    actionNotes: [
-      { id: "n3", author: "Sunil Solanki", text: "Deadline passed. Overdue notice triggered.", date: "02 Aug 2026 09:00 AM" }
-    ]
-  }
-];
+const MOCK_PENDING_DOCUMENTS: PendingDocumentRecord[] = [];
 
 export default function PendingDocumentsManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [appliedByFilter, setAppliedByFilter] = useState("All");
@@ -169,7 +101,40 @@ export default function PendingDocumentsManagement() {
   const [deadlineFilter, setDeadlineFilter] = useState("All");
 
   // Records State
-  const [pendingApps, setPendingApps] = useState<PendingDocumentRecord[]>(MOCK_PENDING_DOCUMENTS);
+  const [pendingApps, setPendingApps] = useState<PendingDocumentRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const pending = contextApps.filter(
+        (a: any) =>
+          a.status === "Docs Pending" ||
+          a.status === "Document Pending" ||
+          (a.verifiedDocs && (a.verifiedDocs.passport === "needs_review" || a.verifiedDocs.photo === "needs_review" || a.verifiedDocs.passport === "pending"))
+      );
+      const mapped: PendingDocumentRecord[] = pending.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-3001",
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        appliedBy: app.appliedBy || "Applicant",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        missingDocs: ["Passport Bio Page", "Bank Statement"],
+        requestedDate: app.submissionDate || "01 Jul 2026",
+        deadline: "05 Aug 2026",
+        requestedBy: authSession?.user?.name || "Visa Officer",
+        reminderSentCount: 1,
+        emailStatus: "Delivered",
+        status: "Pending Upload",
+        email: app.email || "",
+        phone: app.phone || "",
+        nationality: app.nationality || "Indian",
+        actionNotes: []
+      }));
+      setPendingApps(mapped);
+    }
+  }, [contextApps, authSession]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Popup Modal State

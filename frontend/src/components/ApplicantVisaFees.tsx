@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Application, formatINR } from "../context/VisaContext";
+import { API_V1_URL } from "../config/api";
 import {
   DollarSign,
   CreditCard,
@@ -51,87 +52,43 @@ export default function ApplicantVisaFees({
   onNavigateCheckout,
   onNavigateSupport
 }: ApplicantVisaFeesProps) {
-  // Dataset matching wireframe
-  const [feesData] = useState<CountryFeeRecord[]>([
-    {
-      id: "FEE-AU",
-      country: "Australia",
-      flag: "🇦🇺",
-      subclass: "Visitor Subclass 600",
-      govtFeeINR: 10500,
-      serviceChargeINR: 2000,
-      gstRatePercent: 18,
-      expressAddonINR: 3500,
-      doorstepCourierINR: 450,
-      insuranceINR: 1200
-    },
-    {
-      id: "FEE-FR",
-      country: "France (Schengen)",
-      flag: "🇫🇷",
-      subclass: "Short-Stay Type C Schengen",
-      govtFeeINR: 7200,
-      serviceChargeINR: 1850,
-      gstRatePercent: 18,
-      expressAddonINR: 4500,
-      doorstepCourierINR: 450,
-      insuranceINR: 1500
-    },
-    {
-      id: "FEE-UK",
-      country: "United Kingdom",
-      flag: "🇬🇧",
-      subclass: "Standard Visitor 6 Months",
-      govtFeeINR: 11500,
-      serviceChargeINR: 2200,
-      gstRatePercent: 18,
-      expressAddonINR: 6500,
-      doorstepCourierINR: 450,
-      insuranceINR: 1800
-    },
-    {
-      id: "FEE-US",
-      country: "United States",
-      flag: "🇺🇸",
-      subclass: "B1/B2 Tourist & Business",
-      govtFeeINR: 15500,
-      serviceChargeINR: 3000,
-      gstRatePercent: 18,
-      expressAddonINR: 0, // US MRV is flat
-      doorstepCourierINR: 600,
-      insuranceINR: 2200
-    },
-    {
-      id: "FEE-AE",
-      country: "United Arab Emirates",
-      flag: "🇦🇪",
-      subclass: "30-Day Express Tourist eVisa",
-      govtFeeINR: 6500,
-      serviceChargeINR: 1500,
-      gstRatePercent: 18,
-      expressAddonINR: 1500,
-      doorstepCourierINR: 0, // Digital
-      insuranceINR: 800
-    },
-    {
-      id: "FEE-SG",
-      country: "Singapore",
-      flag: "🇸🇬",
-      subclass: "Tourist e-Visa",
-      govtFeeINR: 2200,
-      serviceChargeINR: 1200,
-      gstRatePercent: 18,
-      expressAddonINR: 1000,
-      doorstepCourierINR: 0,
-      insuranceINR: 650
-    }
-  ]);
-
-  // Search & Currency Controls
+  const [feesData, setFeesData] = useState<CountryFeeRecord[]>([]);
+  const [selectedFeeId, setSelectedFeeId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currency, setCurrency] = useState<"INR" | "USD" | "EUR">("INR");
   const [regionFilter, setRegionFilter] = useState("all");
-  const [selectedFeeId, setSelectedFeeId] = useState<string>("FEE-AU");
+
+  // Dynamic fetch from API
+  React.useEffect(() => {
+    fetch(`${API_V1_URL}/countries`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          const mapped: CountryFeeRecord[] = json.data.map((c: any) => ({
+            id: c.countryCode || c._id || c.name,
+            country: c.name,
+            flag: c.flagEmoji || "🌐",
+            subclass: c.visaTypes?.[0]?.name || "Standard Tourist / Visitor",
+            govtFeeINR: c.visaTypes?.[0]?.govtFee || c.govtFee || 0,
+            serviceChargeINR: c.visaTypes?.[0]?.serviceFee || c.serviceFee || 0,
+            gstRatePercent: 18,
+            expressAddonINR: c.expressFee || 0,
+            doorstepCourierINR: 450,
+            insuranceINR: 1200
+          }));
+          setFeesData(mapped);
+          if (mapped.length > 0) {
+            setSelectedFeeId(mapped[0].id);
+          }
+        } else {
+          setFeesData([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch country fee data:", err);
+        setFeesData([]);
+      });
+  }, []);
 
   // Calculator State
   const [calcAdults, setCalcAdults] = useState<number>(1);
@@ -446,7 +403,14 @@ export default function ApplicantVisaFees({
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredFees.map((f) => {
+              {filteredFees.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                    No country visa fees found.
+                  </td>
+                </tr>
+              ) : (
+                filteredFees.map((f) => {
                 const isSelected = f.id === selectedFeeId;
                 const gst = Math.round(f.serviceChargeINR * 0.18);
                 const total = f.govtFeeINR + f.serviceChargeINR + gst;
@@ -488,7 +452,7 @@ export default function ApplicantVisaFees({
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

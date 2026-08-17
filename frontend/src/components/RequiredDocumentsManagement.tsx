@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   FileText,
   Search,
@@ -82,112 +82,7 @@ export const MASTER_DOCUMENT_LIBRARY = [
   }
 ];
 
-const MOCK_DOC_SETS: DocumentSetRecord[] = [
-  {
-    id: "1",
-    docSetId: "DOC-001",
-    country: "Canada",
-    category: "Tourist Visa",
-    visaType: "Tourist E-Visa",
-    entryType: "Single Entry",
-    docSetName: "Canada Standard Tourist Checklist",
-    status: "Active",
-    mandatoryDocs: [
-      "Passport",
-      "Passport Size Photograph",
-      "Bank Statement",
-      "Income Tax Return (ITR)",
-      "Salary Slips",
-      "Employment Letter",
-      "Flight Reservation",
-      "Hotel Booking"
-    ],
-    optionalDocs: ["Marriage Certificate", "Property Documents", "Previous Visa Copies"],
-    uploadRules: {
-      maxFileSize: "5 MB",
-      minFileSize: "100 KB",
-      allowedFormats: ["PDF", "JPG", "PNG"],
-      photoDimensions: "35mm x 45mm (White Background)",
-      expiryCheckRequired: true
-    },
-    verification: {
-      translationRequired: true,
-      notarizationRequired: false,
-      apostilleRequired: false,
-      originalPhysicalNeeded: false
-    }
-  },
-  {
-    id: "2",
-    docSetId: "DOC-002",
-    country: "Australia",
-    category: "Student Visa",
-    visaType: "Student Long Stay",
-    entryType: "Multiple Entry",
-    docSetName: "Australia Subclass 500 Student Set",
-    status: "Active",
-    mandatoryDocs: [
-      "Passport",
-      "Passport Size Photograph",
-      "Bank Statement",
-      "Income Tax Return (ITR)",
-      "Admission Letter",
-      "Marksheets / Transcripts",
-      "Degree Certificate",
-      "TOEFL / IELTS Scorecard",
-      "Medical Certificate",
-      "Police Clearance Certificate (PCC)",
-      "Travel Insurance",
-      "Cover Letter"
-    ],
-    optionalDocs: ["Financial Support Affidavit", "Previous Passport", "Sponsor Letter", "Fixed Deposit Certificate"],
-    uploadRules: {
-      maxFileSize: "10 MB",
-      minFileSize: "200 KB",
-      allowedFormats: ["PDF"],
-      photoDimensions: "35mm x 45mm",
-      expiryCheckRequired: true
-    },
-    verification: {
-      translationRequired: true,
-      notarizationRequired: true,
-      apostilleRequired: false,
-      originalPhysicalNeeded: false
-    }
-  },
-  {
-    id: "3",
-    docSetId: "DOC-003",
-    country: "UAE",
-    category: "Business Visa",
-    visaType: "Multiple Entry Business",
-    entryType: "Multiple Entry",
-    docSetName: "UAE Express Business Checklist",
-    status: "Active",
-    mandatoryDocs: [
-      "Passport",
-      "Passport Size Photograph",
-      "Business Registration Certificate",
-      "Invitation Letter",
-      "Business Bank Statement",
-      "Cover Letter"
-    ],
-    optionalDocs: ["GST Certificate", "Trade License"],
-    uploadRules: {
-      maxFileSize: "4 MB",
-      minFileSize: "50 KB",
-      allowedFormats: ["PDF", "JPG"],
-      photoDimensions: "43mm x 55mm",
-      expiryCheckRequired: true
-    },
-    verification: {
-      translationRequired: false,
-      notarizationRequired: false,
-      apostilleRequired: false,
-      originalPhysicalNeeded: false
-    }
-  }
-];
+const MOCK_DOC_SETS: DocumentSetRecord[] = [];
 
 export default function RequiredDocumentsManagement() {
   // Search & Filter States
@@ -198,7 +93,7 @@ export default function RequiredDocumentsManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Records State
-  const [docSets, setDocSets] = useState<DocumentSetRecord[]>(MOCK_DOC_SETS);
+  const [docSets, setDocSets] = useState<DocumentSetRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

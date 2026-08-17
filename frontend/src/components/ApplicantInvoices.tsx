@@ -93,8 +93,8 @@ export default function ApplicantInvoices({
         : "Recent";
 
       // 18% GST calculation (9% CGST + 9% SGST on taxable base)
-      const consularFee = t.pricing?.consularFee || 12500;
-      const serviceFee = t.pricing?.serviceFee || 2500;
+      const consularFee = t.pricing?.consularFee || 0;
+      const serviceFee = t.pricing?.serviceFee || 0;
       const taxableBase = consularFee + serviceFee;
       const cgst = t.pricing?.cgst ?? Math.round(taxableBase * 0.09);
       const sgst = t.pricing?.sgst ?? Math.round(taxableBase * 0.09);
@@ -109,16 +109,16 @@ export default function ApplicantInvoices({
         dueDate: dateStr,
         amount: netAmount,
         status: statusMap[t.status] || "paid",
-        travelerName: t.applicantName || "Geeta Sharma",
+        travelerName: t.applicantName || "Applicant",
         consularFee,
         serviceFee,
         cgst,
         sgst,
         discount: t.pricing?.discount || 0,
-        paymentMethod: t.paymentMethod || "UPI Instant",
+        paymentMethod: t.paymentMethod || "UPI",
         paymentRef: t.transactionId,
-        gstin: t.gstin || "27AAACG1234H1Z5",
-        billingAddress: t.billingAddress || "104, Park Street, Connaught Place, New Delhi - 110001",
+        gstin: t.gstin || "",
+        billingAddress: t.billingAddress || "",
         pdfFileName: `${t.invoiceNo || "INV"}_${(t.applicantName || "Invoice").replace(/\s+/g, "_")}.pdf`
       };
     });

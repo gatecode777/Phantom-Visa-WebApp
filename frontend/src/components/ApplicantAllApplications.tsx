@@ -60,27 +60,12 @@ export default function ApplicantAllApplications({
   
   // Selected Application ID for expanded deep-dive inspection
   const [selectedAppId, setSelectedAppId] = useState<string>(
-    applications[0]?.id || "VO-2026-1025"
+    applications[0]?.id || ""
   );
   
   // Selected Application object
   const activeApp = useMemo(() => {
-    return applications.find((a) => a.id === selectedAppId) || applications[0] || {
-      id: "VO-2026-1025",
-      travelerName: "Geeta Sharma",
-      dob: "1995-06-12",
-      passportNumber: "Z9817264",
-      passportExpiry: "2033-12-20",
-      nationality: "India",
-      destination: "Canada",
-      visaType: "Tourist Visa",
-      travelDates: "2026-11-10 to 2026-11-25",
-      status: "Embassy Processing",
-      fees: 14500,
-      submissionDate: "18 Jul 2026",
-      verifiedDocs: { passport: "verified", photo: "verified", nocLetter: "needs_review", sponsorLetter: "pending" },
-      checklist: { employed: true, sponsored: false }
-    };
+    return applications.find((a) => a.id === selectedAppId) || applications[0] || null;
   }, [applications, selectedAppId]);
 
   // Tab inside deep-dive detail inspector
@@ -92,10 +77,7 @@ export default function ApplicantAllApplications({
 
   // Agent Chat state in active app
   const [agentMsg, setAgentMsg] = useState("");
-  const [agentChatLogs, setAgentChatLogs] = useState([
-    { id: "1", sender: "Agent (Sarah J.)", text: "Hello Geeta, your passport copy is verified. Please re-upload a clearer scan of your employment NOC letter.", time: "18 Jul, 10:30 AM" },
-    { id: "2", sender: "Applicant (You)", text: "Sure, I am scanning the stamped NOC from HR right away.", time: "18 Jul, 11:15 AM" }
-  ]);
+  const [agentChatLogs, setAgentChatLogs] = useState<Array<{ id: string; sender: string; text: string; time: string }>>([]);
 
   const handleSendAgentMsg = (e: React.FormEvent) => {
     e.preventDefault();

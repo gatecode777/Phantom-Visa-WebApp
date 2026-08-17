@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Search,
@@ -31,6 +31,7 @@ import {
   Check,
   Smile
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface CompletedApplicationRecord {
   id: string;
@@ -101,186 +102,19 @@ export const RECOMMENDED_COMPLETED_TABS = [
 ];
 
 export const COMPLETION_WORKFLOW_STEPS = [
-  "Visa Approved & Issued",
-  "Passport / E-Visa Delivered to Applicant",
-  "Post-Delivery Confirmation Received",
-  "Applicant Feedback & Rating Recorded",
-  "Final Audit & Settlement Cleared",
-  "Closed & Moved to Permanent Archive"
+  "Visa Grant / Decision Issued",
+  "Digital E-Visa Generated & Stored",
+  "Physical Passport Sticker Stamped",
+  "Dispatched via Secure Courier",
+  "Delivered & Applicant Acknowledged",
+  "Dossier Closed & Archived"
 ];
 
-const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20268001",
-    dossierRef: "DOS-CAN-99120",
-    grantNumber: "EV-CAN-9918234",
-    applicantName: "Geeta Bisht",
-    firstName: "Geeta",
-    lastName: "Bisht",
-    passportNumber: "Z9876543",
-    appliedBy: "Applicant",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "V-1 Visitor Multiple Entry",
-    completedDate: "01 Aug 2026",
-    completedTime: "05:00 PM",
-    handlingOfficer: "Rahul Sharma",
-    deliveryStatus: "Delivered & Confirmed",
-    deliveryMethod: "Digital Delivery (Email)",
-    deliveryDate: "01 Aug 2026",
-    approvedBy: "Rahul Sharma",
-    visaIssueDate: "01 Aug 2026",
-    totalAmountPaid: "₹12,350",
-    paymentMethod: "UPI / Credit Card",
-    transactionId: "TXN-9988112",
-    status: "Completed",
-    rating: 5,
-    feedbackComment: "Extremely smooth process! Received the Canada eVisa in 3 days. Excellent portal.",
-    npsScore: 10,
-    dob: "1994-08-12",
-    gender: "Female",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    address: "B-42, South Extension Part II",
-    cityState: "New Delhi, Delhi",
-    passportIssueDate: "15 Jan 2020",
-    passportExpiryDate: "14 Jan 2030",
-    passportIssuingAuthority: "Passport Office New Delhi",
-    passportPlaceOfIssue: "New Delhi",
-    travelDate: "2026-09-20",
-    expectedDepartureDate: "2026-10-15",
-    durationOfStay: "25 Days",
-    purposeOfVisit: "Tourism & Sightseeing",
-    portOfEntry: "Toronto Pearson Intl (YYZ)",
-    accommodationDetails: "Marriott Downtown Toronto",
-    archivedDocs: [
-      { name: "Complete Visa Application Dossier", status: "Archived", fileSize: "4.8 MB" },
-      { name: "Official Canada E-Visa Copy", status: "Archived", fileSize: "1.4 MB" },
-      { name: "Signed Delivery Receipt", status: "Archived", fileSize: "620 KB" },
-      { name: "Consular Payment Receipt", status: "Verified", fileSize: "420 KB" }
-    ],
-    actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Visa delivered via email. Applicant submitted 5-star rating. Case archived.", date: "01 Aug 2026 05:00 PM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20268002",
-    dossierRef: "DOS-AUS-44192",
-    grantNumber: "EV-AUS-4410981",
-    applicantName: "Rahul Sharma",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    passportNumber: "M1234567",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    country: "Australia",
-    category: "Student",
-    visaType: "Subclass 500 Student Grant",
-    completedDate: "31 Jul 2026",
-    completedTime: "06:15 PM",
-    handlingOfficer: "David Thomas",
-    deliveryStatus: "Passport Delivered",
-    deliveryMethod: "Express Courier (BlueDart)",
-    deliveryDate: "Expected 02 Aug 2026",
-    approvedBy: "David Thomas",
-    visaIssueDate: "31 Jul 2026",
-    totalAmountPaid: "₹18,930",
-    paymentMethod: "Net Banking",
-    transactionId: "TXN-7733441",
-    status: "Completed",
-    rating: 5,
-    feedbackComment: "Received stamped passport via BlueDart with official grant letter. Superb service!",
-    npsScore: 10,
-    dob: "1999-02-15",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    address: "Flat 301, Sunshine Heights",
-    cityState: "Mumbai, Maharashtra",
-    passportIssueDate: "10 Mar 2021",
-    passportExpiryDate: "09 Mar 2031",
-    passportIssuingAuthority: "Passport Office Mumbai",
-    passportPlaceOfIssue: "Mumbai",
-    travelDate: "2026-10-01",
-    expectedDepartureDate: "2028-07-30",
-    durationOfStay: "24 Months",
-    purposeOfVisit: "Higher Education",
-    portOfEntry: "Sydney Kingsford Smith (SYD)",
-    accommodationDetails: "University Campus Residence",
-    archivedDocs: [
-      { name: "Full Student Visa Dossier Archive", status: "Archived", fileSize: "6.2 MB" },
-      { name: "Sticker Passport Delivery Receipt", status: "Archived", fileSize: "850 KB" }
-    ],
-    actionNotes: [
-      { id: "n2", author: "David Thomas", text: "Physical passport delivered to applicant. Receipt uploaded.", date: "31 Jul 2026 06:15 PM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20268003",
-    dossierRef: "DOS-UAE-33108",
-    grantNumber: "EV-UAE-3319456",
-    applicantName: "Bikram Suman",
-    firstName: "Bikram",
-    lastName: "Suman",
-    passportNumber: "K4567890",
-    appliedBy: "Applicant",
-    country: "UAE",
-    category: "Business",
-    visaType: "30 Days Multiple Entry",
-    completedDate: "30 Jul 2026",
-    completedTime: "04:00 PM",
-    handlingOfficer: "Sarah Johnston",
-    deliveryStatus: "E-Visa Sent & Opened",
-    deliveryMethod: "Digital Delivery (Email)",
-    deliveryDate: "30 Jul 2026",
-    approvedBy: "Sarah Johnston",
-    visaIssueDate: "30 Jul 2026",
-    totalAmountPaid: "₹8,670",
-    paymentMethod: "Debit Card",
-    transactionId: "TXN-5511223",
-    status: "Archived",
-    rating: 4,
-    feedbackComment: "Quick turnaround for UAE Business visa. Very satisfied.",
-    npsScore: 9,
-    dob: "1988-06-25",
-    gender: "Male",
-    maritalStatus: "Married",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    address: "H.No 108, Sector 15",
-    cityState: "Gurugram, Haryana",
-    passportIssueDate: "05 Jun 2019",
-    passportExpiryDate: "04 Jun 2029",
-    passportIssuingAuthority: "Passport Office Gurgaon",
-    passportPlaceOfIssue: "Gurgaon",
-    travelDate: "2026-08-12",
-    expectedDepartureDate: "2026-08-25",
-    durationOfStay: "13 Days",
-    purposeOfVisit: "Business Conference",
-    portOfEntry: "Dubai Intl Airport (DXB)",
-    accommodationDetails: "Grand Hyatt Dubai",
-    archivedDocs: [
-      { name: "GDRFA UAE E-Visa Official Copy", status: "Archived", fileSize: "1.8 MB" },
-      { name: "Archival Settlement Report", status: "Archived", fileSize: "510 KB" }
-    ],
-    actionNotes: [
-      { id: "n3", author: "Sarah Johnston", text: "Case closed and permanently archived.", date: "30 Jul 2026 04:00 PM" }
-    ]
-  }
-];
+const MOCK_COMPLETED_APPLICATIONS: CompletedApplicationRecord[] = [];
 
 export default function CompletedApplicationsManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [completionStatusFilter, setCompletionStatusFilter] = useState("All");
@@ -290,8 +124,68 @@ export default function CompletedApplicationsManagement() {
   const [deliveryFilter, setDeliveryFilter] = useState("All");
 
   // Records State
-  const [completedApps, setCompletedApps] = useState<CompletedApplicationRecord[]>(MOCK_COMPLETED_APPLICATIONS);
+  const [completedApps, setCompletedApps] = useState<CompletedApplicationRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const completed = contextApps.filter((a: any) => a.status === "Completed");
+      const mapped: CompletedApplicationRecord[] = completed.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-8001",
+        dossierRef: `DOS-${(app.destination || "CAN").substring(0, 3).toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`,
+        grantNumber: `EV-${(app.destination || "CAN").substring(0, 3).toUpperCase()}-${Math.floor(1000000 + Math.random() * 9000000)}`,
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
+        lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        appliedBy: app.appliedBy || "Applicant",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        completedDate: app.submissionDate || "01 Aug 2026",
+        completedTime: "05:00 PM",
+        handlingOfficer: authSession?.user?.name || "Rahul Sharma",
+        deliveryStatus: "Delivered & Confirmed",
+        deliveryMethod: "Digital Delivery (Email)",
+        deliveryDate: app.submissionDate || "01 Aug 2026",
+        approvedBy: authSession?.user?.name || "Consular Officer",
+        visaIssueDate: app.submissionDate || "01 Aug 2026",
+        totalAmountPaid: `₹${app.fees || 12350}`,
+        paymentMethod: "UPI / Card",
+        transactionId: "TXN-9988112",
+        status: "Completed",
+        rating: 5,
+        feedbackComment: "Process complete.",
+        npsScore: 10,
+        dob: app.dob || "1994-08-12",
+        gender: "Female",
+        maritalStatus: "Single",
+        nationality: app.nationality || "Indian",
+        residenceCountry: "India",
+        email: app.email || "",
+        phone: app.phone || "",
+        address: app.address || "",
+        cityState: "New Delhi, Delhi",
+        passportIssueDate: "15 Jan 2020",
+        passportExpiryDate: app.passportExpiry || "14 Jan 2030",
+        passportIssuingAuthority: "Passport Office New Delhi",
+        passportPlaceOfIssue: "New Delhi",
+        travelDate: app.travelDates || "2026-09-20",
+        expectedDepartureDate: "2026-10-15",
+        durationOfStay: "25 Days",
+        purposeOfVisit: "Tourism",
+        portOfEntry: "YYZ",
+        accommodationDetails: "Hotel",
+        archivedDocs: [
+          { name: "Complete Visa Application Dossier", status: "Archived", fileSize: "4.8 MB" },
+          { name: "Official E-Visa Copy", status: "Archived", fileSize: "1.4 MB" }
+        ],
+        actionNotes: []
+      }));
+      setCompletedApps(mapped);
+    }
+  }, [contextApps, authSession]);
 
   // Centered Details Modal State
   const [activeModalApp, setActiveModalApp] = useState<CompletedApplicationRecord | null>(null);

@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Bell,
   Search,
@@ -111,78 +111,7 @@ export const NOTIFICATION_TYPES_CATALOG = [
   "System / Maintenance Announcement"
 ];
 
-const MOCK_NOTIFICATIONS: NotificationRecord[] = [
-  {
-    id: "1",
-    ntfId: "NTF-91001",
-    recipientId: "USR-8801",
-    recipientName: "Geeta Bisht",
-    recipientEmail: "geeta@email.com",
-    mobileNumber: "+91 9876543210",
-    userAddress: "House 42, Sector 15, Chandigarh, India",
-    appId: "APP-20261001",
-    notificationType: "Document Verification",
-    channel: "Email",
-    title: "Document Verification Required for Canada Visa",
-    body: "Please upload your updated bank statement for visa application APP-20261001.",
-    sentDate: "04 Aug 2026",
-    sentDateTime: "04 Aug 2026 10:10 AM",
-    deliveryStatus: "Delivered",
-    readStatus: "Read",
-    readDateTime: "04 Aug 2026 10:15 AM",
-    priority: "High",
-    gatewayInfo: "AWS SES / SMTP Primary Gateway",
-    retryCount: 0,
-    actionNotes: [
-      { id: "n1", author: "System", text: "Delivered cleanly to geeta@email.com.", date: "04 Aug 2026 10:10 AM" }
-    ]
-  },
-  {
-    id: "2",
-    ntfId: "NTF-91002",
-    recipientId: "USR-8802",
-    recipientName: "Rahul Sharma",
-    recipientEmail: "rahul@email.com",
-    mobileNumber: "+91 9811223344",
-    userAddress: "Flat 201, Sunshine Heights, Mumbai, India",
-    appId: "APP-20261002",
-    notificationType: "Payment Successful",
-    channel: "SMS",
-    title: "Payment Receipt Confirmed",
-    body: "Payment of ₹18,500 received for Australia visa processing fee.",
-    sentDate: "04 Aug 2026",
-    sentDateTime: "04 Aug 2026 09:45 AM",
-    deliveryStatus: "Delivered",
-    readStatus: "Unread",
-    priority: "Normal",
-    gatewayInfo: "Twilio SMS Gateway",
-    retryCount: 0,
-    actionNotes: []
-  },
-  {
-    id: "3",
-    ntfId: "NTF-91003",
-    recipientId: "USR-8803",
-    recipientName: "Bikram Suman",
-    recipientEmail: "bikram@email.com",
-    mobileNumber: "+91 9988776655",
-    userAddress: "3rd Cross, Indiranagar, Bengaluru, India",
-    appId: "APP-20261003",
-    notificationType: "Appointment Scheduled",
-    channel: "Push",
-    title: "Biometric Appointment Alert",
-    body: "Your biometric appointment is scheduled for Aug 07 at Apollo Hospital.",
-    sentDate: "03 Aug 2026",
-    sentDateTime: "03 Aug 2026 02:30 PM",
-    deliveryStatus: "Failed",
-    readStatus: "Unread",
-    priority: "Urgent",
-    gatewayInfo: "Firebase Cloud Messaging (FCM)",
-    retryCount: 3,
-    exceptionLog: "ERR_PUSH_TOKEN_EXPIRED: User app device token invalid or uninstalled.",
-    actionNotes: []
-  }
-];
+const MOCK_NOTIFICATIONS: NotificationRecord[] = [];
 
 export default function NotificationsManagement() {
   // Search & Filter States
@@ -192,7 +121,7 @@ export default function NotificationsManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Records State
-  const [notificationsList, setNotificationsList] = useState<NotificationRecord[]>(MOCK_NOTIFICATIONS);
+  const [notificationsList, setNotificationsList] = useState<NotificationRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

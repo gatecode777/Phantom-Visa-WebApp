@@ -27,7 +27,11 @@ import {
   ShieldAlert,
   Pin,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Users,
+  Plus,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 
 interface CountryRecord {
@@ -271,22 +275,22 @@ export default function ApplicantApplyVisa({
         const p = await fetchProfileApi();
         if (p) {
           if (p.personalInfo) {
-            setGivenName((prev) => prev || p.personalInfo.firstName || "Vibhu");
-            setSurname((prev) => prev || p.personalInfo.lastName || "Sharma");
-            setDob((prev) => prev || p.personalInfo.dob || "1995-06-12");
-            setGender((prev) => prev || p.personalInfo.gender || "Male");
-            setNationality((prev) => prev || p.personalInfo.nationality || "Indian");
-            setPhone((prev) => prev || p.personalInfo.phone || "+91 98765 43210");
-            setEmail((prev) => prev || p.personalInfo.email || "vibhu@phantomvisa.com");
-            setEmployerName((prev) => prev || p.personalInfo.employer || "TechCorp Solutions Pvt Ltd");
-            setJobTitle((prev) => prev || p.personalInfo.occupation || "Senior Software Consultant");
+            setGivenName((prev) => prev || p.personalInfo.firstName || "");
+            setSurname((prev) => prev || p.personalInfo.lastName || "");
+            setDob((prev) => prev || p.personalInfo.dob || "");
+            setGender((prev) => prev || p.personalInfo.gender || "");
+            setNationality((prev) => prev || p.personalInfo.nationality || "");
+            setPhone((prev) => prev || p.personalInfo.phone || "");
+            setEmail((prev) => prev || p.personalInfo.email || "");
+            setEmployerName((prev) => prev || p.personalInfo.employer || "");
+            setJobTitle((prev) => prev || p.personalInfo.occupation || "");
           }
           if (p.passportDetails) {
-            setPassportNo((prev) => prev || p.passportDetails.passportNumber || "Z9817264");
+            setPassportNo((prev) => prev || p.passportDetails.passportNumber || "");
             setPassportType((prev) => prev || p.passportDetails.passportType || "Ordinary / Regular");
-            setIssuePlace((prev) => prev || p.passportDetails.placeOfIssue || "New Delhi");
-            setIssueDate((prev) => prev || p.passportDetails.dateOfIssue || "2023-12-21");
-            setExpiryDate((prev) => prev || p.passportDetails.dateOfExpiry || "2033-12-20");
+            setIssuePlace((prev) => prev || p.passportDetails.placeOfIssue || "");
+            setIssueDate((prev) => prev || p.passportDetails.dateOfIssue || "");
+            setExpiryDate((prev) => prev || p.passportDetails.dateOfExpiry || "");
           }
           if (p.coTravelers && Array.isArray(p.coTravelers)) {
             setSavedVaultTravelers(p.coTravelers);
@@ -1960,15 +1964,49 @@ export default function ApplicantApplyVisa({
                                   <input type="file" accept="image/*,application/pdf" disabled={slot.isUploading} onChange={(e) => handleFileUpload(idx, e)} className="hidden" />
                                 </label>
                               ) : (
-                                <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
-                                  <div className="flex items-center gap-2 truncate">
-                                    <FileText size={14} className="text-slate-400 shrink-0" />
-                                    <span className="truncate text-xs text-slate-700">{slot.fileName || "Uploaded ✓"}</span>
+                                <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-slate-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 truncate">
+                                      <FileText size={14} className="text-slate-400 shrink-0" />
+                                      <span className="truncate text-xs font-bold text-slate-700">{slot.fileName || "Uploaded ✓"}</span>
+                                    </div>
+                                    <label className="text-[10px] font-bold text-[#4848F7] hover:underline shrink-0 cursor-pointer">
+                                      Change
+                                      <input type="file" accept="image/*,application/pdf" onChange={(e) => handleFileUpload(idx, e)} className="hidden" />
+                                    </label>
                                   </div>
-                                  <label className="text-[10px] font-bold text-[#4848F7] hover:underline shrink-0 cursor-pointer">
-                                    Change
-                                    <input type="file" accept="image/*,application/pdf" onChange={(e) => handleFileUpload(idx, e)} className="hidden" />
-                                  </label>
+
+                                  {slot.fileUrl && (
+                                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 text-[10px]">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0">CDN:</span>
+                                      <input
+                                        type="text"
+                                        readOnly
+                                        value={slot.fileUrl}
+                                        className="w-full bg-transparent font-mono text-slate-600 outline-none select-all truncate"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(slot.fileUrl!);
+                                          showToast("ImageKit URL copied to clipboard!");
+                                        }}
+                                        className="p-1 hover:bg-slate-200 text-slate-500 rounded cursor-pointer shrink-0"
+                                        title="Copy URL"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+                                      <a
+                                        href={slot.fileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="p-1 hover:bg-slate-200 text-slate-500 rounded cursor-pointer shrink-0"
+                                        title="Open document"
+                                      >
+                                        <ExternalLink size={11} />
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
                               )}
 

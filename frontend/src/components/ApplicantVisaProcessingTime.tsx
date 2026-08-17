@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Application, formatINR } from "../context/VisaContext";
+import { API_V1_URL } from "../config/api";
 import {
   Clock,
   Zap,
@@ -48,102 +49,14 @@ export default function ApplicantVisaProcessingTime({
   onNavigateApply,
   onNavigateSupport
 }: ApplicantVisaProcessingTimeProps) {
-  // Dataset matching wireframe
-  const [processingData] = useState<CountryProcessingRecord[]>([
-    {
-      id: "PROC-AE",
-      country: "United Arab Emirates",
-      flag: "🇦🇪",
-      subclass: "30-Day Express Tourist eVisa",
-      standardDays: "24-48 Hours",
-      expressDays: "12 Hours (Super Express)",
-      peakSeasonAdvisory: "Normal Processing Speed",
-      consularQueueLevel: "Low Queue",
-      expressAvailable: true,
-      timelineStages: [
-        { stage: "Document Audit & OCR Scan", days: 1, description: "Instant automated document checks" },
-        { stage: "GDRFA Immigration Portal Sync", days: 1, description: "Electronic entry permit generation" },
-        { stage: "eVisa Issuance & Vault Delivery", days: 1, description: "Digital PDF delivered to email & vault" }
-      ]
-    },
-    {
-      id: "REQ-AU",
-      country: "Australia",
-      flag: "🇦🇺",
-      subclass: "Visitor Subclass 600",
-      standardDays: "5 - 7 Days",
-      expressDays: "48 Hours (Fast-Track)",
-      peakSeasonAdvisory: "+2 Days Peak Delay",
-      consularQueueLevel: "Moderate Volume",
-      expressAvailable: true,
-      timelineStages: [
-        { stage: "Document Upload & Verification", days: 1, description: "Application lodged in ImmiAccount" },
-        { stage: "VFS Biometrics Collection", days: 2, description: "Fingerprint & photo capture at VFS center" },
-        { stage: "Australian Home Affairs Assessment", days: 3, description: "Consular officer background review" },
-        { stage: "Digital Grant Notification Issued", days: 1, description: "Visa grant letter emailed & updated" }
-      ]
-    },
-    {
-      id: "REQ-FR",
-      country: "France (Schengen)",
-      flag: "🇫🇷",
-      subclass: "Short-Stay Type C Schengen",
-      standardDays: "10 - 15 Days",
-      expressDays: "3 - 5 Days (Express Service)",
-      peakSeasonAdvisory: "+4 Days Summer Peak Alert",
-      consularQueueLevel: "High Summer Peak",
-      expressAvailable: true,
-      timelineStages: [
-        { stage: "Online Application & Appointment", days: 1, description: "France-Visas form submission" },
-        { stage: "VFS Biometrics & Physical Submission", days: 3, description: "Passport & original docs submitted at VFS" },
-        { stage: "Consulate General Processing", days: 8, description: "Consular review & Schengen VIS check" },
-        { stage: "Passport Stamped & Courier Dispatch", days: 3, description: "Stamped passport returned via courier" }
-      ]
-    },
-    {
-      id: "REQ-UK",
-      country: "United Kingdom",
-      flag: "🇬🇧",
-      subclass: "Standard Visitor 6 Months",
-      standardDays: "12 - 15 Days",
-      expressDays: "5 Days (Priority Service)",
-      peakSeasonAdvisory: "+3 Days Delay Notice",
-      consularQueueLevel: "Moderate Volume",
-      expressAvailable: true,
-      timelineStages: [
-        { stage: "GOV.UK Lodgement & Fee Payment", days: 1, description: "Online form & IHIS payment" },
-        { stage: "VFS Global Biometrics Appointment", days: 4, description: "Biometric enrollment & document scanning" },
-        { stage: "UK Visas & Immigration (UKVI) Desk", days: 7, description: "Decision making by UKVI entry officer" },
-        { stage: "Passport Return / Collection", days: 3, description: "VFS collection SMS / Courier dispatch" }
-      ]
-    },
-    {
-      id: "REQ-US",
-      country: "United States",
-      flag: "🇺🇸",
-      subclass: "B1/B2 Tourist & Business",
-      standardDays: "Appointment Dependent",
-      expressDays: "Emergency Appointment (Expedited)",
-      peakSeasonAdvisory: "High Interview Wait Times",
-      consularQueueLevel: "High Summer Peak",
-      expressAvailable: false,
-      timelineStages: [
-        { stage: "DS-160 Form Filing & Fee Payment", days: 1, description: "CEAC portal confirmation" },
-        { stage: "OFC Biometric Center (VAC)", days: 1, description: "Fingerprints & photo at VAC center" },
-        { stage: "US Embassy Consular Interview", days: 1, description: "In-person interview with US Officer" },
-        { stage: "Administrative Processing / Dispatch", days: 5, description: "Passport stamped & sent to pickup location" }
-      ]
-    }
-  ]);
-
-  // Search & Filter State
+  const [processingData, setProcessingData] = useState<CountryProcessingRecord[]>([]);
+  const [selectedCountryId, setSelectedCountryId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [speedFilter, setSpeedFilter] = useState("all");
   const [queueFilter, setQueueFilter] = useState("all");
-  const [selectedCountryId, setSelectedCountryId] = useState<string>("PROC-AE");
 
   // Interactive Estimator Calculator State
-  const [calcSubmissionDate, setCalcSubmissionDate] = useState<string>("2026-08-10");
+  const [calcSubmissionDate, setCalcSubmissionDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [calcSpeedMode, setCalcSpeedMode] = useState<"standard" | "express">("express");
 
   const activeRecord = useMemo(() => {
@@ -201,12 +114,13 @@ export default function ApplicantVisaProcessingTime({
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => {
-              if (onNavigateApply) onNavigateApply(activeRecord.country);
+              if (onNavigateApply && activeRecord) onNavigateApply(activeRecord.country);
             }}
-            className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
+            disabled={!activeRecord}
+            className="bg-[#4848F7] hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
           >
             <Plane size={16} />
-            <span>Apply for {activeRecord.country} Visa</span>
+            <span>Apply for {activeRecord ? activeRecord.country : ""} Visa</span>
           </button>
         </div>
       </div>
@@ -454,7 +368,14 @@ export default function ApplicantVisaProcessingTime({
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredData.map((p) => {
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                    No country processing records found in database.
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((p) => {
                 const isSelected = p.id === selectedCountryId;
                 return (
                   <tr
@@ -500,7 +421,7 @@ export default function ApplicantVisaProcessingTime({
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

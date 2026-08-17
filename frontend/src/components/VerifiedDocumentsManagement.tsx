@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   FileCheck,
   Search,
@@ -39,6 +39,7 @@ import {
   RotateCcw,
   FileText
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface VerifiedDocumentRecord {
   id: string;
@@ -58,6 +59,7 @@ export interface VerifiedDocumentRecord {
   documentName: string;
   fileFormat: "PDF" | "JPG" | "PNG";
   fileSize: string;
+  fileUrl?: string;
   uploadedBy: "Applicant" | "Agent";
   agentName?: string;
   uploadDate: string;
@@ -82,85 +84,17 @@ export const RECOMMENDED_VERIFIED_DOCUMENT_TABS = [
 
 export const VERIFIED_WORKFLOW_STEPS = [
   "Document Uploaded",
-  "Pending Verification",
-  "Admin Review",
-  "Verified",
-  "Application Processing",
-  "Visa Approval"
+  "Intake Verification",
+  "Completeness & Compliance Checked",
+  "Officially Verified & Signed-Off",
+  "Attached to Active Dossier"
 ];
 
-const MOCK_VERIFIED_DOCUMENTS: VerifiedDocumentRecord[] = [
-  {
-    id: "1",
-    docId: "DOC-10245",
-    appId: "APP-20261045",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    documentType: "Passport",
-    documentName: "Bikram_Passport_Bio.pdf",
-    fileFormat: "PDF",
-    fileSize: "2.4 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "01 Aug 2026",
-    verifiedBy: "Rahul Sharma",
-    verificationDate: "01 Aug 2026",
-    verificationTime: "10:30 AM",
-    expiryDate: "15 Mar 2032",
-    status: "Verified",
-    country: "Canada",
-    verificationRemarks: "Verified against original passport biometric record.",
-    actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Verified and approved for Canada eVisa intake.", date: "01 Aug 2026 10:30 AM" }
-    ]
-  },
-  {
-    id: "2",
-    docId: "DOC-10246",
-    appId: "APP-20261046",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    documentType: "Bank Statement",
-    documentName: "Geeta_Bank_Statement_6M.pdf",
-    fileFormat: "PDF",
-    fileSize: "5.1 MB",
-    uploadedBy: "Agent",
-    agentName: "Apex Travels",
-    uploadDate: "01 Aug 2026",
-    verifiedBy: "David Thomas",
-    verificationDate: "01 Aug 2026",
-    verificationTime: "01:15 PM",
-    expiryDate: "N/A",
-    status: "Verified",
-    country: "Australia",
-    verificationRemarks: "Closing balance exceeds required financial threshold.",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    docId: "DOC-10247",
-    appId: "APP-20261047",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    documentType: "Travel Insurance",
-    documentName: "Rahul_Travel_Insurance_Policy.jpg",
-    fileFormat: "JPG",
-    fileSize: "1.8 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "31 Jul 2026",
-    verifiedBy: "Sarah Johnston",
-    verificationDate: "31 Jul 2026",
-    verificationTime: "04:00 PM",
-    expiryDate: "25 Sep 2026",
-    status: "Expiring Soon",
-    country: "UAE",
-    verificationRemarks: "Valid travel policy. Renewal alert set for Sep 2026.",
-    actionNotes: [
-      { id: "n3", author: "Sarah Johnston", text: "Policy verified for 30-day stay.", date: "31 Jul 2026 04:00 PM" }
-    ]
-  }
-];
+const MOCK_VERIFIED_DOCUMENTS: VerifiedDocumentRecord[] = [];
 
 export default function VerifiedDocumentsManagement() {
+  const { applications: contextApps } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("All");
@@ -169,7 +103,45 @@ export default function VerifiedDocumentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [verifiedDocs, setVerifiedDocs] = useState<VerifiedDocumentRecord[]>(MOCK_VERIFIED_DOCUMENTS);
+  const [verifiedDocs, setVerifiedDocs] = useState<VerifiedDocumentRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const allVerified: VerifiedDocumentRecord[] = [];
+      contextApps.forEach((app: any) => {
+        if (Array.isArray(app.uploadedDocuments)) {
+          app.uploadedDocuments
+            .filter((d: any) => d.status === "verified" || !d.status)
+            .forEach((doc: any, idx: number) => {
+              allVerified.push({
+                id: `${app.id || app._id}-${idx}`,
+                docId: `DOC-${String(idx + 1).padStart(5, "0")}`,
+                appId: app.id || app.applicationId || "VO-2026-1045",
+                applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+                passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+                documentType: doc.documentType || doc.title || "Passport",
+                documentName: doc.fileName || "document.pdf",
+                fileFormat: doc.format?.includes("Image") ? "JPG" : "PDF",
+                fileSize: doc.fileSize || "2.4 MB",
+                fileUrl: doc.fileUrl || "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+                uploadedBy: "Applicant",
+                uploadDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-IN") : "01 Aug 2026",
+                verifiedBy: "Visa Officer",
+                verificationDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-IN") : "01 Aug 2026",
+                verificationTime: "10:30 AM",
+                expiryDate: "2032-10-15",
+                status: "Verified",
+                country: app.destination || app.countryName || "Canada",
+                verificationRemarks: "Verified against biometric records.",
+                actionNotes: []
+              });
+            });
+        }
+      });
+      setVerifiedDocs(allVerified);
+    }
+  }, [contextApps]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

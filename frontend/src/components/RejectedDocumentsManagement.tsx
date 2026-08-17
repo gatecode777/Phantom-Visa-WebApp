@@ -80,6 +80,7 @@ export interface RejectedDocumentRecord {
   reuploadDeadline?: string;
   country?: string;
   actionNotes?: { id: string; author: string; text: string; date: string }[];
+  fileUrl?: string;
 }
 
 export const RECOMMENDED_REJECTED_DOCUMENT_TABS = [
@@ -104,6 +105,17 @@ export const REJECTED_WORKFLOW_STEPS = [
   "Verified"
 ];
 
+export const REJECTION_REASONS_LIST = [
+  "Expired Document",
+  "Blurred or Low Quality Scan",
+  "Incorrect Size",
+  "Incomplete Pages",
+  "Signature Missing",
+  "Embassy Requirement Not Met",
+  "Applicant Tarnished",
+  "Other"
+];
+
 export const COMMON_REJECTION_REASONS = [
   "Expired Document",
   "Blurred or Low Quality Scan",
@@ -118,78 +130,11 @@ export const COMMON_REJECTION_REASONS = [
   "Other"
 ];
 
-const MOCK_REJECTED_DOCUMENTS: RejectedDocumentRecord[] = [
-  {
-    id: "1",
-    docId: "DOC-20545",
-    appId: "APP-20261045",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    documentType: "Passport",
-    documentName: "Geeta_Passport_Old.pdf",
-    fileFormat: "PDF",
-    fileSize: "2.8 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "01 Aug 2026",
-    rejectionReason: "Expired Document",
-    rejectedBy: "Rahul Sharma",
-    rejectedDate: "01 Aug 2026",
-    reuploadStatus: "Awaiting Upload",
-    detailedRemarks: "Passport validity expires within 3 months. Minimum 6 months required.",
-    reuploadDeadline: "05 Aug 2026",
-    country: "Canada",
-    actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Rejection notice emailed to applicant.", date: "01 Aug 2026 11:00 AM" }
-    ]
-  },
-  {
-    id: "2",
-    docId: "DOC-20546",
-    appId: "APP-20261046",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    documentType: "Bank Statement",
-    documentName: "Bikram_Bank_Scan_Blur.jpg",
-    fileFormat: "JPG",
-    fileSize: "1.5 MB",
-    uploadedBy: "Agent",
-    agentName: "Apex Travels",
-    uploadDate: "01 Aug 2026",
-    rejectionReason: "Blurred or Low Quality Scan",
-    rejectedBy: "David Thomas",
-    rejectedDate: "01 Aug 2026",
-    reuploadStatus: "Re-submitted",
-    detailedRemarks: "Account number and bank stamp illegible due to resolution.",
-    reuploadDeadline: "04 Aug 2026",
-    country: "Australia",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    docId: "DOC-20547",
-    appId: "APP-20261047",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    documentType: "Photograph",
-    documentName: "Rahul_Photo_Selfie.png",
-    fileFormat: "PNG",
-    fileSize: "3.2 MB",
-    uploadedBy: "Applicant",
-    uploadDate: "28 Jul 2026",
-    rejectionReason: "Incorrect Size",
-    rejectedBy: "Sarah Johnston",
-    rejectedDate: "29 Jul 2026",
-    reuploadStatus: "Overdue",
-    detailedRemarks: "Background must be white and dimensions 35x45mm.",
-    reuploadDeadline: "31 Jul 2026",
-    country: "UAE",
-    actionNotes: [
-      { id: "n3", author: "Sarah Johnston", text: "Overdue reminder sent via SMS.", date: "01 Aug 2026 09:00 AM" }
-    ]
-  }
-];
+const MOCK_REJECTED_DOCUMENTS: RejectedDocumentRecord[] = [];
 
 export default function RejectedDocumentsManagement() {
+  const { applications: contextApps } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("All");
@@ -198,7 +143,45 @@ export default function RejectedDocumentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [rejectedDocs, setRejectedDocs] = useState<RejectedDocumentRecord[]>(MOCK_REJECTED_DOCUMENTS);
+  const [rejectedDocs, setRejectedDocs] = useState<RejectedDocumentRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const allRejected: RejectedDocumentRecord[] = [];
+      contextApps.forEach((app: any) => {
+        if (Array.isArray(app.uploadedDocuments)) {
+          app.uploadedDocuments
+            .filter((d: any) => d.status === "rejected")
+            .forEach((doc: any, idx: number) => {
+              allRejected.push({
+                id: `${app.id || app._id}-${idx}`,
+                docId: `DOC-${String(idx + 1).padStart(5, "0")}`,
+                appId: app.id || app.applicationId || "VO-2026-1045",
+                applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+                passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+                documentType: doc.documentType || doc.title || "Document",
+                documentName: doc.fileName || "document.pdf",
+                fileFormat: doc.format?.includes("Image") ? "JPG" : "PDF",
+                fileSize: doc.fileSize || "2.4 MB",
+                fileUrl: doc.fileUrl || "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+                uploadedBy: "Applicant",
+                uploadDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-IN") : "01 Aug 2026",
+                rejectionReason: "Other",
+                rejectedBy: "Visa Officer",
+                rejectedDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-IN") : "01 Aug 2026",
+                reuploadStatus: "Awaiting Upload",
+                detailedRemarks: "Document did not meet embassy quality standards.",
+                reuploadDeadline: "05 Aug 2026",
+                country: app.destination || app.countryName || "Canada",
+                actionNotes: []
+              });
+            });
+        }
+      });
+      setRejectedDocs(allRejected);
+    }
+  }, [contextApps]);
+  
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

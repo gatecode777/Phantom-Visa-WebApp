@@ -38,30 +38,8 @@ export default function ApplicantCancelledApplications({
   onNavigateApply,
   onNavigatePayments
 }: ApplicantCancelledApplicationsProps) {
-  // Extract cancelled/withdrawn applications or provide rich fallback records
   const cancelledApps = useMemo(() => {
-    const list = applications.filter((a) => a.status === "Docs Pending");
-    if (list.length > 0) return list;
-
-    return [
-      {
-        id: "VO-2026-0711",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Australia",
-        visaType: "Tourist Subclass 600",
-        travelDates: "15 Aug 2026",
-        status: "Docs Pending" as const,
-        fees: 14500,
-        submissionDate: "12 Aug 2026",
-        reason: "Withdrawal requested by applicant due to personal trip postponement.",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      }
-    ];
+    return applications.filter((a) => a.status === "Docs Pending");
   }, [applications]);
 
   // State for search & filter
@@ -71,11 +49,11 @@ export default function ApplicantCancelledApplications({
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
   // Selected Cancelled App ID for Inspector
-  const [selectedAppId, setSelectedAppId] = useState<string>(cancelledApps[0]?.id || "VO-2026-0711");
+  const [selectedAppId, setSelectedAppId] = useState<string>(cancelledApps[0]?.id || "");
 
   // Active App Object
   const activeApp = useMemo(() => {
-    return cancelledApps.find((a) => a.id === selectedAppId) || cancelledApps[0];
+    return cancelledApps.find((a) => a.id === selectedAppId) || cancelledApps[0] || null;
   }, [cancelledApps, selectedAppId]);
 
   // Subtab inside Inspector

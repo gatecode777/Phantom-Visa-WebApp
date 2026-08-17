@@ -31,7 +31,10 @@ import {
   MessageSquare,
   UserCheck,
   Tag,
-  CheckSquare
+  CheckSquare,
+  ExternalLink,
+  Copy,
+  ImageIcon
 } from "lucide-react";
 
 const API_V1_URL = "http://localhost:5000/api/v1";
@@ -57,13 +60,18 @@ export interface ApplicationRecord {
   submissionDate: string;
   paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded";
   status:
+  | "Submitted"
+  | "Draft"
   | "Pending Review"
   | "Under Review"
   | "Document Pending"
+  | "Docs Pending"
+  | "Embassy Processing"
   | "Awaiting Payment"
   | "Processing"
   | "Approved"
   | "Rejected"
+  | "Cancelled"
   | "Visa Issued"
   | "Completed";
   priority: "Regular" | "Express" | "High" | "Urgent";
@@ -100,7 +108,17 @@ export interface ApplicationRecord {
   embassySubmissionDate?: string;
   appointmentDate?: string;
   consulateBranch?: string;
-  documents?: { name: string; status: "Verified" | "Pending" | "Rejected"; url?: string }[];
+  documents?: {
+    name: string;
+    status: string;
+    url?: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: string;
+    format?: string;
+    documentType?: string;
+    uploadedAt?: string;
+  }[];
   actionNotes?: { id: string; author: string; text: string; date: string }[];
   history?: { stage: string; date: string; updatedBy: string }[];
   rejectionReason?: string;
@@ -113,9 +131,9 @@ export const RECOMMENDED_APPLICATION_TABS = [
   "Employment & Finance",
   "Uploaded Documents",
   "Payment & Invoice",
-  "Embassy & Tracking",
   "Action Notes"
 ];
+export const APPLICATION_MODAL_TABS = RECOMMENDED_APPLICATION_TABS;
 
 export const APPLICATION_WORKFLOW_STEPS = [
   "Application Submitted",
@@ -128,198 +146,7 @@ export const APPLICATION_WORKFLOW_STEPS = [
   "Completed"
 ];
 
-const MOCK_APPLICATIONS: ApplicationRecord[] = [
-  {
-    id: "1",
-    appId: "APP-100451",
-    applicantName: "Swapnil Joshi",
-    firstName: "Swapnil",
-    lastName: "Joshi",
-    passportNumber: "Z9876543",
-    passportIssueDate: "2020-04-12",
-    passportExpiry: "2030-04-11",
-    passportIssuingCountry: "India (RPO Mumbai)",
-    passportPlaceOfIssue: "Mumbai",
-    appliedBy: "User",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "eVisa (Multiple Entry)",
-    submissionDate: "28-07-2026",
-    paymentStatus: "Paid",
-    status: "Under Review",
-    priority: "Express",
-    dob: "1992-05-14",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "swapnil.j@gmail.com",
-    phone: "+91 98765 43210",
-    address: "B-402, Green Park, Andheri East",
-    city: "Mumbai, Maharashtra",
-    travelDate: "2026-09-15",
-    departureDate: "2026-09-30",
-    durationOfStay: "15 Days",
-    purposeOfVisit: "Tourism & Sightseeing",
-    portOfEntry: "Toronto Pearson Int'l Airport (YYZ)",
-    hotelDetails: "Fairmont Royal York, Toronto",
-    occupation: "Senior Software Engineer",
-    employerName: "TechSolutions Pvt Ltd",
-    designation: "Lead Developer",
-    annualIncome: "₹18,50,000 / year",
-    sponsorType: "Self-Funded",
-    bankBalance: "₹6,85,000 (HDFC Bank)",
-    governmentFee: "₹8,500",
-    serviceFee: "₹3,150",
-    taxAmount: "₹700",
-    amountPaid: "₹12,350",
-    transactionId: "TXN-9988112",
-    paymentMethod: "UPI",
-    embassyTrackingId: "CAN-EMB-8831",
-    embassySubmissionDate: "2026-07-29",
-    appointmentDate: "2026-08-05",
-    consulateBranch: "Canada VFS Global Mumbai",
-    documents: [
-      { name: "Passport Front & Back Bio Page", status: "Verified" },
-      { name: "Bank Statement (6 Months Certified)", status: "Verified" },
-      { name: "Flight Reservation Ticket", status: "Verified" },
-      { name: "Hotel Booking Confirmation Vouchers", status: "Verified" },
-      { name: "White Background Passport Photo (35x45mm)", status: "Verified" }
-    ],
-    actionNotes: [
-      { id: "n1", author: "Admin (Vibhu)", text: "Initial document review complete. Financials and bank statement verified.", date: "2026-07-29 10:30 AM" }
-    ],
-    history: [
-      { stage: "Submitted", date: "28-07-2026", updatedBy: "System" },
-      { stage: "Payment Verified", date: "28-07-2026", updatedBy: "Payment Gateway" },
-      { stage: "Under Review", date: "29-07-2026", updatedBy: "Admin Vibhu" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-100452",
-    applicantName: "Rahul Sharma",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    passportNumber: "M1234567",
-    passportIssueDate: "2021-08-15",
-    passportExpiry: "2031-08-14",
-    passportIssuingCountry: "India (RPO Delhi)",
-    passportPlaceOfIssue: "New Delhi",
-    appliedBy: "Agent",
-    agentName: "Global Visa Solutions",
-    country: "Australia",
-    category: "Student",
-    visaType: "Sticker Visa (Subclass 500)",
-    submissionDate: "29-07-2026",
-    paymentStatus: "Paid",
-    status: "Approved",
-    priority: "High",
-    dob: "1998-11-20",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    address: "House 12, Sector 17",
-    city: "Chandigarh",
-    travelDate: "2026-10-01",
-    departureDate: "2028-09-30",
-    durationOfStay: "2 Years",
-    purposeOfVisit: "Higher Education (Master's Degree)",
-    portOfEntry: "Sydney Kingsford Smith Airport (SYD)",
-    hotelDetails: "University Student Accommodation Sydney",
-    occupation: "Student",
-    employerName: "N/A (Full Time Student)",
-    designation: "Graduate Scholar",
-    annualIncome: "₹12,00,000 / year (Sponsor)",
-    sponsorType: "Family Sponsor (Father)",
-    bankBalance: "₹24,50,000 (SBI Fixed Deposit)",
-    governmentFee: "₹14,500",
-    serviceFee: "₹3,500",
-    taxAmount: "₹930",
-    amountPaid: "₹18,930",
-    transactionId: "TXN-7733441",
-    paymentMethod: "Credit Card",
-    embassyTrackingId: "AUS-SYD-4412",
-    embassySubmissionDate: "2026-07-30",
-    appointmentDate: "2026-08-02",
-    consulateBranch: "Australian High Commission New Delhi",
-    documents: [
-      { name: "Passport Copy", status: "Verified" },
-      { name: "University CoE Admission Letter", status: "Verified" },
-      { name: "IELTS Scorecard (7.5 Overall)", status: "Verified" },
-      { name: "Financial Sponsorship Affidavit", status: "Verified" }
-    ],
-    actionNotes: [
-      { id: "n2", author: "Agent Global", text: "Client cleared medicals. Final grant issued by Home Affairs.", date: "2026-07-30 04:15 PM" }
-    ],
-    history: [
-      { stage: "Submitted by Agent", date: "29-07-2026", updatedBy: "Agent Global" },
-      { stage: "Visa Granted", date: "30-07-2026", updatedBy: "Australian Embassy" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-100453",
-    applicantName: "Rohit Verma",
-    firstName: "Rohit",
-    lastName: "Verma",
-    passportNumber: "K4567890",
-    passportIssueDate: "2019-01-10",
-    passportExpiry: "2029-01-09",
-    passportIssuingCountry: "India (RPO Hyderabad)",
-    passportPlaceOfIssue: "Hyderabad",
-    appliedBy: "User",
-    country: "UAE",
-    category: "Business",
-    visaType: "Multiple Entry (30 Days)",
-    submissionDate: "30-07-2026",
-    paymentStatus: "Pending",
-    status: "Processing",
-    priority: "Urgent",
-    dob: "1987-03-08",
-    gender: "Male",
-    maritalStatus: "Married",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "rohit.verma@techcorp.in",
-    phone: "+91 99887 76655",
-    address: "Plot 88, HITEC City",
-    city: "Hyderabad, Telangana",
-    travelDate: "2026-08-10",
-    departureDate: "2026-09-09",
-    durationOfStay: "30 Days",
-    purposeOfVisit: "Corporate Trade Summit & Meetings",
-    portOfEntry: "Dubai International Airport (DXB)",
-    hotelDetails: "Jumeirah Emirates Towers, Dubai",
-    occupation: "Business Owner / Managing Director",
-    employerName: "TechCorp Solutions Pvt Ltd",
-    designation: "Managing Director",
-    annualIncome: "₹35,00,000 / year",
-    sponsorType: "Company Sponsored",
-    bankBalance: "₹14,20,000 (ICICI Corporate Account)",
-    governmentFee: "₹6,000",
-    serviceFee: "₹2,200",
-    taxAmount: "₹470",
-    amountPaid: "₹8,670",
-    transactionId: "TXN-PENDING",
-    paymentMethod: "Net Banking",
-    documents: [
-      { name: "Passport Bio Page", status: "Verified" },
-      { name: "Company Cover Letter & Trade License", status: "Verified" },
-      { name: "UAE Host Invitation Letter", status: "Pending" }
-    ],
-    actionNotes: [
-      { id: "n3", author: "Admin Vibhu", text: "Waiting for host company invitation letter.", date: "2026-07-30 02:00 PM" }
-    ],
-    history: [
-      { stage: "Submitted", date: "30-07-2026", updatedBy: "System" },
-      { stage: "Processing Initiated", date: "30-07-2026", updatedBy: "Admin Vibhu" }
-    ]
-  }
-];
+const MOCK_APPLICATIONS: ApplicationRecord[] = [];
 
 const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   id: app._id || app.applicationId || String(Math.random()),
@@ -352,19 +179,31 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   address: app.travelDetails?.hostAddress || app.address || "",
   travelDate: app.travelDetails?.travelDate || app.travelDates || "",
   durationOfStay: app.stayValidity || "60 Days",
-  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 11700).toLocaleString("en-IN")}`,
-  documents: Array.isArray(app.uploadedDocuments)
-    ? app.uploadedDocuments.map((d: any) => ({ name: d.title, status: d.fileUrl ? "Verified" : "Pending" }))
-    : [
-      { name: "Passport Bio Page", status: "Verified" },
-      { name: "Bank Statement (6 Months)", status: "Verified" },
-      { name: "Flight Reservation", status: "Verified" },
-      { name: "Hotel Booking Confirmation", status: "Verified" }
-    ]
+  amountPaid: app.pricing?.totalAmount ? `₹${Number(app.pricing.totalAmount).toLocaleString("en-IN")}` : `₹${Number(app.fees || 0).toLocaleString("en-IN")}`,
+  documents: Array.isArray(app.uploadedDocuments) && app.uploadedDocuments.length > 0
+    ? app.uploadedDocuments.map((d: any) => {
+        const fileUrl = d.fileUrl || "https://ik.imagekit.io/phantomvisa/sample_passport.png";
+        const isImg = fileUrl.toLowerCase().endsWith(".png") || fileUrl.toLowerCase().endsWith(".jpg") || fileUrl.toLowerCase().endsWith(".jpeg") || fileUrl.toLowerCase().endsWith(".webp");
+        return {
+          name: d.title || d.fileName || d.documentType || "Applicant Document",
+          status: d.status ? (d.status.charAt(0).toUpperCase() + d.status.slice(1).replace("_", " ")) : (d.fileUrl ? "Verified" : "Pending"),
+          fileUrl,
+          fileName: d.fileName || `${(d.title || "document").toLowerCase().replace(/\s+/g, "_")}.${isImg ? "png" : "pdf"}`,
+          fileSize: d.fileSize || (isImg ? "1.8 MB" : "2.4 MB"),
+          format: d.format || (isImg ? "Image Scan (PNG)" : "PDF Document"),
+          documentType: d.documentType || (isImg ? "Identity Document" : "PDF Document"),
+          uploadedAt: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString("en-IN") : "2026-08-01"
+        };
+      })
+    : []
 });
 
 export default function AllApplicationsManagement() {
-  const { applications: contextApps } = useVisa();
+  const { applications: contextApps, authSession, currentRole } = useVisa();
+
+  const isAgent = currentRole === "Agent" || authSession?.user?.role === "Agent";
+  const agentId = authSession?.user?.agentId || "AGT-1001";
+  const agentAgencyName = authSession?.user?.agencyName || authSession?.user?.name || "Assigned Agency";
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -378,35 +217,62 @@ export default function AllApplicationsManagement() {
   const [toDate, setToDate] = useState("");
 
   // Records State
-  const [applications, setApplications] = useState<ApplicationRecord[]>(MOCK_APPLICATIONS);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Fetch live MongoDB applications on mount & context updates
+  // Category Pill Filter Tabs State
+  const [activeCategoryTab, setActiveCategoryTab] = useState<
+    "all" | "new" | "under_review" | "approved" | "rejected" | "completed" | "pool"
+  >("all");
+
+  // Fetch live MongoDB applications on mount, role, tab, or agent change
+  const fetchLiveApps = async (isPoolTab = false) => {
+    try {
+      let url = `${API_V1_URL}/applications`;
+      if (isPoolTab) {
+        url += `?pool=available`;
+      } else if (isAgent) {
+        url += `?agentId=${encodeURIComponent(agentId)}`;
+      }
+
+      const headers: Record<string, string> = {};
+      if (authSession?.token) {
+        headers["Authorization"] = `Bearer ${authSession.token}`;
+      }
+
+      const res = await fetch(url, { headers });
+      const json = await res.json();
+      if (res.ok && Array.isArray(json.data)) {
+        const mapped = json.data.map(mapMongoAppToRecord);
+        setApplications(mapped);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to fetch live applications from MongoDB:", err);
+    }
+
+    if (Array.isArray(contextApps) && contextApps.length > 0) {
+      setApplications(contextApps.map(mapMongoAppToRecord));
+    }
+  };
+
   useEffect(() => {
-    const fetchLiveApps = async () => {
-      try {
-        const res = await fetch(`${API_V1_URL}/applications`);
-        const json = await res.json();
-        if (res.ok && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped = json.data.map(mapMongoAppToRecord);
-          setApplications(mapped);
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to fetch live applications from MongoDB:", err);
-      }
-
-      if (Array.isArray(contextApps) && contextApps.length > 0) {
-        setApplications(contextApps.map(mapMongoAppToRecord));
-      }
-    };
-
-    fetchLiveApps();
-  }, [contextApps]);
+    fetchLiveApps(activeCategoryTab === "pool");
+  }, [contextApps, isAgent, agentId, activeCategoryTab]);
 
   // Centered Details Popup Modal State
   const [activeModalApp, setActiveModalApp] = useState<ApplicationRecord | null>(null);
   const [modalTab, setModalTab] = useState<string>("Overview");
+
+  // ImageKit Document Preview Lightbox State
+  const [previewDocument, setPreviewDocument] = useState<{
+    name: string;
+    fileUrl: string;
+    format?: string;
+    status?: string;
+    fileSize?: string;
+    documentType?: string;
+  } | null>(null);
 
   // Rejection reason modal state
   const [rejectDialogApp, setRejectDialogApp] = useState<ApplicationRecord | null>(null);
@@ -423,6 +289,41 @@ export default function AllApplicationsManagement() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  // Claim unassigned application from pool
+  const handleClaimApplication = async (app: ApplicationRecord) => {
+    try {
+      const res = await fetch(`${API_V1_URL}/applications/${app.appId || app.id}/assign`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {})
+        },
+        body: JSON.stringify({
+          agentId,
+          agentName: agentAgencyName
+        })
+      });
+      const json = await res.json();
+      if (res.ok) {
+        triggerToast(`Application ${app.appId} claimed and assigned to your queue!`);
+        fetchLiveApps(activeCategoryTab === "pool");
+      } else {
+        triggerToast(json.message || "Failed to claim application.");
+      }
+    } catch (err) {
+      console.error("Error claiming application:", err);
+      triggerToast("Failed to claim application.");
+    }
+  };
+
+  // Mutually Exclusive Category Counts that sum strictly to total applications
+  const allCount = applications.length;
+  const newCount = applications.filter((a) => a.status === "Submitted" || a.status === "Draft").length;
+  const underReviewCount = applications.filter((a) => ["Under Review", "Docs Pending", "Embassy Processing", "Processing"].includes(a.status)).length;
+  const approvedCount = applications.filter((a) => a.status === "Approved").length;
+  const rejectedCount = applications.filter((a) => a.status === "Rejected" || a.status === "Cancelled").length;
+  const completedCount = applications.filter((a) => a.status === "Completed").length;
+
   // Filter Logic
   const filteredApps = applications.filter((app) => {
     const q = searchQuery.toLowerCase();
@@ -435,6 +336,20 @@ export default function AllApplicationsManagement() {
       app.category.toLowerCase().includes(q) ||
       app.visaType.toLowerCase().includes(q);
 
+    // Tab category match (mutually exclusive)
+    let matchesCategoryTab = true;
+    if (activeCategoryTab === "new") {
+      matchesCategoryTab = app.status === "Submitted" || app.status === "Draft";
+    } else if (activeCategoryTab === "under_review") {
+      matchesCategoryTab = ["Under Review", "Docs Pending", "Embassy Processing", "Processing"].includes(app.status);
+    } else if (activeCategoryTab === "approved") {
+      matchesCategoryTab = app.status === "Approved";
+    } else if (activeCategoryTab === "rejected") {
+      matchesCategoryTab = app.status === "Rejected" || app.status === "Cancelled";
+    } else if (activeCategoryTab === "completed") {
+      matchesCategoryTab = app.status === "Completed";
+    }
+
     const matchesStatus = statusFilter === "All" || app.status === statusFilter;
     const matchesPayment = paymentFilter === "All" || app.paymentStatus === paymentFilter;
     const matchesAppliedBy = appliedByFilter === "All" || app.appliedBy === appliedByFilter;
@@ -444,6 +359,7 @@ export default function AllApplicationsManagement() {
 
     return (
       matchesQuery &&
+      matchesCategoryTab &&
       matchesStatus &&
       matchesPayment &&
       matchesAppliedBy &&
@@ -653,78 +569,116 @@ export default function AllApplicationsManagement() {
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <ClipboardList size={15} />
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Global Application Operations Center
+              {isAgent ? `Assigned Workload Queue • ${agentId}` : "Global Application Operations Center"}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-            All Applications
+            {isAgent ? "My Assigned Visa Applications" : "Visa Applications"}
           </h1>
           <p className="text-xs text-blue-100 font-medium mt-1">
-            Track, filter, and manage all visa applications across every stage, country, and applicant category.
+            {isAgent
+              ? `Manage, inspect, and process visa applications assigned directly to your agency queue (${agentAgencyName}).`
+              : "Track, filter, and manage all visa applications across every stage, country, and applicant category."}
           </p>
         </div>
       </div>
 
-      {/* TOP STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
+      {/* TOP INTERACTIVE STATISTICS CARDS (CLICK TO FILTER) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* LEFT CARDS: 7 METRIC TILES */}
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+        {/* LEFT CARDS: 6 MUTUALLY EXCLUSIVE METRIC TILES */}
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          {/* Total Applications Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("all")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "all"
+                ? "bg-blue-50/50 border-[#2563EB] ring-2 ring-[#2563EB]/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Applications</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">{applications.length}</div>
-            <span className="text-[10px] text-[#2563EB] font-bold">Global Submissions</span>
-          </div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{allCount}</div>
+            <span className="text-[10px] text-[#2563EB] font-bold">{isAgent ? "Assigned Queue" : "Global Total"}</span>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Pending Review</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Submitted", "Pending Review", "Under Review", "Draft"].includes(a.status)).length}
-            </div>
+          {/* New / Submitted Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("new")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "new"
+                ? "bg-amber-50/50 border-amber-500 ring-2 ring-amber-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
+            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">New / Submitted</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{newCount}</div>
             <span className="text-[10px] text-amber-600 font-bold">Awaiting Audit</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          {/* Under Review Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("under_review")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "under_review"
+                ? "bg-blue-50/50 border-blue-500 ring-2 ring-blue-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
+            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Under Review</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{underReviewCount}</div>
+            <span className="text-[10px] text-blue-600 font-bold">In Processing</span>
+          </button>
+
+          {/* Approved Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("approved")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "approved"
+                ? "bg-emerald-50/50 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Approved</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Approved", "Visa Issued", "Granted"].includes(a.status)).length}
-            </div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{approvedCount}</div>
             <span className="text-[10px] text-emerald-600 font-bold">Visas Granted</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
+          {/* Rejected Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("rejected")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "rejected"
+                ? "bg-red-50/50 border-red-500 ring-2 ring-red-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
             <span className="text-[10px] font-extrabold uppercase text-red-600 block mb-1">Rejected</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Rejected", "Refused", "Cancelled"].includes(a.status)).length}
-            </div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{rejectedCount}</div>
             <span className="text-[10px] text-red-600 font-bold">Refused Visas</span>
-          </div>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Processing</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Processing", "Embassy Processing", "Under Review"].includes(a.status)).length}
-            </div>
-            <span className="text-[10px] text-blue-600 font-bold">At Embassy / VFS</span>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Doc Pending</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Document Pending", "Docs Pending", "Draft"].includes(a.status)).length}
-            </div>
-            <span className="text-[10px] text-purple-600 font-bold">Missing Files</span>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition sm:col-span-2">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-700 block mb-1">Completed & Issued</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {applications.filter((a) => ["Completed", "Approved", "Passport Delivered", "Visa Issued"].includes(a.status)).length}
-            </div>
-            <span className="text-[10px] text-emerald-700 font-bold">Passport Delivered</span>
-          </div>
+          {/* Completed & Issued Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("completed")}
+            className={`text-left p-4 rounded-3xl border transition-all cursor-pointer hover:shadow-md ${
+              activeCategoryTab === "completed"
+                ? "bg-teal-50/50 border-teal-500 ring-2 ring-teal-500/30 shadow-sm"
+                : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
+            }`}
+          >
+            <span className="text-[10px] font-extrabold uppercase text-teal-700 block mb-1">Completed & Issued</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{completedCount}</div>
+            <span className="text-[10px] text-teal-700 font-bold">Passport Delivered</span>
+          </button>
         </div>
 
-        {/* RIGHT CARD: RECOMMENDED TABS & WORKFLOW FLOW (FROM WIREFRAME) */}
+        {/* RIGHT CARD: RECOMMENDED TABS & WORKFLOW FLOW */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex flex-col justify-between space-y-4">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-2">
@@ -741,6 +695,128 @@ export default function AllApplicationsManagement() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* CATEGORY FILTER PILL TABS BAR (MERGED SUB-MENU IN PLACE) */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-3 shadow-2xs mb-6 overflow-x-auto">
+        <div className="flex items-center gap-2 min-w-max">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("all")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "all"
+                ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>{isAgent ? "My Assigned Workload" : "All Applications"}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+            }`}>
+              {allCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("new")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "new"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>New / Submitted</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "new" ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800"
+            }`}>
+              {newCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("under_review")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "under_review"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Under Review</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "under_review" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-800"
+            }`}>
+              {underReviewCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("approved")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "approved"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Approved</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "approved" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+            }`}>
+              {approvedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("rejected")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "rejected"
+                ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Rejected</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "rejected" ? "bg-white/20 text-white" : "bg-rose-100 text-rose-800"
+            }`}>
+              {rejectedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("completed")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "completed"
+                ? "bg-teal-600 text-white shadow-md shadow-teal-500/20"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+            }`}
+          >
+            <span>Completed</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeCategoryTab === "completed" ? "bg-white/20 text-white" : "bg-teal-100 text-teal-800"
+            }`}>
+              {completedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveCategoryTab("pool")}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+              activeCategoryTab === "pool"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                : "bg-slate-50 hover:bg-purple-50 text-purple-700 border border-purple-200/60"
+            }`}
+          >
+            <span>Available for Pickup</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+              Pool
+            </span>
+          </button>
         </div>
       </div>
 
@@ -954,6 +1030,15 @@ export default function AllApplicationsManagement() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {activeCategoryTab === "pool" && isAgent ? (
+                          <button
+                            onClick={() => handleClaimApplication(a)}
+                            className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
+                            title="Claim and assign this application to your queue"
+                          >
+                            <UserCheck size={14} /> Claim to My Queue
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => setActiveModalApp(a)}
                           className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
@@ -1204,32 +1289,82 @@ export default function AllApplicationsManagement() {
 
               {modalTab === "Uploaded Documents" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Applicant Document Verification Checklist</h4>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
+                      <FileText size={15} className="text-[#2563EB]" /> Applicant Uploaded Documents (ImageKit CDN Hosted)
+                    </h4>
+                    <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      ImageKit Storage Active
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(activeModalApp.documents || [
-                      { name: "Passport Bio Page", status: "Verified" },
-                      { name: "Bank Statement (6 Months)", status: "Verified" },
-                      { name: "Flight Ticket Reservation", status: "Verified" },
-                      { name: "Hotel Accommodation Voucher", status: "Verified" }
-                    ]).map((doc, idx) => (
-                      <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
-                            <FileText size={16} />
+                    {(activeModalApp.documents && activeModalApp.documents.length > 0 ? activeModalApp.documents : [
+                      { name: "Passport Copy (Bio Page)", status: "Verified", fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png", fileName: "passport_bio_page.png", fileSize: "2.4 MB", format: "Image Scan (PNG)", documentType: "Passport Copy" },
+                      { name: "Financial Affidavit & Solvency Proof", status: "Verified", fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf", fileName: "financial_solvency_affidavit.pdf", fileSize: "3.1 MB", format: "PDF Document", documentType: "Bank Statement" }
+                    ]).map((doc, idx) => {
+                      const targetUrl = doc.fileUrl || doc.url || "https://ik.imagekit.io/phantomvisa/sample_passport.png";
+                      const isImg = targetUrl.toLowerCase().endsWith(".png") || targetUrl.toLowerCase().endsWith(".jpg") || targetUrl.toLowerCase().endsWith(".jpeg") || targetUrl.toLowerCase().endsWith(".webp");
+                      return (
+                        <div key={idx} className="p-3.5 bg-slate-50 hover:bg-blue-50/30 border border-slate-200 hover:border-blue-300 rounded-2xl transition flex flex-col justify-between gap-3 shadow-2xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-blue-100/70 text-[#2563EB] flex items-center justify-center font-bold shrink-0">
+                                {isImg ? <ImageIcon size={18} /> : <FileText size={18} />}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-900 text-xs block leading-tight">{doc.name}</span>
+                                <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
+                                  {doc.format || (isImg ? "Image Scan (PNG)" : "PDF Document")} &bull; {doc.fileSize || "2.4 MB"}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shrink-0 ${doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                              {doc.status}
+                            </span>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-900 block">{doc.name}</span>
-                            <span className="text-[10px] text-slate-400">PDF &bull; 2.4 MB</span>
+
+                          {/* IMAGEKIT CDN ASSET LINK & ACTION BUTTONS */}
+                          <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 truncate max-w-[140px] sm:max-w-[180px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="truncate">{targetUrl}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDocument({ name: doc.name, fileUrl: targetUrl, format: doc.format, status: doc.status, fileSize: doc.fileSize, documentType: doc.documentType })}
+                                className="px-2.5 py-1 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                title="Preview Document in Lightbox"
+                              >
+                                <Eye size={12} /> View File
+                              </button>
+                              <a
+                                href={targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 bg-white hover:bg-slate-100 text-slate-600 hover:text-[#2563EB] border border-slate-200 rounded-lg transition cursor-pointer"
+                                title="Open direct ImageKit CDN URL in new tab"
+                              >
+                                <ExternalLink size={13} />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(targetUrl);
+                                  triggerToast(`ImageKit link for ${doc.name} copied to clipboard!`);
+                                }}
+                                className="p-1 bg-white hover:bg-slate-100 text-slate-600 hover:text-[#2563EB] border border-slate-200 rounded-lg transition cursor-pointer"
+                                title="Copy ImageKit URL"
+                              >
+                                <Copy size={13} />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{doc.status}</span>
-                          <button onClick={() => triggerToast(`Viewing ${doc.name}`)} className="p-1.5 text-[#2563EB] hover:bg-blue-100 rounded-lg transition" title="Preview Document">
-                            <Eye size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1250,17 +1385,6 @@ export default function AllApplicationsManagement() {
                 </div>
               )}
 
-              {(modalTab === "Embassy & Tracking" || modalTab === "Embassy Submission") && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Consulate &amp; VFS Tracking Details</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Reference ID</span><strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.embassyTrackingId || "CAN-EMB-8831"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Submission Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.embassySubmissionDate || "2026-07-29"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Biometrics Appointment Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.appointmentDate || "2026-08-05"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">VFS / Embassy Center</span><strong className="text-slate-900 font-bold">{activeModalApp.consulateBranch || "VFS Global Center Mumbai"}</strong></div>
-                  </div>
-                </div>
-              )}
 
               {modalTab === "Action Notes" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
@@ -1402,6 +1526,110 @@ export default function AllApplicationsManagement() {
                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-extrabold cursor-pointer transition flex items-center gap-1.5"
               >
                 <XCircle size={14} /> Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE IMAGEKIT DOCUMENT PREVIEW LIGHTBOX */}
+      {previewDocument && (
+        <div className="fixed inset-0 z-[10000] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150">
+            {/* LIGHTBOX HEADER */}
+            <div className="bg-[#0E1A2C] text-white p-4 px-6 flex items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#2563EB]/20 text-[#2563EB] flex items-center justify-center shrink-0">
+                  <FileText size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold text-white truncate font-outfit">{previewDocument.name}</h3>
+                  <span className="text-[10px] text-blue-200 font-mono flex items-center gap-1.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    ImageKit CDN Asset &bull; {previewDocument.fileUrl}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewDocument.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <ExternalLink size={13} /> Open in New Tab
+                </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewDocument.fileUrl);
+                    triggerToast("ImageKit asset URL copied to clipboard!");
+                  }}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Copy ImageKit URL"
+                >
+                  <Copy size={15} />
+                </button>
+                <button
+                  onClick={() => setPreviewDocument(null)}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Close Lightbox"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* LIGHTBOX PREVIEW BODY */}
+            <div className="p-4 bg-slate-900 overflow-y-auto flex-1 flex items-center justify-center min-h-[420px]">
+              {previewDocument.fileUrl.toLowerCase().endsWith(".png") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".jpg") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".jpeg") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".webp") ? (
+                <div className="p-2 bg-slate-950/60 rounded-2xl border border-slate-800 flex items-center justify-center max-h-[550px]">
+                  <img
+                    src={previewDocument.fileUrl}
+                    alt={previewDocument.name}
+                    className="max-h-[500px] w-auto mx-auto rounded-xl object-contain shadow-2xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://ik.imagekit.io/phantomvisa/sample_passport.png";
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full min-h-[480px] bg-slate-950 rounded-2xl overflow-hidden flex flex-col border border-slate-800">
+                  <iframe
+                    src={previewDocument.fileUrl}
+                    title={previewDocument.name}
+                    className="w-full h-[480px] rounded-2xl bg-white border-0"
+                  />
+                  <div className="p-2.5 bg-slate-900 text-center text-slate-400 text-xs flex items-center justify-center gap-2 border-t border-slate-800">
+                    <span>If PDF preview does not display in browser:</span>
+                    <a
+                      href={previewDocument.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#2563EB] font-bold underline hover:text-blue-400"
+                    >
+                      Click here to view directly on ImageKit CDN
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* LIGHTBOX FOOTER */}
+            <div className="bg-white p-3.5 px-6 border-t border-slate-200 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500">Document Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {previewDocument.status || "Verified"}
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewDocument(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition cursor-pointer"
+              >
+                Close Preview
               </button>
             </div>
           </div>

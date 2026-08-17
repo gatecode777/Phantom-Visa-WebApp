@@ -23,15 +23,15 @@ export function getPreAggregatedAnalytics(companyId: string): PreAggregatedMetri
     return cached.metrics;
   }
 
-  // Pre-computed snapshot mock
+  // Pre-computed snapshot
   const snapshot: PreAggregatedMetrics = {
     companyId,
     snapshotTime: new Date().toISOString(),
-    activeApplicationsCount: 42,
-    approvalRatePercent: 94.8,
-    grossRevenueINR: 1254000,
-    averageProcessingDays: 3.4,
-    slaBreachCount: 1
+    activeApplicationsCount: 0,
+    approvalRatePercent: 0,
+    grossRevenueINR: 0,
+    averageProcessingDays: 0,
+    slaBreachCount: 0
   };
 
   analyticsCache.set(companyId, { metrics: snapshot, fetchedAt: Date.now() });

@@ -26,15 +26,6 @@ import {
   revokeSessionApi
 } from "../services/sessionService";
 
-export interface SessionRecord {
-  id: string;
-  deviceName: string;
-  browser: string;
-  ipAddress: string;
-  location: string;
-  lastActive: string;
-  isCurrent: boolean;
-}
 
 interface ApplicantSettingsProps {
   onNavigatePayments?: () => void;

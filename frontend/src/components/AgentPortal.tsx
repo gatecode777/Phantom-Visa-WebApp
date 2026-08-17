@@ -29,12 +29,6 @@ import PerformanceReportsManagement from "./PerformanceReportsManagement";
 import VisaTypeReportsManagement from "./VisaTypeReportsManagement";
 import RevenueReportsManagement from "./RevenueReportsManagement";
 import UserActivityReportsManagement from "./UserActivityReportsManagement";
-import GeneralSettingsManagement from "./GeneralSettingsManagement";
-import SecuritySettingsManagement from "./SecuritySettingsManagement";
-import PaymentGatewayManagement from "./PaymentGatewayManagement";
-import EmailConfigurationManagement from "./EmailConfigurationManagement";
-import SMSConfigurationManagement from "./SMSConfigurationManagement";
-import RolesPermissionsManagement from "./RolesPermissionsManagement";
 import SupportManagement from "./SupportManagement";
 import MyProfileManagement from "./MyProfileManagement";
 import {
@@ -83,6 +77,8 @@ export default function AgentPortal() {
     ledger,
     commissions,
     auditLogs,
+    authSession,
+    unifiedAppointments,
     addApplication,
     addFunds,
     requestPayout,
@@ -129,86 +125,78 @@ export default function AgentPortal() {
 
   // Sub-tab filtering states
   const [appSubTab, setAppSubTab] = useState<
-    "all" | "new" | "assigned" | "under_review" | "approved" | "rejected" | "completed"
-  >("all");
-  const [searchAppQuery, setSearchAppQuery] = useState("");
+    "all" | "new" | "assigned" | "review" | "approved" | "rejected" | "completed"
+  >("assigned");
   const [applicantSubTab, setApplicantSubTab] = useState<"list" | "details">("list");
-  const [selectedApplicant, setSelectedApplicant] = useState<any | null>(null);
-  const [docVerifSubTab, setDocVerifSubTab] = useState<"pending" | "verified" | "additional">("pending");
-  const [paymentSubTab, setPaymentSubTab] = useState<"verification" | "transactions" | "invoices">("verification");
+  const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+  const [docSubTab, setDocSubTab] = useState<"pending" | "verified" | "rejected">("pending");
+  const [paymentSubTab, setPaymentSubTab] = useState<"verification" | "transactions" | "invoices">("transactions");
   const [reportSubTab, setReportSubTab] = useState<"daily" | "monthly" | "performance">("daily");
-  const [settingsSubTab, setSettingsSubTab] = useState<"security" | "general" | "payment_gateway" | "email" | "sms" | "roles">("security");
 
-  // Modals & Toast
+  // Filter & Search States
+  const [searchAppQuery, setSearchAppQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [countryFilter, setCountryFilter] = useState("All");
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+
+  // Modals
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
-  const [topupAmount, setTopupAmount] = useState("415000");
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
+  // Form Inputs
+  const [topupAmount, setTopupAmount] = useState("50000");
+  const [payoutAmount, setPayoutAmount] = useState("10000");
 
-  // Search & Wizard Sub-States
-  const [searchDest, setSearchDest] = useState("Germany");
-  const [searchNational, setSearchNational] = useState("India");
-  const [searchType, setSearchType] = useState("Tourist");
-  const [selectedProduct, setSelectedProduct] = useState<{
-    id: string;
-    destination: string;
-    visaType: string;
-    price: number;
-    processingTime: string;
-    entry: string;
-  } | null>(null);
-
-  const [wizardStep, setWizardStep] = useState(1);
-  const [travelerName, setTravelerName] = useState("");
-  const [dob, setDob] = useState("");
-  const [passportNumber, setPassportNumber] = useState("");
-  const [passportExpiry, setPassportExpiry] = useState("");
-  const [travelDates, setTravelDates] = useState("2026-10-01 to 2026-10-15");
-  const [isEmployed, setIsEmployed] = useState(false);
+  // Visa Apply Wizard (Self Application Flow)
+  const [searchDest, setSearchDest] = useState("Canada");
+  const [searchType, setSearchType] = useState("Tourist Visa");
+  const [applicantName, setApplicantName] = useState("");
+  const [passportNum, setPassportNum] = useState("");
+  const [travelDates, setTravelDates] = useState("");
+  const [isEmployed, setIsEmployed] = useState(true);
   const [isSponsored, setIsSponsored] = useState(false);
 
-  const [ocrScanning, setOcrScanning] = useState(false);
-  const [docUploadState, setDocUploadState] = useState<Record<string, "idle" | "uploading" | "verifying" | "done" | "needs_review">>({
-    passport: "idle",
-    photo: "idle",
-    nocLetter: "idle",
-    sponsorLetter: "idle"
-  });
+  const availableProducts = [
+    { destination: "Canada", visaType: "Tourist Visa", price: 13280, processingDays: "12-15 Days", flag: "🇨🇦" },
+    { destination: "United Kingdom", visaType: "Standard Visitor", price: 16185, processingDays: "15-20 Days", flag: "🇬🇧" },
+    { destination: "Australia", visaType: "Visitor Visa 600", price: 14500, processingDays: "10-14 Days", flag: "🇦🇺" },
+    { destination: "United States", visaType: "B1/B2 Tourist", price: 17800, processingDays: "30-45 Days", flag: "🇺🇸" },
+    { destination: "Schengen (France)", visaType: "Short Stay", price: 11900, processingDays: "7-10 Days", flag: "🇫🇷" },
+    { destination: "Japan", visaType: "Tourist eVisa", price: 7885, processingDays: "5-7 Days", flag: "🇯🇵" }
+  ];
 
-  const simulatePassportOCR = () => {
-    setOcrScanning(true);
-    setTimeout(() => {
-      setOcrScanning(false);
-      setTravelerName("AARAV SHARMA");
-      setDob("1991-08-14");
-      setPassportNumber("Z5592817");
-      setPassportExpiry("2035-12-10");
-      setDocUploadState((prev) => ({ ...prev, passport: "done" }));
-      triggerToast("Passport scanned! AI parsed fields automatically.");
-    }, 1800);
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleSubmitVisaApplication = () => {
-    if (walletBalance < (selectedProduct?.price || 13280)) {
-      triggerToast("Insufficient wallet balance. Please top up funds.");
+  const handleApplyVisaSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!applicantName || !passportNum) {
+      triggerToast("Please complete traveler personal and passport information.");
       return;
     }
-    const newId = addApplication({
-      travelerName: travelerName || "Aarav Sharma",
-      dob: dob || "1991-08-14",
-      passportNumber: passportNumber || "Z5592817",
-      passportExpiry: passportExpiry || "2035-12-10",
-      nationality: searchNational,
+    const newId = `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const selectedProduct = availableProducts.find(
+      (p) => p.destination === searchDest && p.visaType === searchType
+    );
+
+    addApplication({
+      id: newId,
+      travelerName: applicantName,
+      dob: "1994-08-14",
+      passportNumber: passportNum,
+      passportExpiry: "2034-08-14",
+      nationality: "Indian",
       destination: selectedProduct?.destination || searchDest,
       visaType: selectedProduct?.visaType || searchType,
       travelDates: travelDates || "2026-10-01 to 2026-10-15",
       status: "Submitted",
       fees: selectedProduct?.price || 13280,
+      submissionDate: new Date().toISOString().split("T")[0],
       verifiedDocs: { passport: "verified", photo: "verified" },
       checklist: { employed: isEmployed, sponsored: isSponsored }
     });
@@ -216,55 +204,37 @@ export default function AgentPortal() {
     setAgentTab("applications");
   };
 
-  // Mock Data matching exact screenshot details
-  const assignedApplicationsMock = [
-    { id: "VO-2026-1250", name: "Rahul Kumawat", country: "Canada", flag: "🇨🇦", visaType: "Tourist Visa", submitOn: "26 Jul 2026", status: "Under Review", statusColor: "text-amber-600 bg-amber-50" },
-    { id: "VO-2026-1251", name: "Animesh Jain", country: "Australia", flag: "🇦🇺", visaType: "Student Visa", submitOn: "26 Jul 2026", status: "Approved", statusColor: "text-emerald-600 bg-emerald-50" },
-    { id: "VO-2026-1252", name: "Omrishi Sharma", country: "United States", flag: "🇺🇸", visaType: "Business Visa", submitOn: "26 Jul 2026", status: "Under Review", statusColor: "text-amber-600 bg-amber-50" },
-    { id: "VO-2026-1253", name: "Balram Suman", country: "United Kingdom", flag: "🇬🇧", visaType: "Work Visa", submitOn: "26 Jul 2026", status: "Rejected", statusColor: "text-rose-600 bg-rose-50" },
-    { id: "VO-2026-1254", name: "Garv Gupta", country: "Others", flag: "🌐", visaType: "Visitor Visa", submitOn: "26 Jul 2026", status: "Approved", statusColor: "text-emerald-600 bg-emerald-50" }
-  ];
+  // Agent Identity Details
+  const agentName = authSession?.user?.name || "Agent";
+  const agentInitials = agentName
+    .split(" ")
+    .map((w: string) => w[0])
+    .filter(Boolean)
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "AG";
 
-  const docVerificationsMock = [
-    { title: "Passport- Geeta Bisht", submitOn: "Submitted on 26 Jul 2026", status: "Pending" },
-    { title: "Bank Statement- Geeta Bisht", submitOn: "Submitted on 26 Jul 2026", status: "Pending" },
-    { title: "Education Cert.- Geeta Bisht", submitOn: "Submitted on 26 Jul 2026", status: "Pending" },
-    { title: "Employment Letter- Geeta Bisht", submitOn: "Submitted on 26 Jul 2026", status: "Pending" },
-    { title: "Invitation Letter- Geeta Bisht", submitOn: "Submitted on 26 Jul 2026", status: "Pending" },
-    { title: "Passport- Ramchandra Suman", submitOn: "Submitted on 26 Jul 2026", status: "Pending" }
-  ];
+  // Dynamic Live Data Derivations from Context & DB
+  const agentApplications = applications || [];
+  const totalAssigned = agentApplications.length;
+  const rejectedCount = agentApplications.filter((a) => a.status === "Rejected").length;
+  const underReviewCount = agentApplications.filter(
+    (a) => a.status === "Under Review" || a.status === "Submitted" || a.status === "Docs Pending" || a.status === "Document Pending" || a.status === "Embassy Processing"
+  ).length;
+  const approvedCount = agentApplications.filter((a) => a.status === "Approved").length;
+  const completedCount = agentApplications.filter((a) => a.status === "Completed").length;
+  const cancelledCount = agentApplications.filter((a) => a.status === "Cancelled").length;
+  const docsToVerifyCount = agentApplications.filter(
+    (a) =>
+      a.status === "Docs Pending" ||
+      a.status === "Document Pending" ||
+      (a.verifiedDocs && (a.verifiedDocs.passport === "needs_review" || a.verifiedDocs.photo === "needs_review" || a.verifiedDocs.passport === "pending"))
+  ).length;
 
-  const myTasksMock = [
-    { title: "Documents Pending Verifications", subtitle: "Verify Documents", count: 18 },
-    { title: "Applications in Review", subtitle: "Review Applications", count: 15 },
-    { title: "Request from Applicants", subtitle: "Documents Requests", count: 7 },
-    { title: "Payments to Verify", subtitle: "Payment Verifications", count: 6 },
-    { title: "Appointments to Confirm", subtitle: "Schedule Appointments", count: 4 }
-  ];
-
-  const upcomingAppointmentsMock = [
-    { visa: "Canada Tourist Visa", location: "Visa Application Centre, New Delhi", time: "11:00 AM", applicant: "Geeta Bisht", date: "28 June 2026" },
-    { visa: "UK Business Visa", location: "Visa Application Centre, New Delhi", time: "02:00 PM", applicant: "Rahul Kumawat", date: "28 June 2026" },
-    { visa: "Canada Tourist Visa", location: "Visa Application Centre, New Delhi", time: "11:00 AM", applicant: "Geeta Bisht", date: "28 June 2026" },
-    { visa: "Canada Tourist Visa", location: "Visa Application Centre, New Delhi", time: "11:00 AM", applicant: "Geeta Bisht", date: "28 June 2026" },
-    { visa: "Canada Tourist Visa", location: "Visa Application Centre, New Delhi", time: "11:00 AM", applicant: "Geeta Bisht", date: "28 June 2026" }
-  ];
-
-  const recentActivityMock = [
-    { title: "New Applications Assigned", detail: "VO-2026-1255 By Admin", time: "5 min ago", color: "bg-blue-500", textColor: "text-blue-600", borderPos: "top" },
-    { title: "Document Verified", detail: "Passport - Geeta Bisht", time: "20 min ago", color: "bg-emerald-500", textColor: "text-emerald-600", borderPos: "bottom" },
-    { title: "Application Under Review", detail: "VO-2026-1240", time: "45 min ago", color: "bg-amber-500", textColor: "text-amber-600", borderPos: "top" },
-    { title: "Application Approved", detail: "VO-2026-1239", time: "45 min ago", color: "bg-emerald-500", textColor: "text-emerald-600", borderPos: "bottom" },
-    { title: "Application Rejected", detail: "VO-2026-1236", time: "2 hr ago", color: "bg-rose-500", textColor: "text-rose-600", borderPos: "top" },
-    { title: "Document Request Sent", detail: "To Geeta Bisht", time: "2 hr ago", color: "bg-blue-500", textColor: "text-blue-600", borderPos: "bottom" }
-  ];
-
-  const applicantsList = [
-    { id: "APP-01", name: "Geeta Bisht", nationality: "India", passport: "Z5592817", email: "geeta.bisht@phantom.com", activeVisas: 1, lastApp: "VO-2026-1250" },
-    { id: "APP-02", name: "Rahul Kumawat", nationality: "India", passport: "Z8829102", email: "rahul.k@gmail.com", activeVisas: 1, lastApp: "VO-2026-1250" },
-    { id: "APP-03", name: "Animesh Jain", nationality: "India", passport: "Z9928172", email: "animesh@jain.org", activeVisas: 1, lastApp: "VO-2026-1251" },
-    { id: "APP-04", name: "Omrishi Sharma", nationality: "India", passport: "Z1182736", email: "omrishi@sharma.in", activeVisas: 1, lastApp: "VO-2026-1252" }
-  ];
+  const underReviewPct = totalAssigned > 0 ? ((underReviewCount / totalAssigned) * 100).toFixed(1) : "0.0";
+  const approvedPct = totalAssigned > 0 ? ((approvedCount / totalAssigned) * 100).toFixed(1) : "0.0";
+  const rejectedPct = totalAssigned > 0 ? ((rejectedCount / totalAssigned) * 100).toFixed(1) : "0.0";
+  const cancelledPct = totalAssigned > 0 ? ((cancelledCount / totalAssigned) * 100).toFixed(1) : "0.0";
 
   return (
     <div className="flex h-screen bg-[#F8F9FD] text-slate-800 font-sans overflow-hidden">
@@ -300,183 +270,47 @@ export default function AgentPortal() {
             <span>Dashboard</span>
           </button>
 
-          {/* Visa Applications Accordion */}
-          <div>
-            <button
-              onClick={() => {
-                toggleAccordion("visa_apps");
-                setAppSubTab("all");
-                handleTabChange("applications");
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
-                agentTab === "applications"
-                  ? "bg-purple-50 text-purple-700 font-bold"
-                  : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ClipboardList size={18} className={agentTab === "applications" ? "text-purple-600" : "text-slate-400"} />
-                <span>Visa Applications</span>
-              </div>
-              {openAccordions["visa_apps"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
+          {/* Visa Applications Single Direct Menu */}
+          <button
+            onClick={() => handleTabChange("applications")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              agentTab === "applications"
+                ? "bg-purple-50 text-purple-700 font-extrabold shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <ClipboardList size={18} className={agentTab === "applications" ? "text-purple-600" : "text-slate-400"} />
+            <span>Visa Applications</span>
+          </button>
 
-            {openAccordions["visa_apps"] && (
-              <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                <button
-                  onClick={() => { setAppSubTab("all"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "all" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>All Applications</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("new"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "new" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>New Applications</span>
-                  <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">12</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("assigned"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "assigned" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Assigned to Me</span>
-                  <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">8</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("under_review"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "under_review" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Under Review</span>
-                  <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded-full text-[10px]">15</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("approved"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "approved" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Approved</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("rejected"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "rejected" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Rejected</span>
-                </button>
-                <button
-                  onClick={() => { setAppSubTab("completed"); handleTabChange("applications"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applications" && appSubTab === "completed" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Completed</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Applicants Single Direct Menu */}
+          <button
+            onClick={() => {
+              setApplicantSubTab("list");
+              handleTabChange("applicants");
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              agentTab === "applicants"
+                ? "bg-purple-50 text-purple-700 font-extrabold shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Users size={18} className={agentTab === "applicants" ? "text-purple-600" : "text-slate-400"} />
+            <span>Applicants</span>
+          </button>
 
-          {/* Applicants Accordion */}
-          <div>
-            <button
-              onClick={() => {
-                toggleAccordion("applicants");
-                handleTabChange("applicants");
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
-                agentTab === "applicants"
-                  ? "bg-purple-50 text-purple-700 font-bold"
-                  : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Users size={18} className={agentTab === "applicants" ? "text-purple-600" : "text-slate-400"} />
-                <span>Applicants</span>
-              </div>
-              {openAccordions["applicants"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-
-            {openAccordions["applicants"] && (
-              <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                <button
-                  onClick={() => { setApplicantSubTab("list"); handleTabChange("applicants"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applicants" && applicantSubTab === "list" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Applicant List</span>
-                </button>
-                <button
-                  onClick={() => { setApplicantSubTab("details"); handleTabChange("applicants"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "applicants" && applicantSubTab === "details" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Applicant Details</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Document Verification Accordion */}
-          <div>
-            <button
-              onClick={() => {
-                toggleAccordion("doc_verif");
-                handleTabChange("doc_verification");
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
-                agentTab === "doc_verification"
-                  ? "bg-purple-50 text-purple-700 font-bold"
-                  : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <FileCheck size={18} className={agentTab === "doc_verification" ? "text-purple-600" : "text-slate-400"} />
-                <span>Document Verification</span>
-              </div>
-              {openAccordions["doc_verif"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-
-            {openAccordions["doc_verif"] && (
-              <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                <button
-                  onClick={() => { setDocVerifSubTab("pending"); handleTabChange("doc_verification"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "doc_verification" && docVerifSubTab === "pending" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Pending Verification</span>
-                </button>
-                <button
-                  onClick={() => { setDocVerifSubTab("verified"); handleTabChange("doc_verification"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "doc_verification" && docVerifSubTab === "verified" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Verified Documents</span>
-                </button>
-                <button
-                  onClick={() => { setDocVerifSubTab("additional"); handleTabChange("doc_verification"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "doc_verification" && docVerifSubTab === "additional" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Additional Requests</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Document Verification Single Direct Menu */}
+          <button
+            onClick={() => handleTabChange("doc_verification")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              agentTab === "doc_verification"
+                ? "bg-purple-50 text-purple-700 font-extrabold shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <FileCheck size={18} className={agentTab === "doc_verification" ? "text-purple-600" : "text-slate-400"} />
+            <span>Document Verification</span>
+          </button>
 
           {/* Payments Accordion */}
           <div>
@@ -618,78 +452,6 @@ export default function AgentPortal() {
           </div>
 
           <div className="pt-2 border-t border-slate-100 space-y-1">
-            {/* Settings Accordion */}
-            <div>
-              <button
-                onClick={() => {
-                  toggleAccordion("settings");
-                  handleTabChange("settings");
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
-                  agentTab === "settings" ? "bg-purple-50 text-purple-700 font-bold" : "hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Settings size={18} className={agentTab === "settings" ? "text-purple-600" : "text-slate-400"} />
-                  <span>Settings</span>
-                </div>
-                {openAccordions["settings"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
-
-              {openAccordions["settings"] && (
-                <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                  <button
-                    onClick={() => { setSettingsSubTab("security"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "security" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>Security Settings</span>
-                  </button>
-                  <button
-                    onClick={() => { setSettingsSubTab("general"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "general" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>General Settings</span>
-                  </button>
-                  <button
-                    onClick={() => { setSettingsSubTab("payment_gateway"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "payment_gateway" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>Payment Gateway</span>
-                  </button>
-                  <button
-                    onClick={() => { setSettingsSubTab("email"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "email" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>Email Config</span>
-                  </button>
-                  <button
-                    onClick={() => { setSettingsSubTab("sms"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "sms" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>SMS Config</span>
-                  </button>
-                  <button
-                    onClick={() => { setSettingsSubTab("roles"); handleTabChange("settings"); }}
-                    className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                      agentTab === "settings" && settingsSubTab === "roles" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>Roles & Permissions</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* Support */}
             <button
               onClick={() => handleTabChange("support")}
@@ -777,8 +539,8 @@ export default function AgentPortal() {
               onClick={() => handleTabChange("profile")}
               className="flex items-center gap-2 pl-2 cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full bg-amber-200 border border-slate-200 overflow-hidden flex items-center justify-center font-bold text-amber-900 text-xs">
-                GB
+              <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 overflow-hidden flex items-center justify-center font-bold text-indigo-700 text-xs">
+                {agentInitials}
               </div>
             </div>
           </div>
@@ -794,7 +556,7 @@ export default function AgentPortal() {
               {/* Greeting Header */}
               <div>
                 <h1 className="text-xl font-bold text-slate-900">
-                  Good Morning, Geeta 👋
+                  Good Morning, {agentName} 👋
                 </h1>
               </div>
 
@@ -804,20 +566,20 @@ export default function AgentPortal() {
                 <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-2">
                   <span className="text-[11px] font-medium text-slate-500 block">Total Assigned</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">42</span>
-                    <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                      <TrendingUp size={12} /> 12.5% vs yesterday
+                    <span className="text-2xl font-bold text-slate-900">{totalAssigned}</span>
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-0.5">
+                      Live Queue
                     </span>
                   </div>
                 </div>
 
                 {/* Rejected Today */}
                 <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-2">
-                  <span className="text-[11px] font-medium text-slate-500 block">Rejected Today</span>
+                  <span className="text-[11px] font-medium text-slate-500 block">Rejected</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">03</span>
+                    <span className="text-2xl font-bold text-slate-900">{rejectedCount}</span>
                     <span className="text-[11px] font-semibold text-rose-500 flex items-center gap-0.5">
-                      <TrendingDown size={12} /> 25% vs yesterday
+                      {rejectedPct}%
                     </span>
                   </div>
                 </div>
@@ -826,31 +588,31 @@ export default function AgentPortal() {
                 <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-2">
                   <span className="text-[11px] font-medium text-slate-500 block">Under Review</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">15</span>
-                    <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                      <TrendingUp size={12} /> 7.3% vs yesterday
+                    <span className="text-2xl font-bold text-slate-900">{underReviewCount}</span>
+                    <span className="text-[11px] font-semibold text-amber-600 flex items-center gap-0.5">
+                      {underReviewPct}%
                     </span>
                   </div>
                 </div>
 
-                {/* Approved Today */}
+                {/* Approved */}
                 <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-2">
-                  <span className="text-[11px] font-medium text-slate-500 block">Approved Today</span>
+                  <span className="text-[11px] font-medium text-slate-500 block">Approved</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">08</span>
+                    <span className="text-2xl font-bold text-slate-900">{approvedCount}</span>
                     <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                      <TrendingUp size={12} /> 33.3% vs yesterday
+                      {approvedPct}%
                     </span>
                   </div>
                 </div>
 
                 {/* Documents to Verify */}
                 <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-2">
-                  <span className="text-[11px] font-medium text-slate-500 block">Documents to Verify</span>
+                  <span className="text-[11px] font-medium text-slate-500 block">Docs to Verify</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-slate-900">18</span>
-                    <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                      <TrendingUp size={12} /> 5.9% vs yesterday
+                    <span className="text-2xl font-bold text-slate-900">{docsToVerifyCount}</span>
+                    <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-0.5">
+                      Awaiting Audit
                     </span>
                   </div>
                 </div>
@@ -865,7 +627,7 @@ export default function AgentPortal() {
                       setAppSubTab("assigned");
                       handleTabChange("applications");
                     }}
-                    className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition"
+                    className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition cursor-pointer"
                   >
                     View All
                   </button>
@@ -884,23 +646,36 @@ export default function AgentPortal() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {assignedApplicationsMock.map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-50 transition">
-                          <td className="py-3 px-3 font-mono font-medium text-slate-600">{row.id}</td>
-                          <td className="py-3 px-3 font-semibold text-slate-900">{row.name}</td>
-                          <td className="py-3 px-3 flex items-center gap-1.5">
-                            <span>{row.flag}</span>
-                            <span>{row.country}</span>
-                          </td>
-                          <td className="py-3 px-3 text-slate-600">{row.visaType}</td>
-                          <td className="py-3 px-3 text-slate-500">{row.submitOn}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${row.statusColor}`}>
-                              {row.status}
-                            </span>
+                      {agentApplications.length > 0 ? (
+                        agentApplications.slice(0, 5).map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50 transition">
+                            <td className="py-3 px-3 font-mono font-medium text-slate-600">{row.id}</td>
+                            <td className="py-3 px-3 font-semibold text-slate-900">{row.travelerName}</td>
+                            <td className="py-3 px-3">{row.destination}</td>
+                            <td className="py-3 px-3 text-slate-600">{row.visaType}</td>
+                            <td className="py-3 px-3 text-slate-500">{row.submissionDate}</td>
+                            <td className="py-3 px-3">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                  row.status === "Approved"
+                                    ? "text-emerald-600 bg-emerald-50"
+                                    : row.status === "Rejected"
+                                    ? "text-rose-600 bg-rose-50"
+                                    : "text-amber-600 bg-amber-50"
+                                }`}
+                              >
+                                {row.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                            No applications assigned to your queue in the database.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -912,11 +687,7 @@ export default function AgentPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="font-bold text-sm text-slate-900">Applications Status Overview</h3>
-                    <select className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2.5 py-1 outline-none">
-                      <option>Last 30 Days</option>
-                      <option>Last 7 Days</option>
-                      <option>This Year</option>
-                    </select>
+                    <span className="text-xs font-semibold text-slate-400 font-mono">Live Sync</span>
                   </div>
 
                   <div className="flex flex-col md:flex-row items-center justify-around py-4 gap-6">
@@ -929,19 +700,19 @@ export default function AgentPortal() {
                         <circle cx="100" cy="100" r="40" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
                         <circle cx="100" cy="100" r="20" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
 
-                        {/* Purple Segment (Under Review ~24.4%) */}
-                        <path d="M 100 100 L 100 20 A 80 80 0 0 1 180 100 Z" fill="#93C5FD" fillOpacity="0.75" stroke="#ffffff" strokeWidth="2" />
-                        {/* Green Segment (Approved ~55.2%) */}
-                        <path d="M 100 100 L 180 100 A 80 80 0 0 1 20 100 Z" fill="#86EFAC" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
-                        {/* Orange Segment (Rejected ~12.5%) */}
-                        <path d="M 100 100 L 20 100 A 80 80 0 0 1 50 30 Z" fill="#FDBA74" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
-                        {/* Red Segment (Cancelled ~4.9%) */}
-                        <path d="M 100 100 L 50 30 A 80 80 0 0 1 100 20 Z" fill="#FCA5A5" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
+                        {totalAssigned > 0 ? (
+                          <>
+                            <path d="M 100 100 L 100 20 A 80 80 0 0 1 180 100 Z" fill="#93C5FD" fillOpacity="0.75" stroke="#ffffff" strokeWidth="2" />
+                            <path d="M 100 100 L 180 100 A 80 80 0 0 1 20 100 Z" fill="#86EFAC" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
+                            <path d="M 100 100 L 20 100 A 80 80 0 0 1 50 30 Z" fill="#FDBA74" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
+                            <path d="M 100 100 L 50 30 A 80 80 0 0 1 100 20 Z" fill="#FCA5A5" fillOpacity="0.85" stroke="#ffffff" strokeWidth="2" />
+                          </>
+                        ) : null}
                       </svg>
                       {/* Center total overlay */}
                       <div className="absolute text-center">
                         <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
-                        <span className="text-base font-extrabold text-slate-900 font-mono">1,248</span>
+                        <span className="text-base font-extrabold text-slate-900 font-mono">{totalAssigned}</span>
                       </div>
                     </div>
 
@@ -952,28 +723,28 @@ export default function AgentPortal() {
                           <span className="w-2.5 h-2.5 rounded-full bg-blue-300"></span>
                           <span className="text-slate-600 font-medium">Under Review</span>
                         </div>
-                        <span className="font-bold text-slate-900">24.4% <span className="text-slate-400 font-normal">(342)</span></span>
+                        <span className="font-bold text-slate-900">{underReviewPct}% <span className="text-slate-400 font-normal">({underReviewCount})</span></span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-300"></span>
                           <span className="text-slate-600 font-medium">Approved</span>
                         </div>
-                        <span className="font-bold text-slate-900">55.2% <span className="text-slate-400 font-normal">(689)</span></span>
+                        <span className="font-bold text-slate-900">{approvedPct}% <span className="text-slate-400 font-normal">({approvedCount})</span></span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-orange-300"></span>
                           <span className="text-slate-600 font-medium">Rejected</span>
                         </div>
-                        <span className="font-bold text-slate-900">12.5% <span className="text-slate-400 font-normal">(156)</span></span>
+                        <span className="font-bold text-slate-900">{rejectedPct}% <span className="text-slate-400 font-normal">({rejectedCount})</span></span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-rose-300"></span>
                           <span className="text-slate-600 font-medium">Cancelled</span>
                         </div>
-                        <span className="font-bold text-slate-900">4.9% <span className="text-slate-400 font-normal">(61)</span></span>
+                        <span className="font-bold text-slate-900">{cancelledPct}% <span className="text-slate-400 font-normal">({cancelledCount})</span></span>
                       </div>
                     </div>
                   </div>
@@ -985,7 +756,7 @@ export default function AgentPortal() {
                     <h3 className="font-bold text-sm text-slate-900">Document Verifications</h3>
                     <button
                       onClick={() => handleTabChange("doc_verification")}
-                      className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition"
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition cursor-pointer"
                     >
                       View All
                     </button>
@@ -1000,19 +771,34 @@ export default function AgentPortal() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {docVerificationsMock.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="py-2.5 px-3">
-                              <span className="font-semibold text-slate-900 block">{item.title}</span>
-                              <span className="text-[10px] text-slate-400">{item.submitOn}</span>
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <span className="text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full font-semibold text-[11px]">
-                                {item.status}
-                              </span>
+                        {agentApplications.filter((a) => a.status === "Docs Pending" || a.status === "Document Pending").length > 0 ? (
+                          agentApplications
+                            .filter((a) => a.status === "Docs Pending" || a.status === "Document Pending")
+                            .slice(0, 5)
+                            .map((item, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50 transition">
+                                <td className="py-2.5 px-3">
+                                  <span className="font-semibold text-slate-900 block">
+                                    Passport Verification &bull; {item.travelerName}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {item.id} &bull; {item.submissionDate}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right">
+                                  <span className="text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full font-semibold text-[11px]">
+                                    Needs Audit
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                        ) : (
+                          <tr>
+                            <td colSpan={2} className="py-6 text-center text-slate-400 font-medium">
+                              No documents currently pending verification.
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1024,25 +810,48 @@ export default function AgentPortal() {
                 {/* Left Card: My Task */}
                 <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-sm text-slate-900">My Task</h3>
-                    <button className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition">
+                    <h3 className="font-bold text-sm text-slate-900">My Tasks</h3>
+                    <button
+                      onClick={() => handleTabChange("applications")}
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition cursor-pointer"
+                    >
                       View All &gt;
                     </button>
                   </div>
 
                   <div className="space-y-2.5">
-                    {myTasksMock.map((t, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-slate-50/80 hover:bg-slate-100/80 p-3 rounded-lg flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div>
-                          <span className="text-[11px] text-slate-400 block">{t.title}</span>
-                          <span className="text-xs font-bold text-slate-900">{t.subtitle}</span>
-                        </div>
-                        <span className="font-bold text-sm text-slate-800 font-mono">{t.count}</span>
+                    <div
+                      onClick={() => handleTabChange("doc_verification")}
+                      className="bg-slate-50/80 hover:bg-slate-100/80 p-3 rounded-lg flex items-center justify-between transition cursor-pointer"
+                    >
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Documents Pending Verifications</span>
+                        <span className="text-xs font-bold text-slate-900">Verify Documents</span>
                       </div>
-                    ))}
+                      <span className="font-bold text-sm text-slate-800 font-mono">{docsToVerifyCount}</span>
+                    </div>
+
+                    <div
+                      onClick={() => handleTabChange("applications")}
+                      className="bg-slate-50/80 hover:bg-slate-100/80 p-3 rounded-lg flex items-center justify-between transition cursor-pointer"
+                    >
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Applications in Review</span>
+                        <span className="text-xs font-bold text-slate-900">Review Applications</span>
+                      </div>
+                      <span className="font-bold text-sm text-slate-800 font-mono">{underReviewCount}</span>
+                    </div>
+
+                    <div
+                      onClick={() => handleTabChange("appointments")}
+                      className="bg-slate-50/80 hover:bg-slate-100/80 p-3 rounded-lg flex items-center justify-between transition cursor-pointer"
+                    >
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Appointments to Confirm</span>
+                        <span className="text-xs font-bold text-slate-900">Schedule Appointments</span>
+                      </div>
+                      <span className="font-bold text-sm text-slate-800 font-mono">{(unifiedAppointments || []).length}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1052,34 +861,40 @@ export default function AgentPortal() {
                     <h3 className="font-bold text-sm text-slate-900">Upcoming Appointments</h3>
                     <button
                       onClick={() => handleTabChange("appointments")}
-                      className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition"
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition cursor-pointer"
                     >
                       View All &gt;
                     </button>
                   </div>
 
                   <div className="space-y-2.5">
-                    {upcomingAppointmentsMock.map((apt, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-slate-50/80 p-3 rounded-lg flex items-center justify-between text-xs"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-slate-800">{apt.visa}</span>
+                    {(unifiedAppointments || []).length > 0 ? (
+                      (unifiedAppointments || []).slice(0, 3).map((apt, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-slate-50/80 p-3 rounded-lg flex items-center justify-between text-xs"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">{apt.visaType}</span>
+                            </div>
+                            <span className="font-bold text-slate-900 block">{apt.applicantName}</span>
                           </div>
-                          <span className="font-bold text-slate-900 block">{apt.applicant}</span>
-                        </div>
 
-                        <div className="text-right space-y-0.5">
-                          <span className="text-[11px] text-slate-500 block">{apt.location}</span>
-                          <div className="flex items-center justify-end gap-2 text-[11px] font-semibold text-slate-800">
-                            <span>{apt.date}</span>
-                            <span className="font-mono">{apt.time}</span>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[11px] text-slate-500 block">{apt.vacCenter}</span>
+                            <div className="flex items-center justify-end gap-2 text-[11px] font-semibold text-slate-800">
+                              <span>{apt.dateDisplay}</span>
+                              <span className="font-mono">{apt.timeSlot}</span>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="py-6 text-center text-slate-400 text-xs font-medium">
+                        No upcoming appointments in the database.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -1088,49 +903,35 @@ export default function AgentPortal() {
               <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 space-y-6">
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold text-sm text-slate-900">Recent Activity</h3>
-                  <button className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition">
+                  <button
+                    onClick={() => handleTabChange("applications")}
+                    className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition cursor-pointer"
+                  >
                     View All &gt;
                   </button>
                 </div>
 
-                {/* Horizontal Activity Timeline */}
-                <div className="relative py-8 overflow-x-auto">
-                  {/* Central Horizontal Line */}
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -translate-y-1/2 z-0"></div>
-
-                  <div className="flex items-center justify-between min-w-[700px] relative z-10 px-4">
-                    {recentActivityMock.map((act, idx) => (
-                      <div key={idx} className="flex flex-col items-center relative group">
-                        {/* Upper Content Box */}
-                        {act.borderPos === "top" ? (
-                          <div className="mb-4 text-center space-y-0.5">
-                            <span className="text-[10px] text-slate-400 block">{act.time}</span>
-                            <span className={`text-xs font-bold ${act.textColor} block`}>{act.title}</span>
-                            <span className="text-[11px] text-slate-500 block">{act.detail}</span>
-                          </div>
-                        ) : (
-                          <div className="mb-8 opacity-0 pointer-events-none">&nbsp;</div>
-                        )}
-
-                        {/* Timeline Node Icon */}
-                        <div className={`w-6 h-6 rounded-full ${act.color} text-white flex items-center justify-center shadow-md z-10 ring-4 ring-white`}>
-                          <User size={12} />
+                {agentApplications.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {agentApplications.slice(0, 4).map((app, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-slate-700">{app.id}</span>
+                          <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {app.status}
+                          </span>
                         </div>
-
-                        {/* Lower Content Box */}
-                        {act.borderPos === "bottom" ? (
-                          <div className="mt-4 text-center space-y-0.5">
-                            <span className={`text-xs font-bold ${act.textColor} block`}>{act.title}</span>
-                            <span className="text-[11px] text-slate-500 block">{act.detail}</span>
-                            <span className="text-[10px] text-slate-400 block">{act.time}</span>
-                          </div>
-                        ) : (
-                          <div className="mt-8 opacity-0 pointer-events-none">&nbsp;</div>
-                        )}
+                        <p className="font-bold text-slate-900 truncate">{app.travelerName}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{app.destination} &bull; {app.visaType}</p>
+                        <span className="text-[10px] text-slate-400 block pt-1">{app.submissionDate}</span>
                       </div>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="py-6 text-center text-slate-400 text-xs font-medium">
+                    No recent activity recorded in the database.
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
@@ -1145,13 +946,7 @@ export default function AgentPortal() {
           {/* ============================================================ */}
           {agentTab === "applications" && (
             <div className="space-y-6">
-              {appSubTab === "all" && <AllApplicationsManagement />}
-              {appSubTab === "new" && <NewApplicationsManagement />}
-              {appSubTab === "assigned" && <AssignedApplicationsManagement />}
-              {appSubTab === "under_review" && <UnderReviewManagement />}
-              {appSubTab === "approved" && <ApprovedApplicationsManagement />}
-              {appSubTab === "rejected" && <RejectedApplicationsManagement />}
-              {appSubTab === "completed" && <CompletedApplicationsManagement />}
+              <AllApplicationsManagement />
             </div>
           )}
 
@@ -1177,9 +972,7 @@ export default function AgentPortal() {
 
           {agentTab === "doc_verification" && (
             <div className="space-y-6">
-              {docVerifSubTab === "pending" && <PendingVerificationManagement />}
-              {docVerifSubTab === "verified" && <VerifiedDocumentsManagement />}
-              {docVerifSubTab === "additional" && <PendingDocumentsManagement />}
+              <PendingVerificationManagement />
             </div>
           )}
 
@@ -1217,16 +1010,6 @@ export default function AgentPortal() {
             </div>
           )}
 
-          {agentTab === "settings" && (
-            <div className="space-y-6">
-              {settingsSubTab === "security" && <SecuritySettingsManagement />}
-              {settingsSubTab === "general" && <GeneralSettingsManagement />}
-              {settingsSubTab === "payment_gateway" && <PaymentGatewayManagement />}
-              {settingsSubTab === "email" && <EmailConfigurationManagement />}
-              {settingsSubTab === "sms" && <SMSConfigurationManagement />}
-              {settingsSubTab === "roles" && <RolesPermissionsManagement />}
-            </div>
-          )}
 
           {agentTab === "support" && (
             <div className="space-y-6">

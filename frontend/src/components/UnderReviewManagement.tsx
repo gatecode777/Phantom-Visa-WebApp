@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Search,
@@ -36,8 +36,12 @@ import {
   BarChart2,
   Users,
   ShieldAlert,
-  FileCheck
+  FileCheck,
+  ExternalLink,
+  Copy,
+  ImageIcon
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface UnderReviewRecord {
   id: string;
@@ -106,7 +110,17 @@ export interface UnderReviewRecord {
     policeBackgroundCheck: boolean;
     finalApprovalReview: boolean;
   };
-  submittedDocs: { name: string; status: "Verified" | "Missing" | "Pending" }[];
+  submittedDocs: {
+    name: string;
+    status: string;
+    url?: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: string;
+    format?: string;
+    documentType?: string;
+    uploadedAt?: string;
+  }[];
   reviewNotes: { id: string; author: string; text: string; date: string }[];
 }
 
@@ -117,14 +131,13 @@ export const RECOMMENDED_UNDER_REVIEW_TABS = [
   "Employment & Finance",
   "Uploaded Documents",
   "Payment & Invoice",
-  "Embassy & Tracking",
   "Verification Checklist",
   "Verification Notes"
 ];
 
-export const REVIEW_WORKFLOW_STEPS = [
-  "Application Submitted",
-  "Initial Verification",
+export const UNDER_REVIEW_WORKFLOW_STEPS = [
+  "Document Submission",
+  "Intake Verification",
   "Under Review (Document Audit)",
   "Financial Verification",
   "Background Check",
@@ -133,224 +146,11 @@ export const REVIEW_WORKFLOW_STEPS = [
   "Approval / Rejection"
 ];
 
-const MOCK_UNDER_REVIEW: UnderReviewRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20263001",
-    applicantName: "Geeta Bisht",
-    firstName: "Geeta",
-    lastName: "Bisht",
-    passportNumber: "Z9876543",
-    passportIssueDate: "2020-04-12",
-    passportExpiry: "2030-04-11",
-    passportIssuingCountry: "India (RPO New Delhi)",
-    passportPlaceOfIssue: "New Delhi",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "eVisa (Multiple Entry)",
-    assignedOfficer: "Amardeep Sen",
-    reviewStage: "Document Audit",
-    documentsStatus: "Complete",
-    reviewDate: "01 Jul 2026",
-    priority: "Normal",
-    status: "Under Review",
-    dob: "1994-08-12",
-    gender: "Female",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    address: "Flat 204, Rose Apartments, Dwarka",
-    city: "New Delhi, Delhi",
-    purposeOfVisit: "Vacation Tour",
-    travelDate: "2026-09-20",
-    departureDate: "2026-10-05",
-    durationOfStay: "15 Days",
-    portOfEntry: "Vancouver Int'l Airport (YVR)",
-    hotelDetails: "Pan Pacific Vancouver",
-    occupation: "Senior UX Designer",
-    employerName: "Digital Systems Tech",
-    designation: "Lead Consultant",
-    annualIncome: "₹16,50,000 / year",
-    sponsorType: "Self-Funded",
-    bankBalance: "₹7,20,000 (ICICI Bank)",
-    governmentFee: "₹8,500",
-    serviceFee: "₹3,150",
-    taxAmount: "₹700",
-    amountPaid: "₹12,350",
-    transactionId: "TXN-9988112",
-    paymentMethod: "UPI (PhonePe)",
-    paymentDate: "01 Jul 2026 10:14 AM",
-    paymentStatus: "Paid",
-    embassyTrackingId: "CAN-REV-9912",
-    embassySubmissionDate: "2026-07-02",
-    appointmentDate: "2026-07-06",
-    consulateBranch: "Canada High Commission New Delhi",
-    reviewChecklist: {
-      verifyIdentityDocs: true,
-      financialVerification: true,
-      employmentVerification: true,
-      travelHistoryVerification: false,
-      policeBackgroundCheck: false,
-      finalApprovalReview: false
-    },
-    submittedDocs: [
-      { name: "Passport Bio Page", status: "Verified" },
-      { name: "Photograph (White BG)", status: "Verified" },
-      { name: "Bank Statement (6 Months)", status: "Verified" },
-      { name: "Travel Insurance Policy", status: "Verified" },
-      { name: "Flight Reservation Ticket", status: "Verified" },
-      { name: "Hotel Booking Voucher", status: "Verified" },
-      { name: "Personal Cover Letter", status: "Verified" }
-    ],
-    reviewNotes: [
-      { id: "n1", author: "Amardeep Sen", text: "Identity documents match passport record.", date: "01 Jul 2026 11:30 AM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20263002",
-    applicantName: "Rahul Sharma",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    passportNumber: "M1234567",
-    passportIssueDate: "2021-08-15",
-    passportExpiry: "2031-08-14",
-    passportIssuingCountry: "India (RPO Chandigarh)",
-    passportPlaceOfIssue: "Chandigarh",
-    country: "Australia",
-    category: "Student",
-    visaType: "Sticker Visa (Subclass 500)",
-    assignedOfficer: "Devender Sharma",
-    reviewStage: "Background Check",
-    documentsStatus: "Complete",
-    reviewDate: "02 Jul 2026",
-    priority: "High",
-    status: "Under Review",
-    dob: "1999-02-15",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    address: "House 12, Sector 17",
-    city: "Chandigarh",
-    purposeOfVisit: "University Education",
-    travelDate: "2026-10-01",
-    departureDate: "2028-09-30",
-    durationOfStay: "2 Years",
-    portOfEntry: "Melbourne Airport (MEL)",
-    hotelDetails: "Monash Campus Hostel",
-    occupation: "Student",
-    employerName: "Full Time Graduate Scholar",
-    designation: "N/A",
-    annualIncome: "₹14,00,000 / year (Father)",
-    sponsorType: "Family Sponsor",
-    bankBalance: "₹22,50,000 (SBI Deposit)",
-    governmentFee: "₹14,500",
-    serviceFee: "₹3,500",
-    taxAmount: "₹930",
-    amountPaid: "₹18,930",
-    transactionId: "TXN-8833441",
-    paymentMethod: "Credit Card (HDFC)",
-    paymentDate: "02 Jul 2026 11:10 AM",
-    paymentStatus: "Paid",
-    embassyTrackingId: "AUS-REV-4412",
-    embassySubmissionDate: "2026-07-03",
-    appointmentDate: "2026-07-08",
-    consulateBranch: "High Commission New Delhi",
-    reviewChecklist: {
-      verifyIdentityDocs: true,
-      financialVerification: true,
-      employmentVerification: true,
-      travelHistoryVerification: true,
-      policeBackgroundCheck: true,
-      finalApprovalReview: false
-    },
-    submittedDocs: [
-      { name: "Passport Bio Page", status: "Verified" },
-      { name: "Admission CoE Document", status: "Verified" },
-      { name: "PCC Clearance Certificate", status: "Verified" }
-    ],
-    reviewNotes: [
-      { id: "n2", author: "Devender Sharma", text: "Police clearance verified via Interpol database.", date: "02 Jul 2026 03:00 PM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20263003",
-    applicantName: "Bikram Suman",
-    firstName: "Bikram",
-    lastName: "Suman",
-    passportNumber: "K4567890",
-    passportIssueDate: "2019-06-10",
-    passportExpiry: "2029-06-09",
-    passportIssuingCountry: "India (RPO Mumbai)",
-    passportPlaceOfIssue: "Mumbai",
-    country: "UAE",
-    category: "Business",
-    visaType: "Multiple Entry (30 Days)",
-    assignedOfficer: "Sunil Solanki",
-    reviewStage: "Final Review",
-    documentsStatus: "Missing (1)",
-    reviewDate: "03 Aug 2026",
-    priority: "Urgent",
-    status: "Doc Pending",
-    dob: "1988-06-25",
-    gender: "Male",
-    maritalStatus: "Married",
-    nationality: "Indian",
-    countryOfResidence: "India",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    address: "Plot 88, HITEC City",
-    city: "Hyderabad, Telangana",
-    purposeOfVisit: "Business Summit",
-    travelDate: "2026-08-12",
-    departureDate: "2026-09-11",
-    durationOfStay: "30 Days",
-    portOfEntry: "Dubai Int'l Airport (DXB)",
-    hotelDetails: "Armani Hotel Dubai",
-    occupation: "Managing Director",
-    employerName: "TechSolutions Pvt Ltd",
-    designation: "Managing Director",
-    annualIncome: "₹32,00,000 / year",
-    sponsorType: "Company Sponsored",
-    bankBalance: "₹18,40,000 (Kotak Corporate)",
-    governmentFee: "₹6,000",
-    serviceFee: "₹2,200",
-    taxAmount: "₹470",
-    amountPaid: "₹8,670",
-    transactionId: "TXN-771199",
-    paymentMethod: "Net Banking",
-    paymentDate: "03 Aug 2026 09:15 AM",
-    paymentStatus: "Paid",
-    embassyTrackingId: "UAE-REV-7711",
-    embassySubmissionDate: "2026-08-03",
-    appointmentDate: "2026-08-05",
-    consulateBranch: "UAE Consulate Mumbai",
-    reviewChecklist: {
-      verifyIdentityDocs: true,
-      financialVerification: true,
-      employmentVerification: false,
-      travelHistoryVerification: true,
-      policeBackgroundCheck: true,
-      finalApprovalReview: false
-    },
-    submittedDocs: [
-      { name: "Passport Bio Page", status: "Verified" },
-      { name: "Company Cover Letter", status: "Missing" },
-      { name: "UAE Sponsor Letter", status: "Verified" }
-    ],
-    reviewNotes: [
-      { id: "n3", author: "Sunil Solanki", text: "Requested updated company cover letter.", date: "03 Aug 2026 09:15 AM" }
-    ]
-  }
-];
+const MOCK_UNDER_REVIEW: UnderReviewRecord[] = [];
 
 export default function UnderReviewManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [reviewStageFilter, setReviewStageFilter] = useState("All");
@@ -359,12 +159,111 @@ export default function UnderReviewManagement() {
   const [assignedFilter, setAssignedFilter] = useState("All");
 
   // Records State
-  const [underReviewList, setUnderReviewList] = useState<UnderReviewRecord[]>(MOCK_UNDER_REVIEW);
+  const [underReviewList, setUnderReviewList] = useState<UnderReviewRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const reviewApps = contextApps.filter(
+        (app: any) =>
+          app.status === "Under Review" ||
+          app.status === "Submitted" ||
+          app.status === "Docs Pending" ||
+          app.status === "Document Pending" ||
+          app.status === "Embassy Processing"
+      );
+      const mapped: UnderReviewRecord[] = reviewApps.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-3001",
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
+        lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        passportIssueDate: app.passportDetails?.issueDate || "2020-04-12",
+        passportExpiry: app.passportExpiry || app.passportDetails?.expiryDate || "2030-04-11",
+        passportIssuingCountry: app.passportDetails?.issuingCountry || "India",
+        passportPlaceOfIssue: app.passportDetails?.placeOfIssue || "New Delhi",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        assignedOfficer: app.assignedAgentName || authSession?.user?.name || "Assigned Officer",
+        reviewStage: "Document Audit",
+        documentsStatus: app.status === "Docs Pending" ? "Missing (1)" : "Complete",
+        reviewDate: app.submissionDate || "01 Jul 2026",
+        priority: "Normal",
+        status: app.status === "Docs Pending" ? "Doc Pending" : "Under Review",
+        dob: app.dob || "1994-08-12",
+        gender: "Female",
+        maritalStatus: "Single",
+        nationality: app.nationality || "Indian",
+        countryOfResidence: "India",
+        email: app.email || "",
+        phone: app.phone || "",
+        address: app.address || "",
+        city: "New Delhi",
+        purposeOfVisit: "Vacation Tour",
+        travelDate: app.travelDates || "2026-09-20",
+        departureDate: "2026-10-05",
+        durationOfStay: "15 Days",
+        portOfEntry: "YVR",
+        hotelDetails: "Hotel",
+        occupation: "UX Designer",
+        employerName: "Tech Company",
+        designation: "Consultant",
+        annualIncome: "₹16,50,000 / year",
+        sponsorType: "Self-Funded",
+        bankBalance: "₹7,20,000",
+        governmentFee: "₹8,500",
+        serviceFee: "₹3,150",
+        taxAmount: "₹700",
+        amountPaid: `₹${app.fees || 12350}`,
+        transactionId: "TXN-9988112",
+        paymentMethod: "UPI",
+        paymentDate: app.submissionDate || "01 Jul 2026",
+        paymentStatus: "Paid",
+        embassyTrackingId: "CAN-REV-9912",
+        embassySubmissionDate: "2026-07-02",
+        appointmentDate: "2026-07-06",
+        consulateBranch: "High Commission",
+        reviewChecklist: {
+          verifyIdentityDocs: true,
+          financialVerification: true,
+          employmentVerification: true,
+          travelHistoryVerification: false,
+          policeBackgroundCheck: false,
+          finalApprovalReview: false
+        },
+        submittedDocs: Array.isArray(app.uploadedDocuments) && app.uploadedDocuments.length > 0
+          ? app.uploadedDocuments.map((d: any) => ({
+              name: d.title || d.fileName || "Document",
+              status: d.status ? (d.status.charAt(0).toUpperCase() + d.status.slice(1)) : "Verified",
+              fileUrl: d.fileUrl || "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+              fileName: d.fileName || "document.png",
+              fileSize: d.fileSize || "1.8 MB",
+              format: d.format || "Image Scan (PNG)",
+              documentType: d.documentType || "Identity Document"
+            }))
+          : [],
+        reviewNotes: []
+      }));
+      setUnderReviewList(mapped);
+    }
+  }, [contextApps, authSession]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Popup Modal State
   const [activeModalApp, setActiveModalApp] = useState<UnderReviewRecord | null>(null);
   const [modalTab, setModalTab] = useState<string>("Overview");
+
+  // ImageKit Document Preview Lightbox State
+  const [previewDocument, setPreviewDocument] = useState<{
+    name: string;
+    fileUrl: string;
+    format?: string;
+    status?: string;
+    fileSize?: string;
+    documentType?: string;
+  } | null>(null);
 
   // New Note State
   const [newNoteText, setNewNoteText] = useState("");
@@ -1089,38 +988,86 @@ export default function UnderReviewManagement() {
               {/* TAB 5: UPLOADED DOCUMENTS */}
               {modalTab === "Uploaded Documents" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
-                    Submitted Document Files Audit
-                  </h4>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
+                      <FileText size={15} className="text-[#2563EB]" /> Submitted Document Files Audit (ImageKit CDN)
+                    </h4>
+                    <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      ImageKit Storage Active
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(activeModalApp.submittedDocs || [
-                      { name: "Passport Bio Page", status: "Verified" },
-                      { name: "Photograph (White BG)", status: "Verified" },
-                      { name: "Bank Statement (6 Months)", status: "Verified" }
-                    ]).map((doc, idx) => (
-                      <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
-                            <FileText size={16} />
+                    {(activeModalApp.submittedDocs && activeModalApp.submittedDocs.length > 0 ? activeModalApp.submittedDocs : [
+                      { name: "Passport Bio Page", status: "Verified", fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png", fileName: "passport_bio_page.png", fileSize: "2.4 MB", format: "Image Scan (PNG)", documentType: "Passport Copy" },
+                      { name: "Photograph (White BG)", status: "Verified", fileUrl: "https://ik.imagekit.io/phantomvisa/sample_photo.png", fileName: "applicant_photo.png", fileSize: "1.2 MB", format: "Image Scan (PNG)", documentType: "Applicant Photo" },
+                      { name: "Bank Statement (6 Months)", status: "Verified", fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf", fileName: "bank_statement_6m.pdf", fileSize: "3.1 MB", format: "PDF Document", documentType: "Bank Statement" }
+                    ]).map((doc, idx) => {
+                      const targetUrl = doc.fileUrl || doc.url || "https://ik.imagekit.io/phantomvisa/sample_passport.png";
+                      const isImg = targetUrl.toLowerCase().endsWith(".png") || targetUrl.toLowerCase().endsWith(".jpg") || targetUrl.toLowerCase().endsWith(".jpeg") || targetUrl.toLowerCase().endsWith(".webp");
+                      return (
+                        <div key={idx} className="p-3.5 bg-slate-50 hover:bg-blue-50/30 border border-slate-200 hover:border-blue-300 rounded-2xl transition flex flex-col justify-between gap-3 shadow-2xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-blue-100/70 text-[#2563EB] flex items-center justify-center font-bold shrink-0">
+                                {isImg ? <ImageIcon size={18} /> : <FileText size={18} />}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-900 text-xs block leading-tight">{doc.name}</span>
+                                <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
+                                  {doc.format || (isImg ? "Image Scan (PNG)" : "PDF Document")} &bull; {doc.fileSize || "2.1 MB"}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shrink-0 ${
+                              doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                              doc.status === "Missing" ? "bg-red-50 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}>
+                              {doc.status}
+                            </span>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-900 block">{doc.name}</span>
-                            <span className="text-[10px] text-slate-400">PDF &bull; 2.1 MB</span>
+
+                          {/* IMAGEKIT CDN ASSET LINK & ACTION BUTTONS */}
+                          <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 truncate max-w-[140px] sm:max-w-[180px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="truncate">{targetUrl}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDocument({ name: doc.name, fileUrl: targetUrl, format: doc.format, status: doc.status, fileSize: doc.fileSize, documentType: doc.documentType })}
+                                className="px-2.5 py-1 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                title="Preview Document in Lightbox"
+                              >
+                                <Eye size={12} /> View File
+                              </button>
+                              <a
+                                href={targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 bg-white hover:bg-slate-100 text-slate-600 hover:text-[#2563EB] border border-slate-200 rounded-lg transition cursor-pointer"
+                                title="Open direct ImageKit CDN URL in new tab"
+                              >
+                                <ExternalLink size={13} />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(targetUrl);
+                                  triggerToast(`ImageKit link for ${doc.name} copied to clipboard!`);
+                                }}
+                                className="p-1 bg-white hover:bg-slate-100 text-slate-600 hover:text-[#2563EB] border border-slate-200 rounded-lg transition cursor-pointer"
+                                title="Copy ImageKit URL"
+                              >
+                                <Copy size={13} />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                            doc.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                            doc.status === "Missing" ? "bg-red-50 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}>
-                            {doc.status}
-                          </span>
-                          <button onClick={() => triggerToast(`Viewing ${doc.name}`)} className="p-1.5 text-[#2563EB] hover:bg-blue-100 rounded-lg transition" title="Preview Document">
-                            <Eye size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1142,18 +1089,7 @@ export default function UnderReviewManagement() {
                 </div>
               )}
 
-              {/* TAB 7: EMBASSY & TRACKING */}
-              {(modalTab === "Embassy & Tracking" || modalTab === "Embassy Submission") && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">Consulate &amp; VFS Tracking Details</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Reference ID</span><strong className="text-[#2563EB] font-mono font-bold">{activeModalApp.embassyTrackingId || "CAN-REV-9912"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Embassy Submission Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.embassySubmissionDate || "2026-07-02"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Biometrics Appointment Date</span><strong className="text-slate-900 font-mono font-bold">{activeModalApp.appointmentDate || "2026-07-06"}</strong></div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">VFS / Embassy Center</span><strong className="text-slate-900 font-bold">{activeModalApp.consulateBranch || "Canada High Commission New Delhi"}</strong></div>
-                  </div>
-                </div>
-              )}
+
 
               {/* TAB 8: VERIFICATION CHECKLIST */}
               {modalTab === "Verification Checklist" && (
@@ -1246,6 +1182,110 @@ export default function UnderReviewManagement() {
                 className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
               >
                 <Edit3 size={14} /> Edit Audit Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE IMAGEKIT DOCUMENT PREVIEW LIGHTBOX */}
+      {previewDocument && (
+        <div className="fixed inset-0 z-[10000] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150">
+            {/* LIGHTBOX HEADER */}
+            <div className="bg-[#0E1A2C] text-white p-4 px-6 flex items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#2563EB]/20 text-[#2563EB] flex items-center justify-center shrink-0">
+                  <FileText size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold text-white truncate font-outfit">{previewDocument.name}</h3>
+                  <span className="text-[10px] text-blue-200 font-mono flex items-center gap-1.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    ImageKit CDN Asset &bull; {previewDocument.fileUrl}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewDocument.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <ExternalLink size={13} /> Open in New Tab
+                </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewDocument.fileUrl);
+                    triggerToast("ImageKit asset URL copied to clipboard!");
+                  }}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Copy ImageKit URL"
+                >
+                  <Copy size={15} />
+                </button>
+                <button
+                  onClick={() => setPreviewDocument(null)}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Close Lightbox"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* LIGHTBOX PREVIEW BODY */}
+            <div className="p-4 bg-slate-900 overflow-y-auto flex-1 flex items-center justify-center min-h-[420px]">
+              {previewDocument.fileUrl.toLowerCase().endsWith(".png") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".jpg") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".jpeg") ||
+              previewDocument.fileUrl.toLowerCase().endsWith(".webp") ? (
+                <div className="p-2 bg-slate-950/60 rounded-2xl border border-slate-800 flex items-center justify-center max-h-[550px]">
+                  <img
+                    src={previewDocument.fileUrl}
+                    alt={previewDocument.name}
+                    className="max-h-[500px] w-auto mx-auto rounded-xl object-contain shadow-2xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://ik.imagekit.io/phantomvisa/sample_passport.png";
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full min-h-[480px] bg-slate-950 rounded-2xl overflow-hidden flex flex-col border border-slate-800">
+                  <iframe
+                    src={previewDocument.fileUrl}
+                    title={previewDocument.name}
+                    className="w-full h-[480px] rounded-2xl bg-white border-0"
+                  />
+                  <div className="p-2.5 bg-slate-900 text-center text-slate-400 text-xs flex items-center justify-center gap-2 border-t border-slate-800">
+                    <span>If PDF preview does not display in browser:</span>
+                    <a
+                      href={previewDocument.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#2563EB] font-bold underline hover:text-blue-400"
+                    >
+                      Click here to view directly on ImageKit CDN
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* LIGHTBOX FOOTER */}
+            <div className="bg-white p-3.5 px-6 border-t border-slate-200 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500">Document Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {previewDocument.status || "Verified"}
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewDocument(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition cursor-pointer"
+              >
+                Close Preview
               </button>
             </div>
           </div>

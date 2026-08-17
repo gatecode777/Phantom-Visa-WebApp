@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   CheckCircle2,
   Search,
@@ -35,6 +35,7 @@ import {
   BarChart3,
   PieChart
 } from "lucide-react";
+import { fetchUnifiedTransactions } from "../services/paymentService";
 
 export interface SuccessfulPaymentRecord {
   id: string;
@@ -95,102 +96,14 @@ export const REVENUE_SUMMARY_ITEMS = [
   "Highest Payment"
 ];
 
-export const EXPORT_OPTIONS_ITEMS = [
-  "PDF Export",
+export const EXPORT_OPTIONS = [
+  "PDF Invoice",
   "Excel Export",
   "CSV Export",
   "Print Report"
 ];
 
-const MOCK_SUCCESSFUL_PAYMENTS: SuccessfulPaymentRecord[] = [
-  {
-    id: "1",
-    txnId: "TXN-L80501",
-    appId: "APP-20262001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    paidBy: "Applicant",
-    amount: 8500,
-    paymentMethod: "UPI",
-    paymentDate: "01 Aug 2026",
-    paymentDateTime: "01 Aug 2026 10:15 AM",
-    invoiceNo: "INV-#501",
-    receiptNo: "RCP-2026-9901",
-    status: "Successful",
-    country: "Canada",
-    visaCategory: "Tourist",
-    paymentGateway: "Razorpay",
-    paymentRefNo: "RZP_PAY_88771122",
-    breakdown: {
-      visaAppFee: 5000,
-      serviceCharge: 1500,
-      processingFee: 1000,
-      taxGst: 1000,
-      discount: 0
-    },
-    actionNotes: [
-      { id: "n1", author: "System", text: "Automated instant confirmation receipt delivered.", date: "01 Aug 2026 10:15 AM" }
-    ]
-  },
-  {
-    id: "2",
-    txnId: "TXN-L80502",
-    appId: "APP-20262002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    paidBy: "Agent",
-    agentName: "Apex Travels",
-    amount: 12000,
-    paymentMethod: "Credit Card",
-    paymentDate: "01 Aug 2026",
-    paymentDateTime: "01 Aug 2026 11:45 AM",
-    invoiceNo: "INV-#502",
-    receiptNo: "RCP-2026-9902",
-    status: "Successful",
-    country: "Australia",
-    visaCategory: "Business",
-    paymentGateway: "Stripe",
-    paymentRefNo: "STP_PAY_33445511",
-    breakdown: {
-      visaAppFee: 7500,
-      serviceCharge: 2000,
-      processingFee: 1500,
-      taxGst: 1000,
-      discount: 0
-    },
-    actionNotes: []
-  },
-  {
-    id: "3",
-    txnId: "TXN-L80503",
-    appId: "APP-20262003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    paidBy: "Applicant",
-    amount: 15500,
-    paymentMethod: "Net Banking",
-    paymentDate: "01 Aug 2026",
-    paymentDateTime: "01 Aug 2026 01:20 PM",
-    invoiceNo: "INV-#503",
-    receiptNo: "RCP-2026-9903",
-    status: "Successful",
-    country: "UAE",
-    visaCategory: "Tourist",
-    paymentGateway: "HDFC Netbanking",
-    paymentRefNo: "HDFC_NET_55667788",
-    breakdown: {
-      visaAppFee: 9500,
-      serviceCharge: 2500,
-      processingFee: 2000,
-      taxGst: 1500,
-      discount: 0
-    },
-    actionNotes: []
-  }
-];
+const MOCK_SUCCESSFUL_PAYMENTS: SuccessfulPaymentRecord[] = [];
 
 export default function SuccessfulPaymentsManagement() {
   // Search & Filter States
@@ -201,7 +114,47 @@ export default function SuccessfulPaymentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [paymentsList, setPaymentsList] = useState<SuccessfulPaymentRecord[]>(MOCK_SUCCESSFUL_PAYMENTS);
+  const [paymentsList, setPaymentsList] = useState<SuccessfulPaymentRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedTransactions().then((txns) => {
+      if (Array.isArray(txns) && txns.length > 0) {
+        const mapped: SuccessfulPaymentRecord[] = txns
+          .filter((t: any) => t.status === "Success" || t.status === "Completed" || t.status === "Paid")
+          .map((t: any) => ({
+            id: t.id,
+            txnId: t.txnRef || t.id,
+            appId: t.appId || "APP-20262001",
+            applicantName: t.user || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            paidBy: t.role || "Applicant",
+            amount: typeof t.amount === "number" ? t.amount : 8500,
+            paymentMethod: t.channel || "UPI",
+            paymentDate: t.date || "01 Aug 2026",
+            paymentDateTime: `${t.date || "01 Aug 2026"} 10:15 AM`,
+            invoiceNo: `INV-${t.id}`,
+            receiptNo: `RCP-${t.id}`,
+            status: "Successful",
+            country: t.country || "Canada",
+            visaCategory: "Tourist",
+            paymentGateway: "Razorpay",
+            paymentRefNo: t.txnRef || t.id,
+            breakdown: {
+              visaAppFee: Math.round((typeof t.amount === "number" ? t.amount : 8500) * 0.7),
+              serviceCharge: Math.round((typeof t.amount === "number" ? t.amount : 8500) * 0.15),
+              processingFee: Math.round((typeof t.amount === "number" ? t.amount : 8500) * 0.1),
+              taxGst: Math.round((typeof t.amount === "number" ? t.amount : 8500) * 0.05),
+              discount: 0
+            },
+            actionNotes: []
+          }));
+        setPaymentsList(mapped);
+      } else {
+        setPaymentsList([]);
+      }
+    });
+  }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

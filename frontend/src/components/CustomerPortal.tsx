@@ -86,7 +86,7 @@ export default function CustomerPortal() {
   } = useVisa();
 
   // Selected active application ID for tracking/documents
-  const [selectedAppId, setSelectedAppId] = useState<string>("VO-2026-1025");
+  const [selectedAppId, setSelectedAppId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCompleteKycModal, setShowCompleteKycModal] = useState<boolean>(false);
   const [kycCompletedState, setKycCompletedState] = useState<boolean>(() => {
@@ -110,6 +110,8 @@ export default function CustomerPortal() {
     } catch { }
     return "countries";
   });
+
+  const [paymentSubTab, setPaymentSubTab] = useState<"history" | "invoices">("history");
 
   // Real-time dynamic KYC status state listener
   const [localKycStatus, setLocalKycStatus] = useState<string>(() => {
@@ -155,14 +157,14 @@ export default function CustomerPortal() {
   // Dynamic user data from MongoDB
   const greetingName = applicantDashboardData?.greetingName || authSession?.user?.name || "Applicant";
   const liveMetrics = applicantDashboardData?.metrics || {
-    totalApplications: applications.length || 1,
+    totalApplications: applications.length,
     underReview: applications.filter((a) => ["Submitted", "Docs Uploaded", "Embassy Processing"].includes(a.status)).length,
     approvedVisas: applications.filter((a) => a.status === "Approved").length,
     rejectedApplications: applications.filter((a) => a.status === "Rejected").length,
-    pendingDocuments: 1,
-    upcomingAppointments: 1,
-    unreadMessages: 2,
-    notifications: 3
+    pendingDocuments: 0,
+    upcomingAppointments: 0,
+    unreadMessages: 0,
+    notifications: 0
   };
 
   // Collapsible Sidebar Sections State — initialized from localStorage to avoid blink on reload
@@ -230,24 +232,24 @@ export default function CustomerPortal() {
   // Apply Wizard State
   const [applyStep, setApplyStep] = useState<number>(1);
   const [newAppForm, setNewAppForm] = useState({
-    travelerName: "Geeta Sharma",
-    dob: "1995-06-12",
-    passportNumber: "Z9817264",
-    passportExpiry: "2033-12-20",
-    nationality: "India",
-    destination: "Canada",
-    visaType: "Tourist Visa",
-    travelDates: "2026-11-10 to 2026-11-25",
+    travelerName: authSession?.user?.name || "",
+    dob: "",
+    passportNumber: "",
+    passportExpiry: "",
+    nationality: "",
+    destination: "",
+    visaType: "",
+    travelDates: "",
     employed: true,
     sponsored: false,
-    fees: 14500
+    fees: 0
   });
   const [applySuccessId, setApplySuccessId] = useState<string | null>(null);
 
   // Appointment State
-  const [selectedCenter, setSelectedCenter] = useState("Visa Application Center, New Delhi");
-  const [selectedApptDate, setSelectedApptDate] = useState("2026-07-26");
-  const [selectedApptTime, setSelectedApptTime] = useState("11:00 AM");
+  const [selectedCenter, setSelectedCenter] = useState("");
+  const [selectedApptDate, setSelectedApptDate] = useState("");
+  const [selectedApptTime, setSelectedApptTime] = useState("");
   const [apptSuccess, setApptSuccess] = useState(false);
 
   // Payments interactive checkout state
@@ -256,21 +258,17 @@ export default function CustomerPortal() {
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
 
   // Notifications state
-  const [notifications, setNotifications] = useState([
-    { id: "n1", title: "Under Review Status Updated", desc: "Embassy marked application VO-2026-1025 under active verification.", time: "10 mins ago", read: false },
-    { id: "n2", title: "Visa Approved!", desc: "Application VO-2026-0987 for Australia has been stamped.", time: "2 hours ago", read: false },
-    { id: "n3", title: "Upcoming Appointment", desc: "Visa Interview scheduled at New Delhi Center on 26 July 2026.", time: "1 day ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; desc: string; time: string; read: boolean }>>([]);
 
   // Profile Data
   const [profileData, setProfileData] = useState({
-    fullName: "Geeta Sharma",
-    email: "geeta.sharma@phantomvisa.com",
-    phone: "+91 98765 43210",
-    nationality: "Indian",
-    passportNumber: "Z9817264",
-    passportExpiry: "2033-12-20",
-    address: "42, Barakhamba Road, Connaught Place, New Delhi 110001"
+    fullName: authSession?.user?.name || "",
+    email: authSession?.user?.email || "",
+    phone: authSession?.user?.phone || "",
+    nationality: "",
+    passportNumber: "",
+    passportExpiry: "",
+    address: ""
   });
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
 
@@ -1299,10 +1297,17 @@ export default function CustomerPortal() {
 
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
-            <ApplicantPaymentHistory
-              applications={applications}
-              onNavigateSupport={() => setCustomerTab("support")}
-            />
+            paymentSubTab === "invoices" ? (
+              <ApplicantInvoices
+                applications={applications}
+                onNavigateSupport={() => setCustomerTab("support")}
+              />
+            ) : (
+              <ApplicantPaymentHistory
+                applications={applications}
+                onNavigateSupport={() => setCustomerTab("support")}
+              />
+            )
           )}
 
           {/* APPOINTMENTS VIEW */}

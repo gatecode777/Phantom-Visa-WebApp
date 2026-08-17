@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Clock,
   Search,
@@ -70,6 +70,18 @@ export interface PendingPaymentRecord {
   actionNotes?: { id: string; author: string; text: string; date: string }[];
 }
 
+export const PENDING_REASONS = [
+  "Awaiting Payment",
+  "Gateway Processing",
+  "Bank Verification",
+  "Bank Verification Pending",
+  "OTP / 3D Secure Incomplete",
+  "Network Timeout",
+  "Approval Notification Pending",
+  "Agent Credit Approval",
+  "Manual Release Required"
+];
+
 export const RECOMMENDED_PENDING_PAYMENT_TABS = [
   "Overview",
   "Applicant Details",
@@ -100,89 +112,7 @@ export const PENDING_PAYMENT_REASONS = [
   "Manual Release Required"
 ];
 
-const MOCK_PENDING_PAYMENTS: PendingPaymentRecord[] = [
-  {
-    id: "1",
-    txnId: "TXN-P98001",
-    appId: "APP-20263001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    paidBy: "Applicant",
-    amount: 12500,
-    paymentMethod: "UPI",
-    pendingSince: "01 Aug 2026",
-    pendingSinceTime: "01 Aug 2026 10:15 AM",
-    pendingReason: "Awaiting Payment",
-    status: "Pending",
-    country: "Canada",
-    visaCategory: "Tourist",
-    paymentGateway: "Razorpay",
-    verificationAttempt: 1,
-    breakdown: {
-      visaFee: 8500,
-      serviceCharge: 2000,
-      processingFee: 1000,
-      taxGst: 1000
-    },
-    actionNotes: [
-      { id: "n1", author: "System", text: "Payment link sent to applicant email.", date: "01 Aug 2026 10:16 AM" }
-    ]
-  },
-  {
-    id: "2",
-    txnId: "TXN-P98002",
-    appId: "APP-20263002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    paidBy: "Agent",
-    agentName: "Apex Travels",
-    amount: 28000,
-    paymentMethod: "Credit Card",
-    pendingSince: "01 Aug 2026",
-    pendingSinceTime: "01 Aug 2026 11:30 AM",
-    pendingReason: "Gateway Processing",
-    status: "Pending",
-    country: "Australia",
-    visaCategory: "Business",
-    paymentGateway: "Stripe",
-    verificationAttempt: 2,
-    breakdown: {
-      visaFee: 18000,
-      serviceCharge: 4000,
-      processingFee: 3000,
-      taxGst: 3000
-    },
-    actionNotes: []
-  },
-  {
-    id: "3",
-    txnId: "TXN-P98003",
-    appId: "APP-20263003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    paidBy: "Applicant",
-    amount: 15800,
-    paymentMethod: "Net Banking",
-    pendingSince: "01 Aug 2026",
-    pendingSinceTime: "01 Aug 2026 02:10 PM",
-    pendingReason: "Bank Verification",
-    status: "Pending",
-    country: "UAE",
-    visaCategory: "Tourist",
-    paymentGateway: "HDFC Netbanking",
-    verificationAttempt: 1,
-    breakdown: {
-      visaFee: 10000,
-      serviceCharge: 2500,
-      processingFee: 1800,
-      taxGst: 1500
-    },
-    actionNotes: []
-  }
-];
+const MOCK_PENDING_PAYMENTS: PendingPaymentRecord[] = [];
 
 export default function PendingPaymentsManagement() {
   // Search & Filter States
@@ -194,7 +124,45 @@ export default function PendingPaymentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [pendingPayments, setPendingPayments] = useState<PendingPaymentRecord[]>(MOCK_PENDING_PAYMENTS);
+  const [pendingPayments, setPendingPayments] = useState<PendingPaymentRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedTransactions().then((txns) => {
+      if (Array.isArray(txns) && txns.length > 0) {
+        const mapped: PendingPaymentRecord[] = txns
+          .filter((t: any) => t.status === "Pending" || t.status === "Processing")
+          .map((t: any) => ({
+            id: t.id,
+            txnId: t.txnRef || t.id,
+            appId: t.appId || "APP-20263001",
+            applicantName: t.user || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            paidBy: t.role || "Applicant",
+            amount: typeof t.amount === "number" ? t.amount : 12500,
+            paymentMethod: t.channel || "UPI",
+            pendingSince: t.date || "01 Aug 2026",
+            pendingSinceTime: `${t.date || "01 Aug 2026"} 10:15 AM`,
+            pendingReason: "Awaiting Payment",
+            status: "Pending",
+            country: t.country || "Canada",
+            visaCategory: "Tourist",
+            paymentGateway: "Razorpay",
+            verificationAttempt: 1,
+            breakdown: {
+              visaFee: Math.round((typeof t.amount === "number" ? t.amount : 12500) * 0.7),
+              serviceCharge: Math.round((typeof t.amount === "number" ? t.amount : 12500) * 0.15),
+              processingFee: Math.round((typeof t.amount === "number" ? t.amount : 12500) * 0.1),
+              taxGst: Math.round((typeof t.amount === "number" ? t.amount : 12500) * 0.05)
+            },
+            actionNotes: []
+          }));
+        setPendingPayments(mapped);
+      } else {
+        setPendingPayments([]);
+      }
+    });
+  }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

@@ -80,10 +80,10 @@ const COUNTRIES: CountryOption[] = [
 ];
 
 const PRESETS = [
-  { label: "Admin", phone: "+919876543210", role: "Admin", badge: "Super Admin" },
+  { label: "Admin", phone: "+919810011001", role: "Admin", badge: "Super Admin" },
   { label: "Agent", phone: "+919876543212", role: "Agent", badge: "Visa Partner" },
   { label: "Staff", phone: "+919876543211", role: "Staff", badge: "Consular Reviewer" },
-  { label: "Applicant", phone: "+919876543213", role: "Applicant", badge: "Self-Serve User" }
+  { label: "Applicant", phone: "+919822233001", role: "Applicant", badge: "Self-Serve User" }
 ];
 
 interface LoginPageProps {
@@ -356,7 +356,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       const res = await fetch(`${API_V1_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: e164Phone || phoneNumber, otp: codeToVerify, role: selectedRole })
+        body: JSON.stringify({ phone: e164Phone || phoneNumber, code: codeToVerify, otp: codeToVerify, role: selectedRole })
       });
       const json = await res.json();
 
@@ -368,7 +368,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
             id: json.data.user.id,
             phone: json.data.user.phone,
             role: json.data.user.role,
-            name: json.data.user.name
+            name: json.data.user.name,
+            agentId: json.data.user.agentId,
+            agencyName: json.data.user.agencyName,
+            applicantId: json.data.user.applicantId
           },
           expiresAt: Date.now() + 15 * 60 * 1000
         });
