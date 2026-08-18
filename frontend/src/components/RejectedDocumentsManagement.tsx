@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   XCircle,
   Search,
@@ -39,6 +39,7 @@ import {
   FileText,
   ShieldAlert
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface RejectedDocumentRecord {
   id: string;
@@ -158,7 +159,7 @@ export default function RejectedDocumentsManagement() {
                 docId: `DOC-${String(idx + 1).padStart(5, "0")}`,
                 appId: app.id || app.applicationId || "VO-2026-1045",
                 applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
-                passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+                passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9817264",
                 documentType: doc.documentType || doc.title || "Document",
                 documentName: doc.fileName || "document.pdf",
                 fileFormat: doc.format?.includes("Image") ? "JPG" : "PDF",

@@ -141,7 +141,7 @@ export default function CancelledApplicationsManagement() {
         id: app.id || app._id || String(Math.random()),
         appId: app.id || app.applicationId || "VO-2026-1601",
         applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
-        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9817264",
         appliedBy: app.appliedBy || "Applicant",
         country: app.destination || app.countryName || "Canada",
         category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",

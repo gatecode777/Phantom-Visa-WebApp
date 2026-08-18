@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
+import { useVisa } from "../context/VisaContext";
 import {
   Search,
   Filter,
@@ -35,6 +36,19 @@ import {
   Check
 } from "lucide-react";
 
+export interface ApplicationHistoryItem {
+  id?: string;
+  applicationId: string;
+  countryName: string;
+  countryCode?: string;
+  flag?: string;
+  visaTypeName: string;
+  appliedDate: string;
+  processingStage: string;
+  status: string;
+  assignedAgentName?: string;
+}
+
 export interface ApplicantRecord {
   id: string;
   name: string;
@@ -61,18 +75,46 @@ export interface ApplicantRecord {
   applicationStatus?: string;
   assignedAgent?: string;
   processingStage?: string;
+  applications?: ApplicationHistoryItem[];
   documents?: {
     passport: boolean;
     photograph: boolean;
     bankStatement: boolean;
     invitationLetter: boolean;
   };
+  uploadedDocuments?: Array<{
+    id: string;
+    name: string;
+    fileName: string;
+    fileUrl: string;
+    format?: string;
+    fileSize?: string;
+    status?: string;
+    documentType?: string;
+    applicationId?: string;
+    countryName?: string;
+    uploadedAt?: string | Date;
+  }>;
+  kycDetails?: {
+    kycStatus: string;
+    govtIdType?: string;
+    idDocScan?: string;
+    addressProofScan?: string;
+  };
   payments?: {
     totalPaid: number;
     pendingAmount: number;
-    history: Array<{ date: string; amount: number; desc: string; method: string }>;
+    history: Array<{
+      id?: string;
+      invoiceNo?: string;
+      applicationId?: string;
+      date: string;
+      amount: number;
+      desc: string;
+      method: string;
+      status?: string;
+    }>;
   };
-  timeline?: Array<{ title: string; time: string; completed: boolean }>;
 }
 
 export const mockApplicants: ApplicantRecord[] = [];
@@ -119,11 +161,19 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch real database records from backend
+  // Access authenticated session
+  const { authSession, currentRole } = useVisa();
+
+  // Fetch real database records from backend with server-side agent scoping
   const fetchApplicantsFromDB = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_V1_URL}/applicant/all`);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authSession?.token) {
+        headers["Authorization"] = `Bearer ${authSession.token}`;
+      }
+      const agentParam = currentRole === "Agent" && authSession?.agentId ? `?agentId=${encodeURIComponent(authSession.agentId)}` : "";
+      const res = await fetch(`${API_V1_URL}/applicant/all${agentParam}`, { headers });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setApplicants(json.data);
@@ -143,7 +193,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
 
   useEffect(() => {
     fetchApplicantsFromDB();
-  }, []);
+  }, [authSession?.token, authSession?.agentId, currentRole]);
 
   // Filter Logic
   const filteredApplicants = applicants.filter((app) => {
@@ -674,7 +724,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
                         {app.country}
                       </td>
                       <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-800">
-                        {app.totalApplications}
+                        {app.totalApplications ?? 1}
                       </td>
                       <td className="py-3.5 px-3">
                         <span
@@ -992,7 +1042,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
 
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">Assigned Agent</span>
-                      <strong className="text-slate-800 font-bold">{viewApplicant.assignedAgent || "Balram Suman"}</strong>
+                      <strong className="text-slate-800 font-bold">{viewApplicant.assignedAgent || "Assigned Officer"}</strong>
                     </div>
 
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">

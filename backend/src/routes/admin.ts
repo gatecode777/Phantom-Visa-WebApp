@@ -13,13 +13,13 @@ async function getOrCreateSuperAdmin() {
   let admin = await User.findOne({ role: "Admin" });
   if (!admin) {
     admin = await User.create({
-      name: "Vibhu Sharma",
-      phone: "+91 98100 11001",
+      name: "Vikramaditya Singhania",
+      phone: "+91 98100 99001",
       email: "admin@phantomvisa.com",
       role: "Admin",
       designation: "Lead Platform Administrator",
-      altPhone: "+91 98100 11002",
-      dob: "1994-08-15",
+      altPhone: "+91 98100 99002",
+      dob: "1988-11-20",
       gender: "Male",
       nationality: "Indian",
       city: "New Delhi, Delhi",
@@ -39,9 +39,9 @@ async function getOrCreateSuperAdmin() {
 adminRouter.get("/profile", async (req: Request, res: Response) => {
   try {
     const admin = await getOrCreateSuperAdmin();
-    const nameParts = (admin.name || "Vibhu Sharma").split(" ");
-    const firstName = nameParts[0] || "Vibhu";
-    const lastName = nameParts.slice(1).join(" ") || "Sharma";
+    const nameParts = (admin.name || "Vikramaditya Singhania").split(" ");
+    const firstName = nameParts[0] || "Vikramaditya";
+    const lastName = nameParts.slice(1).join(" ") || "Singhania";
 
     return res.status(200).json({
       success: true,

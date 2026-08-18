@@ -126,7 +126,7 @@ export default function SuccessfulPaymentsManagement() {
             txnId: t.txnRef || t.id,
             appId: t.appId || "APP-20262001",
             applicantName: t.user || "Applicant",
-            passportNumber: "Z9876543",
+            passportNumber: "Z9817264",
             nationality: "Indian",
             paidBy: t.role || "Applicant",
             amount: typeof t.amount === "number" ? t.amount : 8500,
@@ -525,13 +525,6 @@ export default function SuccessfulPaymentsManagement() {
                           title="View Payment Details & Fee Breakdown"
                         >
                           <Eye size={15} />
-                        </button>
-                        <button
-                          onClick={() => triggerToast(`Downloading receipt ${p.receiptNo}...`)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="Download Receipt"
-                        >
-                          <Receipt size={15} />
                         </button>
                         <button
                           onClick={() => triggerToast(`Printing invoice ${p.invoiceNo}...`)}

@@ -17,7 +17,6 @@ import ApplicantDetailsManagement from "./ApplicantDetailsManagement";
 import PendingVerificationManagement from "./PendingVerificationManagement";
 import VerifiedDocumentsManagement from "./VerifiedDocumentsManagement";
 import PendingDocumentsManagement from "./PendingDocumentsManagement";
-import PendingPaymentsManagement from "./PendingPaymentsManagement";
 import AllTransactionsManagement from "./AllTransactionsManagement";
 import InvoicesManagement from "./InvoicesManagement";
 import UpcomingAppointmentsManagement from "./UpcomingAppointmentsManagement";
@@ -30,7 +29,7 @@ import VisaTypeReportsManagement from "./VisaTypeReportsManagement";
 import RevenueReportsManagement from "./RevenueReportsManagement";
 import UserActivityReportsManagement from "./UserActivityReportsManagement";
 import SupportManagement from "./SupportManagement";
-import MyProfileManagement from "./MyProfileManagement";
+import AgentProfileManagement from "./AgentProfileManagement";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -130,7 +129,7 @@ export default function AgentPortal() {
   const [applicantSubTab, setApplicantSubTab] = useState<"list" | "details">("list");
   const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
   const [docSubTab, setDocSubTab] = useState<"pending" | "verified" | "rejected">("pending");
-  const [paymentSubTab, setPaymentSubTab] = useState<"verification" | "transactions" | "invoices">("transactions");
+  const [paymentSubTab, setPaymentSubTab] = useState<"transactions" | "invoices">("transactions");
   const [reportSubTab, setReportSubTab] = useState<"daily" | "monthly" | "performance">("daily");
 
   // Filter & Search States
@@ -312,55 +311,18 @@ export default function AgentPortal() {
             <span>Document Verification</span>
           </button>
 
-          {/* Payments Accordion */}
-          <div>
-            <button
-              onClick={() => {
-                toggleAccordion("payments");
-                handleTabChange("payments");
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
-                agentTab === "payments"
-                  ? "bg-purple-50 text-purple-700 font-bold"
-                  : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <CreditCard size={18} className={agentTab === "payments" ? "text-purple-600" : "text-slate-400"} />
-                <span>Payments</span>
-              </div>
-              {openAccordions["payments"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-
-            {openAccordions["payments"] && (
-              <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                <button
-                  onClick={() => { setPaymentSubTab("verification"); handleTabChange("payments"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "payments" && paymentSubTab === "verification" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Payment Verification</span>
-                </button>
-                <button
-                  onClick={() => { setPaymentSubTab("transactions"); handleTabChange("payments"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "payments" && paymentSubTab === "transactions" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Transactions</span>
-                </button>
-                <button
-                  onClick={() => { setPaymentSubTab("invoices"); handleTabChange("payments"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "payments" && paymentSubTab === "invoices" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Invoices</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Payments */}
+          <button
+            onClick={() => handleTabChange("payments")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
+              agentTab === "payments"
+                ? "bg-purple-50 text-purple-700 font-bold"
+                : "hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <CreditCard size={18} className={agentTab === "payments" ? "text-purple-600" : "text-slate-400"} />
+            <span>Payments</span>
+          </button>
 
           {/* Appointments */}
           <button
@@ -401,55 +363,18 @@ export default function AgentPortal() {
             <span>Notifications</span>
           </button>
 
-          {/* Reports Accordion */}
-          <div>
-            <button
-              onClick={() => {
-                toggleAccordion("reports");
-                handleTabChange("reports");
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
-                agentTab === "reports"
-                  ? "bg-purple-50 text-purple-700 font-bold"
-                  : "hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <BarChart3 size={18} className={agentTab === "reports" ? "text-purple-600" : "text-slate-400"} />
-                <span>Reports</span>
-              </div>
-              {openAccordions["reports"] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-
-            {openAccordions["reports"] && (
-              <div className="ml-8 mt-1 space-y-1 text-[11px] text-slate-500 border-l border-slate-100 pl-2">
-                <button
-                  onClick={() => { setReportSubTab("daily"); handleTabChange("reports"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "reports" && reportSubTab === "daily" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Daily Report</span>
-                </button>
-                <button
-                  onClick={() => { setReportSubTab("monthly"); handleTabChange("reports"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "reports" && reportSubTab === "monthly" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Monthly Report</span>
-                </button>
-                <button
-                  onClick={() => { setReportSubTab("performance"); handleTabChange("reports"); }}
-                  className={`w-full text-left px-2 py-1.5 rounded flex justify-between items-center transition ${
-                    agentTab === "reports" && reportSubTab === "performance" ? "text-purple-700 font-bold bg-purple-50/60" : "hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Performance Report</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Reports */}
+          <button
+            onClick={() => handleTabChange("reports")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
+              agentTab === "reports"
+                ? "bg-purple-50 text-purple-700 font-bold"
+                : "hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <BarChart3 size={18} className={agentTab === "reports" ? "text-purple-600" : "text-slate-400"} />
+            <span>Reports</span>
+          </button>
 
           <div className="pt-2 border-t border-slate-100 space-y-1">
             {/* Support */}
@@ -972,21 +897,61 @@ export default function AgentPortal() {
 
           {agentTab === "doc_verification" && (
             <div className="space-y-6">
-              <PendingVerificationManagement />
+              <PendingVerificationManagement
+                agentId={authSession?.user?.agentId || (authSession as any)?.agentId || "AGT-1001"}
+              />
             </div>
           )}
 
           {agentTab === "payments" && (
             <div className="space-y-6">
-              {paymentSubTab === "verification" && <PendingPaymentsManagement />}
-              {paymentSubTab === "transactions" && <AllTransactionsManagement />}
-              {paymentSubTab === "invoices" && <InvoicesManagement />}
+              {/* Merged Payments View Switcher Tabs */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-3 shadow-2xs flex items-center gap-2 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setPaymentSubTab("transactions")}
+                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+                    paymentSubTab === "transactions"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold"
+                  }`}
+                >
+                  <CreditCard size={14} />
+                  <span>Transactions & Financial Ledger</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentSubTab("invoices")}
+                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer flex items-center gap-2 ${
+                    paymentSubTab === "invoices"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold"
+                  }`}
+                >
+                  <FileText size={14} />
+                  <span>Tax Invoices & Billing</span>
+                </button>
+              </div>
+
+              {paymentSubTab === "transactions" && (
+                <AllTransactionsManagement
+                  agentId={authSession?.user?.agentId || (authSession as any)?.agentId || "AGT-1001"}
+                />
+              )}
+              {paymentSubTab === "invoices" && (
+                <InvoicesManagement
+                  agentId={authSession?.user?.agentId || (authSession as any)?.agentId || "AGT-1001"}
+                />
+              )}
             </div>
           )}
 
           {agentTab === "appointments" && (
             <div className="space-y-6">
-              <UpcomingAppointmentsManagement />
+              <UpcomingAppointmentsManagement
+                agentId={authSession?.user?.agentId || (authSession as any)?.agentId || "AGT-1001"}
+              />
             </div>
           )}
 
@@ -1004,9 +969,7 @@ export default function AgentPortal() {
 
           {agentTab === "reports" && (
             <div className="space-y-6">
-              {reportSubTab === "daily" && <DailyReportsManagement />}
-              {reportSubTab === "monthly" && <MonthlyReportsManagement />}
-              {reportSubTab === "performance" && <PerformanceReportsManagement />}
+              <PerformanceReportsManagement />
             </div>
           )}
 
@@ -1019,7 +982,10 @@ export default function AgentPortal() {
 
           {agentTab === "profile" && (
             <div className="space-y-6">
-              <MyProfileManagement />
+              <AgentProfileManagement
+                token={authSession?.token || localStorage.getItem("token") || ""}
+                agentId={authSession?.user?.agentId || (authSession as any)?.agentId}
+              />
             </div>
           )}
         </main>

@@ -51,9 +51,17 @@ export interface UnifiedTransactionRecord {
  */
 export const INITIAL_UNIFIED_TRANSACTIONS: UnifiedTransactionRecord[] = [];
 
-export async function fetchUnifiedTransactions(): Promise<UnifiedTransactionRecord[]> {
+export async function fetchUnifiedTransactions(agentId?: string): Promise<UnifiedTransactionRecord[]> {
   try {
-    const res = await fetch(`${API_V1_URL}/finance/transactions`);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const url = agentId
+      ? `${API_V1_URL}/finance/transactions?agentId=${encodeURIComponent(agentId)}`
+      : `${API_V1_URL}/finance/transactions`;
+
+    const res = await fetch(url, { headers });
     const json = await res.json();
     if (res.ok && json.success && Array.isArray(json.data)) {
       return json.data.map((item: any) => ({
