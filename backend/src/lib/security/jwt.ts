@@ -10,6 +10,8 @@ export interface TokenPayload {
   role: string;
   phone: string;
   applicantId?: string;
+  agentId?: string;
+  agencyName?: string;
 }
 
 export interface IssuedTokens {

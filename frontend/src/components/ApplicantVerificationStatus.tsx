@@ -36,7 +36,7 @@ export interface VerificationDocRecord {
   name: string;
   category: string;
   submissionDate: string;
-  verifiedBy: "AI System" | "Agent Sarah Jenkins" | "Admin Consular";
+  verifiedBy: "AI System" | "Agent Sarah Jenkins" | "Admin Consular" | string;
   verificationDate: string;
   status: AuditStatus;
   remarks: string;
@@ -57,20 +57,12 @@ export default function ApplicantVerificationStatus({
 }: ApplicantVerificationStatusProps) {
   // Active App Reference
   const activeApp = useMemo(() => {
-    return applications[0] || {
-      id: "VO-2026-1025",
-      applicationId: "VO-2026-1025",
-      travelerName: "Geeta Sharma",
-      dob: "1995-06-12",
-      passportNumber: "Z9817264",
-      destination: "Australia",
-      visaType: "Tourist Subclass 600",
-      uploadedDocuments: []
-    };
+    return applications[0] || null;
   }, [applications]);
 
   // Dynamically derive verification audit records from active application documents
   const verificationItems = useMemo<VerificationDocRecord[]>(() => {
+    if (!activeApp) return [];
     const rawDocs = (activeApp as any).uploadedDocuments || [];
     if (rawDocs.length > 0) {
       return rawDocs.map((d: any, idx: number) => {
@@ -80,7 +72,7 @@ export default function ApplicantVerificationStatus({
         else if (statusNorm === "rejected") auditStatus = "rejected";
         else if (statusNorm === "needs_review") auditStatus = "resubmit";
 
-        const submissionDate = d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString("en-GB") : "07 Aug 2026";
+        const submissionDate = d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString("en-GB") : "";
         const verificationDate = d.verificationDate || (auditStatus === "verified" ? `${submissionDate}, 10:15 AM` : "Pending Audit");
 
         return {
@@ -88,12 +80,12 @@ export default function ApplicantVerificationStatus({
           name: d.title,
           category: d.documentType?.includes("Bank") ? "Financial" : d.documentType?.includes("Letter") ? "Employment" : "Identity",
           submissionDate,
-          verifiedBy: (d.verifiedBy as any) || (auditStatus === "verified" ? "AI System" : "Agent Sarah Jenkins"),
+          verifiedBy: (d.verifiedBy as any) || (auditStatus === "verified" ? "AI System" : "Consular Reviewer"),
           verificationDate,
           status: auditStatus,
           remarks: d.rejectionReason || (auditStatus === "verified" ? "Original high-resolution scan verified meeting consular biometrics standard." : "Pending auditor manual check."),
           aiMatchScore: d.aiMatchScore || (auditStatus === "verified" ? 98 : 75),
-          ocrData: d.ocrData || { passportNo: (activeApp as any).passportDetails?.passportNo || "Z9817264", dob: (activeApp as any).personalDetails?.dob || "12 Jun 1995", nameMatch: true }
+          ocrData: d.ocrData || { passportNo: (activeApp as any)?.passportDetails?.passportNo || "", dob: (activeApp as any)?.personalDetails?.dob || "", nameMatch: true }
         };
       });
     }

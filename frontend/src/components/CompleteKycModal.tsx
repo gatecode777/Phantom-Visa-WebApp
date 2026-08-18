@@ -16,7 +16,9 @@ import {
   Check,
   RefreshCw,
   Sparkles,
-  Lock
+  Lock,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 
 export interface CompleteKycModalProps {
@@ -33,12 +35,13 @@ export interface CompleteKycModalProps {
     kycStatus?: string;
   };
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
-export interface SlotVerificationState {
+interface SlotVerificationState {
   file: File | null;
   fileName: string | null;
+  fileUrl?: string | null;
   isVerifying: boolean;
   isVerified: boolean;
   verifiedType: string | null;
@@ -166,6 +169,7 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
             setIdDocState({
               file,
               fileName: file.name,
+              fileUrl: json.fileUrl || null,
               isVerifying: false,
               isVerified: true,
               verifiedType: json.documentType || "Government ID",
@@ -254,6 +258,7 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
             setAddressProofState({
               file,
               fileName: file.name,
+              fileUrl: json.fileUrl || null,
               isVerifying: false,
               isVerified: true,
               verifiedType: json.documentType || "Address Proof",
@@ -347,7 +352,7 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
       if (typeof window !== "undefined") {
         localStorage.setItem("phantom_customer_kyc_status", "Under Audit");
       }
-      onSuccess();
+      onSuccess?.();
     } catch (err: any) {
       setErrorMsg(err.message || "An error occurred while submitting KYC details.");
     } finally {
@@ -581,16 +586,47 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                   )}
 
                   {idDocState.isVerified && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto">
+                    <div className="space-y-1.5 w-full">
+                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto w-fit">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Verified: {idDocState.verifiedType}</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">{idDocState.fileName}</p>
+                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px] mx-auto">{idDocState.fileName}</p>
+                      {idDocState.fileUrl && (
+                        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] text-left">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0">CDN:</span>
+                          <input
+                            type="text"
+                            readOnly
+                            value={idDocState.fileUrl}
+                            className="w-full bg-transparent font-mono text-slate-600 outline-none select-all truncate"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(idDocState.fileUrl!);
+                              alert("ImageKit URL copied!");
+                            }}
+                            className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                            title="Copy URL"
+                          >
+                            <Copy size={11} />
+                          </button>
+                          <a
+                            href={idDocState.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                            title="Open document"
+                          >
+                            <ExternalLink size={11} />
+                          </a>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => idFileInputRef.current?.click()}
-                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer"
+                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer block mx-auto"
                       >
                         Change File
                       </button>
@@ -655,16 +691,47 @@ export default function CompleteKycModal({ applicant, onClose, onSuccess }: Comp
                   )}
 
                   {addressProofState.isVerified && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto">
+                    <div className="space-y-1.5 w-full">
+                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-extrabold text-[11px] mx-auto w-fit">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Verified: {addressProofState.verifiedType}</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">{addressProofState.fileName}</p>
+                      <p className="text-[10px] text-slate-500 font-mono truncate max-w-[180px] mx-auto">{addressProofState.fileName}</p>
+                      {addressProofState.fileUrl && (
+                        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] text-left">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0">CDN:</span>
+                          <input
+                            type="text"
+                            readOnly
+                            value={addressProofState.fileUrl}
+                            className="w-full bg-transparent font-mono text-slate-600 outline-none select-all truncate"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(addressProofState.fileUrl!);
+                              alert("ImageKit URL copied!");
+                            }}
+                            className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                            title="Copy URL"
+                          >
+                            <Copy size={11} />
+                          </button>
+                          <a
+                            href={addressProofState.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                            title="Open document"
+                          >
+                            <ExternalLink size={11} />
+                          </a>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => addressFileInputRef.current?.click()}
-                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer"
+                        className="text-[10px] text-indigo-600 underline font-bold cursor-pointer block mx-auto"
                       >
                         Change File
                       </button>

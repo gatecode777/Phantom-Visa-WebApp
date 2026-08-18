@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import { COUNTRY_DIAL_CODES, getCountryByCodeOrName } from "../utils/countryData";
-import { ALL_VISA_DESTINATION_COUNTRIES } from "./AddNewAgent";
 import {
   Briefcase,
   User,
@@ -24,10 +23,12 @@ import {
   Globe,
   MapPin,
   Sparkles,
-  DollarSign,
   Info,
-  Search
+  Search,
+  Copy,
+  ExternalLink
 } from "lucide-react";
+import { uploadImageToImageKit } from "../services/imageKitService";
 
 export interface RegisterAgentProps {
   onClose?: () => void;
@@ -115,8 +116,7 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
 
   const fetchDatabaseCountries = async () => {
     try {
-      setIsLoadingDbCountries(true);
-      const res = await fetch(`${API_V1_URL}/countries`);
+      const res = await fetch(`${API_V1_URL}/country`);
       const json = await res.json();
 
       if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -134,13 +134,13 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
             flag: c.flag || "🌐",
             code: c.code || ""
           }));
-        setAvailableDbCountries(activeDbCountries.length > 0 ? activeDbCountries : ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries(activeDbCountries);
       } else {
-        setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+        setAvailableDbCountries([]);
       }
     } catch (err) {
-      console.warn("Could not fetch database countries, using default list:", err);
-      setAvailableDbCountries(ALL_VISA_DESTINATION_COUNTRIES);
+      console.warn("Could not fetch database countries:", err);
+      setAvailableDbCountries([]);
     } finally {
       setIsLoadingDbCountries(false);
     }
@@ -169,14 +169,9 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
   const [phoneDialCode, setPhoneDialCode] = useState<string>("+91");
   const [altPhoneDialCode, setAltPhoneDialCode] = useState<string>("+91");
 
-  // File Upload State (Simulated / Local Files)
-  const [uploadedFiles, setUploadedFiles] = useState<{
-    businessCert?: string;
-    govtIdDoc?: string;
-    addressProofDoc?: string;
-    taxCertDoc?: string;
-    agencyLogoDoc?: string;
-  }>({});
+  // File Upload State (ImageKit Permanent Storage)
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; url: string; fileId?: string; size?: string }>>({});
+  const [uploadingDocKey, setUploadingDocKey] = useState<string | null>(null);
 
   // Validation Error State per field
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -186,10 +181,39 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
-        const updated = { ...prev };
-        delete updated[field];
-        return updated;
+        const copy = { ...prev };
+        delete copy[field];
+        return copy;
       });
+    }
+  };
+
+  // Real ImageKit File Upload Handler
+  const handleFileUpload = async (docType: string, file: File | null) => {
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      triggerToast(`File ${file.name} exceeds 10MB limit.`);
+      return;
+    }
+
+    setUploadingDocKey(docType);
+    try {
+      const res = await uploadImageToImageKit(file, "/PHANTOM-VISA/agents/");
+      setUploadedFiles((prev) => ({
+        ...prev,
+        [docType]: {
+          name: file.name,
+          url: res.url,
+          fileId: res.fileId,
+          size: `${(file.size / 1024).toFixed(1)} KB`
+        }
+      }));
+      triggerToast(`Uploaded '${file.name}' to ImageKit successfully!`);
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to upload document to ImageKit.");
+    } finally {
+      setUploadingDocKey(null);
     }
   };
 
@@ -276,13 +300,6 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
         setErrors((prev) => ({ ...prev, phone: errMsg }));
       }
     }
-  };
-
-  // File Upload Simulation Handler
-  const handleFileUpload = (docType: keyof typeof uploadedFiles, file: File | null) => {
-    if (!file) return;
-    setUploadedFiles((prev) => ({ ...prev, [docType]: file.name }));
-    triggerToast(`Uploaded document '${file.name}' for verification.`);
   };
 
   // Validate Specific Steps before Next
@@ -1123,28 +1140,60 @@ export default function RegisterAgent({ onClose, onSuccessSubmit }: RegisterAgen
                         </span>
                         <div className={`flex items-center justify-between bg-white border p-2.5 rounded-xl ${errors[doc.key] ? "border-red-400 ring-2 ring-red-500/10" : "border-slate-200"}`}>
                           <span className={`text-[11px] truncate max-w-[180px] ${uploadedFiles[doc.key] ? "text-emerald-700 font-bold" : "text-slate-500"}`}>
-                            {uploadedFiles[doc.key] ? `✓ ${uploadedFiles[doc.key]}` : "No file uploaded"}
+                            {uploadedFiles[doc.key] ? `✓ ${uploadedFiles[doc.key].name}` : "No file uploaded"}
                           </span>
                           <label className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] text-[11px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1">
-                            <Upload size={12} />
-                            <span>Upload</span>
+                            <Upload size={12} className={uploadingDocKey === doc.key ? "animate-spin" : ""} />
+                            <span>{uploadingDocKey === doc.key ? "Uploading..." : "Upload"}</span>
                             <input
                               type="file"
                               accept=".pdf,.png,.jpg,.jpeg"
+                              disabled={uploadingDocKey === doc.key}
                               className="hidden"
                               onChange={(e) => {
                                 handleFileUpload(doc.key, e.target.files?.[0] || null);
                                 if (errors[doc.key]) {
                                   setErrors((prev) => {
-                                    const updated = { ...prev };
-                                    delete updated[doc.key];
-                                    return updated;
+                                    const copy = { ...prev };
+                                    delete copy[doc.key];
+                                    return copy;
                                   });
                                 }
                               }}
                             />
                           </label>
                         </div>
+                        {uploadedFiles[doc.key]?.url && (
+                          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1.5 text-[10px]">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0">CDN:</span>
+                            <input
+                              type="text"
+                              readOnly
+                              value={uploadedFiles[doc.key].url}
+                              className="w-full bg-transparent font-mono text-slate-600 outline-none select-all truncate"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(uploadedFiles[doc.key].url);
+                                triggerToast("ImageKit URL copied to clipboard!");
+                              }}
+                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                              title="Copy URL"
+                            >
+                              <Copy size={11} />
+                            </button>
+                            <a
+                              href={uploadedFiles[doc.key].url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer shrink-0"
+                              title="Open image"
+                            >
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
                         {errors[doc.key] && <p className="text-[10px] text-red-600 font-bold flex items-center gap-1"><AlertCircle size={12} /> {errors[doc.key]}</p>}
                       </div>
                     ))}

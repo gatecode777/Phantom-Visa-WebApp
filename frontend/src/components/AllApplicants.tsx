@@ -75,223 +75,7 @@ export interface ApplicantRecord {
   timeline?: Array<{ title: string; time: string; completed: boolean }>;
 }
 
-export const mockApplicants: ApplicantRecord[] = [
-  {
-    id: "APP-1025",
-    name: "Geeta Bisht",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-    email: "geeta@email.com",
-    mobile: "+91 9876543210",
-    country: "Canada",
-    flag: "🇨🇦",
-    totalApplications: 2,
-    status: "Active",
-    registeredOn: "20 Jul 2026",
-    dob: "14 May 1994",
-    gender: "Female",
-    nationality: "Indian",
-    passportNumber: "Z9876543",
-    passportExpiry: "12 Dec 2031",
-    address: "B-402, Green Park Avenue, New Delhi, India",
-    currentVisa: "Express Entry PR / Tourist",
-    visaType: "Tourist Visa Subclass 600",
-    destinationCountry: "Canada",
-    applicationStatus: "Under Review",
-    assignedAgent: "Balram Suman (Senior Agent)",
-    processingStage: "Embassy Document Verification",
-    documents: {
-      passport: true,
-      photograph: true,
-      bankStatement: true,
-      invitationLetter: false
-    },
-    payments: {
-      totalPaid: 45000,
-      pendingAmount: 0,
-      history: [
-        { date: "20 Jul 2026", amount: 25000, desc: "Initial Embassy Fee & Processing", method: "UPI / Net Banking" },
-        { date: "22 Jul 2026", amount: 20000, desc: "Biometric & VFS Service Charge", method: "Credit Card" }
-      ]
-    },
-    timeline: [
-      { title: "Account Created", time: "20 Jul 2026, 10:15 AM", completed: true },
-      { title: "Visa Application Submitted", time: "20 Jul 2026, 11:30 AM", completed: true },
-      { title: "Documents Uploaded", time: "21 Jul 2026, 03:45 PM", completed: true },
-      { title: "Payment Completed", time: "22 Jul 2026, 06:12 PM", completed: true },
-      { title: "Under Review at Embassy", time: "24 Jul 2026, 09:00 AM", completed: true }
-    ]
-  },
-  {
-    id: "APP-1026",
-    name: "Rahul Sharma",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256",
-    email: "rahul@email.com",
-    mobile: "+91 9812345678",
-    country: "Australia",
-    flag: "🇦🇺",
-    totalApplications: 1,
-    status: "Active",
-    registeredOn: "19 Jul 2026",
-    dob: "02 Aug 1991",
-    gender: "Male",
-    nationality: "Indian",
-    passportNumber: "K1234567",
-    passportExpiry: "18 Aug 2029",
-    address: "Flat 101, Sunshine Heights, Mumbai, India",
-    currentVisa: "Student Visa (Subclass 500)",
-    visaType: "Higher Education Sector Visa",
-    destinationCountry: "Australia",
-    applicationStatus: "Approved",
-    assignedAgent: "Geeta Bisht (Admin Lead)",
-    processingStage: "Visa Grant Letter Issued",
-    documents: {
-      passport: true,
-      photograph: true,
-      bankStatement: true,
-      invitationLetter: true
-    },
-    payments: {
-      totalPaid: 65000,
-      pendingAmount: 0,
-      history: [
-        { date: "19 Jul 2026", amount: 65000, desc: "Full Tuition Deposit & Application Fee", method: "Razorpay" }
-      ]
-    },
-    timeline: [
-      { title: "Account Created", time: "19 Jul 2026, 08:30 AM", completed: true },
-      { title: "Visa Application Submitted", time: "19 Jul 2026, 10:00 AM", completed: true },
-      { title: "Documents Uploaded", time: "19 Jul 2026, 12:20 PM", completed: true },
-      { title: "Payment Completed", time: "19 Jul 2026, 01:15 PM", completed: true },
-      { title: "Visa Approved", time: "23 Jul 2026, 04:30 PM", completed: true }
-    ]
-  },
-  {
-    id: "APP-1027",
-    name: "Priya Singh",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=256",
-    email: "priya@email.com",
-    mobile: "+91 9765432109",
-    country: "UK",
-    flag: "🇬🇧",
-    totalApplications: 3,
-    status: "Blocked",
-    registeredOn: "18 Jul 2026",
-    dob: "25 Nov 1996",
-    gender: "Female",
-    nationality: "Indian",
-    passportNumber: "M5544332",
-    passportExpiry: "30 Jan 2028",
-    address: "78 Lotus Colony, Bengaluru, India",
-    currentVisa: "Skilled Worker Visa",
-    visaType: "Tier 2 General",
-    destinationCountry: "United Kingdom",
-    applicationStatus: "Rejected / Suspended",
-    assignedAgent: "Animesh Jain",
-    processingStage: "Flagged for Compliance Audit",
-    documents: {
-      passport: true,
-      photograph: false,
-      bankStatement: true,
-      invitationLetter: false
-    },
-    payments: {
-      totalPaid: 15000,
-      pendingAmount: 35000,
-      history: [
-        { date: "18 Jul 2026", amount: 15000, desc: "Initial Registration Fee", method: "Bank Transfer" }
-      ]
-    },
-    timeline: [
-      { title: "Account Created", time: "18 Jul 2026, 02:00 PM", completed: true },
-      { title: "Visa Application Submitted", time: "18 Jul 2026, 03:15 PM", completed: true },
-      { title: "Documents Uploaded", time: "18 Jul 2026, 05:00 PM", completed: false },
-      { title: "Account Blocked", time: "19 Jul 2026, 11:00 AM", completed: true }
-    ]
-  },
-  {
-    id: "APP-1028",
-    name: "Animesh Kumawat",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256",
-    email: "animesh@email.com",
-    mobile: "+91 9654321098",
-    country: "USA",
-    flag: "🇺🇸",
-    totalApplications: 1,
-    status: "Active",
-    registeredOn: "17 Jul 2026",
-    dob: "10 Oct 1992",
-    gender: "Male",
-    nationality: "Indian",
-    passportNumber: "R7788990",
-    passportExpiry: "14 Jul 2032",
-    address: "C-12 Sector 62, Noida, UP, India",
-    currentVisa: "B1/B2 Business Visitor",
-    visaType: "Non-immigrant Visitor Visa",
-    destinationCountry: "USA",
-    applicationStatus: "Under Review",
-    assignedAgent: "Balram Suman",
-    processingStage: "DS-160 Form Review",
-    documents: {
-      passport: true,
-      photograph: true,
-      bankStatement: true,
-      invitationLetter: true
-    },
-    payments: {
-      totalPaid: 32000,
-      pendingAmount: 0,
-      history: [
-        { date: "17 Jul 2026", amount: 32000, desc: "US Embassy DS-160 Booking Fee", method: "Credit Card" }
-      ]
-    },
-    timeline: [
-      { title: "Account Created", time: "17 Jul 2026, 11:00 AM", completed: true },
-      { title: "Visa Application Submitted", time: "17 Jul 2026, 01:00 PM", completed: true },
-      { title: "Documents Uploaded", time: "17 Jul 2026, 03:00 PM", completed: true },
-      { title: "Under Review", time: "18 Jul 2026, 10:00 AM", completed: true }
-    ]
-  },
-  {
-    id: "APP-1029",
-    name: "Bhavani Suman",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256",
-    email: "bhavani@email.com",
-    mobile: "+91 9543210987",
-    country: "Germany",
-    flag: "🇩🇪",
-    totalApplications: 2,
-    status: "Inactive",
-    registeredOn: "15 Jul 2026",
-    dob: "05 Mar 1998",
-    gender: "Female",
-    nationality: "Indian",
-    passportNumber: "L3322110",
-    passportExpiry: "09 Sep 2030",
-    address: "45 Civil Lines, Jaipur, Rajasthan, India",
-    currentVisa: "Opportunity Card / Job Seeker",
-    visaType: "Chancenkarte Germany",
-    destinationCountry: "Germany",
-    applicationStatus: "Pending Documents",
-    assignedAgent: "Geeta Bisht",
-    processingStage: "Awaiting Apostille Certification",
-    documents: {
-      passport: true,
-      photograph: true,
-      bankStatement: false,
-      invitationLetter: false
-    },
-    payments: {
-      totalPaid: 18000,
-      pendingAmount: 12000,
-      history: [
-        { date: "15 Jul 2026", amount: 18000, desc: "Consultation & Document Audit Fee", method: "Net Banking" }
-      ]
-    },
-    timeline: [
-      { title: "Documents Uploaded", time: "16 Jul 2026, 02:00 PM", completed: false }
-    ]
-  }
-];
+export const mockApplicants: ApplicantRecord[] = [];
 
 interface AllApplicantsProps {
   onSelectApplicant?: (applicant: ApplicantRecord) => void;
@@ -326,7 +110,7 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
   };
 
   // Applicants List State & Metrics State
-  const [applicants, setApplicants] = useState<ApplicantRecord[]>(mockApplicants);
+  const [applicants, setApplicants] = useState<ApplicantRecord[]>([]);
   const [dbMetrics, setDbMetrics] = useState<{
     totalApplicants: number;
     activeApplicants: number;
@@ -341,14 +125,17 @@ export default function AllApplicants({ onSelectApplicant }: AllApplicantsProps 
       setIsLoading(true);
       const res = await fetch(`${API_V1_URL}/applicant/all`);
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data)) {
         setApplicants(json.data);
         if (json.metrics) {
           setDbMetrics(json.metrics);
         }
+      } else {
+        setApplicants([]);
       }
     } catch (err) {
       console.error("Failed to fetch applicant records from MongoDB:", err);
+      setApplicants([]);
     } finally {
       setIsLoading(false);
     }

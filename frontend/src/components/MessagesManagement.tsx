@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   MessageSquare,
   Search,
@@ -107,70 +107,7 @@ export const SAMPLE_MESSAGE_TEMPLATES: MessageTemplate[] = [
   { id: "t8", title: "Welcome Message", category: "General", subject: "Welcome to Phantom Visa Platform", body: "Welcome aboard! Manage all your visa applications seamlessly." }
 ];
 
-const MOCK_MESSAGES: MessageRecord[] = [
-  {
-    id: "1",
-    msgId: "MSG-1001",
-    fromName: "Geeta Bisht",
-    fromEmail: "geeta@email.com",
-    fromRole: "Applicant",
-    toName: "Admin Support",
-    toEmail: "support@phantomvisa.com",
-    toRole: "Admin",
-    subject: "Query regarding Canada Tourist Visa Document Checklist",
-    content: "Hello, I uploaded my bank statements yesterday. Could you please confirm if the 6-month transaction balance is sufficient?",
-    type: "Support",
-    date: "04 Aug 2026",
-    dateTime: "04 Aug 2026 10:15 AM",
-    status: "Unread",
-    starred: true,
-    ticketId: "TCK-4001",
-    ticketStatus: "Open",
-    priority: "High",
-    assignedStaff: "Officer Rahul",
-    attachments: [{ name: "Bank_Statement_Jan_Jun.pdf", size: "2.4 MB" }],
-    internalNotes: ["Applicant called phone support earlier today."]
-  },
-  {
-    id: "2",
-    msgId: "MSG-1002",
-    fromName: "Apex Travels",
-    fromEmail: "agent@apextravels.com",
-    fromRole: "Agent",
-    toName: "B2B Admin Team",
-    toEmail: "b2b@phantomvisa.com",
-    toRole: "Admin",
-    subject: "Bulk Application Slot Reschedule Request for Australia Business Visa",
-    content: "Hi Admin Team, we have 4 candidates whose flight schedules shifted. Kindly reschedule their biometric slots to Aug 12.",
-    type: "Inbox",
-    date: "04 Aug 2026",
-    dateTime: "04 Aug 2026 09:30 AM",
-    status: "Read",
-    starred: false,
-    ticketId: "TCK-4002",
-    ticketStatus: "In Progress",
-    priority: "Medium",
-    assignedStaff: "Officer Sarah",
-    attachments: [{ name: "Agent_Candidate_List.xlsx", size: "1.1 MB" }]
-  },
-  {
-    id: "3",
-    msgId: "MSG-1003",
-    fromName: "Phantom Visa System",
-    fromEmail: "broadcast@phantomvisa.com",
-    fromRole: "System",
-    toName: "All Applicants",
-    toEmail: "all@phantomvisa.com",
-    toRole: "All Users",
-    subject: "Scheduled System Maintenance Notice - Aug 10th",
-    content: "Dear Users, the portal will undergo scheduled server upgrade on August 10th from 02:00 AM to 04:00 AM IST.",
-    type: "Broadcast",
-    date: "03 Aug 2026",
-    dateTime: "03 Aug 2026 04:00 PM",
-    status: "Replied",
-    starred: false
-  }
-];
+const MOCK_MESSAGES: MessageRecord[] = [];
 
 export default function MessagesManagement() {
   // Navigation Submenu State
@@ -182,7 +119,7 @@ export default function MessagesManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Records State
-  const [messagesList, setMessagesList] = useState<MessageRecord[]>(MOCK_MESSAGES);
+  const [messagesList, setMessagesList] = useState<MessageRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Modal / Detailed View State

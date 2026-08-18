@@ -8,6 +8,7 @@ import ApplicationModel from "../models/Application.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { upload, documentUploadFields } from "../middleware/upload.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
+import imagekit from "../lib/imagekit.js";
 
 const router = Router();
 
@@ -117,6 +118,7 @@ router.post("/submit-kyc", async (req: Request, res: Response) => {
       addressProofScan,
       name,
       email,
+      phone,
       country
     } = req.body;
 
@@ -139,23 +141,26 @@ router.post("/submit-kyc", async (req: Request, res: Response) => {
     }
 
     if (!applicant) {
-      // Create new Applicant if database is empty
+      const nameParts = (name || "").trim().split(" ");
+      const fName = nameParts[0] || "";
+      const lName = nameParts.slice(1).join(" ") || "";
+
       applicant = new Applicant({
         applicantId: applicantId && applicantId !== "APP-MYSELF" ? applicantId : `APP-${Math.floor(1000 + Math.random() * 9000)}`,
         userId: userId || "USR-CUSTOMER",
         personalInfo: {
-          fullName: name || "vibhu sharma",
-          firstName: "vibhu",
-          lastName: "sharma",
-          email: email || "vibhu@gmail.com",
-          country: country || "India",
-          phone: "+91 9876543210",
-          dob: "1995-06-12",
-          nationality: "Indian",
-          address: "New Delhi, India",
-          city: "New Delhi",
-          state: "Delhi",
-          postalCode: "110001"
+          fullName: name || "",
+          firstName: fName,
+          lastName: lName,
+          email: email || "",
+          country: country || "",
+          phone: phone || "",
+          dob: "",
+          nationality: "",
+          address: "",
+          city: "",
+          state: "",
+          postalCode: ""
         },
         status: "Active"
       });
@@ -509,11 +514,29 @@ Respond STRICTLY with valid JSON in this exact schema (no markdown, no additiona
         }
       }
 
+      // Upload verified KYC ID Card scan to ImageKit
+      let fileUrl = "";
+      let imagekitId = "";
+      try {
+        const cleanName = (file.originalname || `kyc-id-${Date.now()}`).replace(/[^a-zA-Z0-9.-]/g, "_");
+        const ikRes = await imagekit.upload({
+          file: fileBuffer,
+          fileName: `${Date.now()}-${cleanName}`,
+          folder: "/PHANTOM-VISA/kyc/"
+        });
+        fileUrl = ikRes.url;
+        imagekitId = ikRes.fileId;
+      } catch (ikErr) {
+        console.warn("⚠️ ImageKit upload failed for KYC ID:", ikErr);
+      }
+
       return res.status(200).json({
         success: true,
         verificationStatus: "verified",
         documentType: parsed.documentType,
         extractedNumber: parsed.extractedNumber,
+        fileUrl,
+        imagekitId,
         message: `Successfully verified as a genuine ${parsed.documentType}!`
       });
     } else {
@@ -534,10 +557,28 @@ Respond STRICTLY with valid JSON in this exact schema (no markdown, no additiona
         });
       }
 
+      // Upload verified Address Proof scan to ImageKit
+      let fileUrl = "";
+      let imagekitId = "";
+      try {
+        const cleanName = (file.originalname || `kyc-addr-${Date.now()}`).replace(/[^a-zA-Z0-9.-]/g, "_");
+        const ikRes = await imagekit.upload({
+          file: fileBuffer,
+          fileName: `${Date.now()}-${cleanName}`,
+          folder: "/PHANTOM-VISA/kyc/"
+        });
+        fileUrl = ikRes.url;
+        imagekitId = ikRes.fileId;
+      } catch (ikErr) {
+        console.warn("⚠️ ImageKit upload failed for KYC Address Proof:", ikErr);
+      }
+
       return res.status(200).json({
         success: true,
         verificationStatus: "verified",
         documentType: parsed.detectedDocumentName || parsed.documentType || "Address Proof",
+        fileUrl,
+        imagekitId,
         message: `Successfully verified as a genuine ${parsed.detectedDocumentName || parsed.documentType || "Address Proof"}!`
       });
     }
@@ -823,13 +864,30 @@ Respond STRICTLY with valid JSON (no markdown, no extra text):
       return res.status(200).json({ success: false, verificationStatus: "wrong_type", message: shortMsg });
     }
 
-    // ──── Verified successfully ───────────────────────────────────────────────
+    // ──── Verified successfully — Upload to ImageKit CDN ─────────────────────
+    let fileUrl = "";
+    let imagekitId = "";
+    try {
+      const cleanName = (file.originalname || `visa-doc-${Date.now()}`).replace(/[^a-zA-Z0-9.-]/g, "_");
+      const ikRes = await imagekit.upload({
+        file: fileBuffer,
+        fileName: `${Date.now()}-${cleanName}`,
+        folder: "/PHANTOM-VISA/documents/"
+      });
+      fileUrl = ikRes.url;
+      imagekitId = ikRes.fileId;
+    } catch (ikErr) {
+      console.warn("⚠️ ImageKit upload failed for Visa Document:", ikErr);
+    }
+
     return res.status(200).json({
       success: true,
       verificationStatus: "verified",
       documentType: parsed.detectedDocumentName || documentTitle || "Verified Document",
       detectedDocumentName: parsed.detectedDocumentName || documentTitle,
       confidence: parsed.confidence || 95,
+      fileUrl,
+      imagekitId,
       message: `✓ AI verified: ${parsed.detectedDocumentName || documentTitle || "Document"}`
     });
 
@@ -977,22 +1035,22 @@ router.get("/dashboard", async (req: Request, res: Response) => {
         },
         application: {
           id: applicant.applicantId,
-          travelerName: applicant.personalInfo?.fullName || "vibhu sharma",
-          dob: applicant.personalInfo?.dob || "1995-06-12",
-          passportNumber: applicant.personalInfo?.passportNo || applicant.passportDetails?.passportNumber || "Z9817264",
-          passportExpiry: applicant.passportDetails?.passportExpiryDate || "2032-10-15",
-          nationality: applicant.personalInfo?.nationality || "Indian",
-          destination: applicant.visaInfo?.destinationCountry || "Australia",
-          visaType: applicant.visaInfo?.visaType || "Tourist Visa",
-          visaCategory: applicant.visaInfo?.visaCategory || "General",
-          purposeOfVisit: applicant.visaInfo?.purposeOfVisit || "Tourism",
-          entryType: applicant.visaInfo?.entryType || "Single Entry",
-          durationOfStay: applicant.visaInfo?.durationOfStay || "30 Days",
-          expectedTravelDate: applicant.visaInfo?.expectedTravelDate || "2026-10-15",
-          preferredEmbassy: applicant.visaInfo?.preferredEmbassy || "New Delhi Consular",
+          travelerName: applicant.personalInfo?.fullName || "",
+          dob: applicant.personalInfo?.dob || "",
+          passportNumber: applicant.personalInfo?.passportNo || applicant.passportDetails?.passportNumber || "",
+          passportExpiry: applicant.passportDetails?.passportExpiryDate || "",
+          nationality: applicant.personalInfo?.nationality || "",
+          destination: applicant.visaInfo?.destinationCountry || "",
+          visaType: applicant.visaInfo?.visaType || "",
+          visaCategory: applicant.visaInfo?.visaCategory || "",
+          purposeOfVisit: applicant.visaInfo?.purposeOfVisit || "",
+          entryType: applicant.visaInfo?.entryType || "",
+          durationOfStay: applicant.visaInfo?.durationOfStay || "",
+          expectedTravelDate: applicant.visaInfo?.expectedTravelDate || "",
+          preferredEmbassy: applicant.visaInfo?.preferredEmbassy || "",
           status: applicant.status || "Submitted",
-          fees: applicant.fees || 16500,
-          submissionDate: applicant.createdAt ? new Date(applicant.createdAt).toISOString().split("T")[0] : "2026-08-04",
+          fees: applicant.fees || 0,
+          submissionDate: applicant.createdAt ? new Date(applicant.createdAt).toISOString().split("T")[0] : "",
           verifiedDocs: {
             passport: docs?.passportScan ? "verified" : "pending",
             photo: docs?.photo ? "verified" : "pending",
@@ -1087,49 +1145,6 @@ router.get("/activity-logs", async (req: Request, res: Response) => {
       device: log.device || "Chrome / Windows",
       status: log.status || "Success"
     }));
-
-    // Generate fallback dynamic activity logs for all applicants if dbLogs is small
-    if (logsList.length < 5) {
-      applicants.forEach((app, i) => {
-        const dateStr = new Date(app.createdAt).toLocaleString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-
-        logsList.push({
-          id: `LOG-${2000 + i}`,
-          logId: `LOG-${2000 + i}`,
-          userName: app.personalInfo?.fullName || "Applicant",
-          userEmail: app.personalInfo?.email || "user@email.com",
-          applicantId: app.applicantId,
-          activity: "Account Registered & Profile Created",
-          activityType: "Authentication",
-          dateAndTime: dateStr,
-          ipAddress: `192.168.1.${10 + i}`,
-          device: "Chrome / Windows",
-          status: "Success"
-        });
-
-        if (app.kycDetails && app.kycDetails.kycStatus !== "Pending") {
-          logsList.push({
-            id: `LOG-${3000 + i}`,
-            logId: `LOG-${3000 + i}`,
-            userName: app.personalInfo?.fullName || "Applicant",
-            userEmail: app.personalInfo?.email || "user@email.com",
-            applicantId: app.applicantId,
-            activity: `KYC Verification (${app.kycDetails.govtIdType || "Aadhaar / PAN Card"})`,
-            activityType: "KYC",
-            dateAndTime: dateStr,
-            ipAddress: `192.168.1.${10 + i}`,
-            device: "Chrome / Windows",
-            status: app.kycDetails.kycStatus === "Rejected" ? "Failed" : "Success"
-          });
-        }
-      });
-    }
 
     const totalActivities = logsList.length;
     const todayCount = logsList.filter(
@@ -1361,69 +1376,57 @@ router.get("/profile", async (req: Request, res: Response) => {
       applicant = await Applicant.findOne({}).sort({ updatedAt: -1 });
     }
 
-    if (!applicant) {
-      // Create seed applicant record if none exists
+    if (!applicant && user) {
+      const nameParts = (user.name || "").trim().split(" ");
       applicant = await Applicant.create({
-        applicantId: `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-        userId: userId || undefined,
+        applicantId: `APP-${Date.now().toString().slice(-6)}`,
+        userId: user._id,
         personalInfo: {
-          fullName: user?.name || "Vibhu Sharma",
-          firstName: (user?.name || "Vibhu").split(" ")[0],
-          lastName: (user?.name || "Vibhu Sharma").split(" ").slice(1).join(" ") || "Sharma",
-          dob: "1995-06-12",
-          gender: "Male",
-          nationality: "Indian",
-          phone: user?.phone || "+91 98765 43210",
-          email: user?.email || "vibhu@phantomvisa.com",
-          country: "India",
-          address: "B-402, Highstreet Towers, MG Road, New Delhi, Delhi - 110001",
-          city: "New Delhi",
-          state: "Delhi",
-          postalCode: "110001",
-          occupation: "Senior Software Consultant",
-          employer: "TechCorp Solutions Pvt Ltd"
+          fullName: user.name || "",
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          dob: (user as any).dob || "",
+          gender: (user as any).gender || "",
+          nationality: (user as any).nationality || "",
+          phone: user.phone || "",
+          email: user.email || "",
+          country: (user as any).country || "",
+          address: (user as any).address || "",
+          city: (user as any).city || "",
+          state: (user as any).state || "",
+          postalCode: (user as any).postalCode || "",
+          occupation: "",
+          employer: ""
         },
         passportDetails: {
-          passportNumber: "Z9817264",
-          passportType: "Regular Ordinary (Type P)",
-          dateOfIssue: "2023-12-21",
-          dateOfExpiry: "2033-12-20",
-          placeOfIssue: "New Delhi",
-          scannedStatus: "Verified & OCR Scanned"
+          passportNumber: "",
+          passportType: "",
+          dateOfIssue: "",
+          dateOfExpiry: "",
+          placeOfIssue: "",
+          scannedStatus: "Pending Upload"
         },
-        coTravelers: [
-          {
-            id: "TRAVELER-1",
-            fullName: "Ananya Sharma",
-            relation: "Spouse",
-            passportNumber: "Z9817265",
-            dob: "1996-05-14",
-            kycStatus: "Verified"
-          },
-          {
-            id: "TRAVELER-2",
-            fullName: "Aarav Sharma",
-            relation: "Child",
-            passportNumber: "X1029481",
-            dob: "2020-08-02",
-            kycStatus: "Verified"
-          }
-        ],
+        coTravelers: [],
         preferences: {
-          twoFactorAuth: true,
+          twoFactorAuth: false,
           emailNotifications: true,
-          smsNotifications: true,
-          passportReminder: true
+          smsNotifications: false,
+          passportReminder: false
         },
         kycDetails: {
-          kycStatus: "Approved",
-          govtIdType: "National Identification & Address Proof",
-          aadhaarNumber: "5489 1234 9876",
-          panCardNumber: "ABCDE1234F",
-          submittedAt: new Date(),
-          verifiedAt: new Date()
+          kycStatus: "Pending",
+          govtIdType: "",
+          aadhaarNumber: "",
+          panCardNumber: ""
         },
         status: "Active"
+      });
+    }
+
+    if (!applicant) {
+      return res.status(200).json({
+        success: true,
+        data: null
       });
     }
 
@@ -1435,15 +1438,15 @@ router.get("/profile", async (req: Request, res: Response) => {
 
     const applications = applicantQuery.length > 0
       ? await ApplicationModel.find({ $or: applicantQuery })
-      : await ApplicationModel.find({});
+      : [];
 
     const approvedApps = applications.filter((app) => app.status === "Approved");
     const visasIssuedCount = approvedApps.length;
     const visasIssuedDestinations = Array.from(new Set(approvedApps.map((a) => a.countryName)));
 
     // Calculate Passport Validity live from dateOfExpiry
-    let passportValidityYears = 7;
-    let passportValidityLabel = "7 Years";
+    let passportValidityYears = 0;
+    let passportValidityLabel = "Not Provided";
     let isPassportExpired = false;
     if (applicant.passportDetails?.dateOfExpiry) {
       const expDate = new Date(applicant.passportDetails.dateOfExpiry);
@@ -1497,14 +1500,14 @@ router.get("/profile", async (req: Request, res: Response) => {
         passportDetails: applicant.passportDetails,
         coTravelers: applicant.coTravelers || [],
         preferences: applicant.preferences || {
-          twoFactorAuth: true,
+          twoFactorAuth: false,
           emailNotifications: true,
-          smsNotifications: true,
-          passportReminder: true
+          smsNotifications: false,
+          passportReminder: false
         },
-        kycDetails: applicant.kycDetails || { kycStatus: "Approved" },
+        kycDetails: applicant.kycDetails || { kycStatus: "Pending" },
         metrics: {
-          kycStatus: applicant.kycDetails?.kycStatus || "Approved",
+          kycStatus: applicant.kycDetails?.kycStatus || "Pending",
           passportValidityLabel,
           passportValidityYears,
           isPassportExpired,

@@ -31,6 +31,7 @@ import {
   X,
   ExternalLink
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface ApprovedApplicationRecord {
   id: string;
@@ -105,193 +106,17 @@ export const RECOMMENDED_APPROVED_TABS = [
 
 export const APPROVAL_WORKFLOW_STEPS = [
   "Application Approved",
-  "E-Visa Generated",
-  "Approval Certificate Issued",
+  "Visa Grant Document Generated",
   "Stamping & Sticker Applied",
   "Courier Dispatched",
   "Passport & Visa Delivered"
 ];
 
-const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20265001",
-    grantNumber: "EV-CAN-9918234",
-    applicantName: "Geeta Bisht",
-    firstName: "Geeta",
-    lastName: "Bisht",
-    passportNumber: "Z9876543",
-    appliedBy: "Applicant",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "V-1 Visitor Multiple Entry",
-    approvedBy: "Rahul Sharma (Consular Officer)",
-    approvalDate: "01 Aug 2026",
-    approvalTime: "10:30 AM",
-    visaIssueDate: "01 Aug 2026",
-    visaStatus: "Visa Issued",
-    status: "Approved",
-    amountPaid: "₹12,350",
-    transactionId: "TXN-9988112",
-    dob: "1994-08-12",
-    gender: "Female",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    address: "B-42, South Extension Part II",
-    cityState: "New Delhi, Delhi",
-    passportIssueDate: "15 Jan 2020",
-    passportExpiryDate: "14 Jan 2030",
-    passportIssuingAuthority: "Passport Office New Delhi",
-    passportPlaceOfIssue: "New Delhi",
-    travelDate: "2026-09-20",
-    expectedDepartureDate: "2026-10-15",
-    durationOfStay: "25 Days",
-    purposeOfVisit: "Tourism & Sightseeing",
-    portOfEntry: "Toronto Pearson Intl (YYZ)",
-    accommodationDetails: "Marriott Downtown Toronto",
-    occupation: "Senior Product Designer",
-    employerName: "TechCorp Global",
-    annualIncome: "₹18,50,000 INR",
-    sponsorType: "Self Sponsored",
-    embassyRefId: "CAN-EMB-88124",
-    biometricsDate: "22 Jul 2026",
-    vfsBranch: "VFS Global New Delhi",
-    issuedDocs: [
-      { name: "Official Canada E-Visa PDF", status: "Issued", fileSize: "1.4 MB" },
-      { name: "Visa Grant Notice & Confirmation", status: "Issued", fileSize: "850 KB" },
-      { name: "Official Approval Certificate", status: "Issued", fileSize: "1.1 MB" },
-      { name: "Payment Receipt & Invoice", status: "Available", fileSize: "420 KB" },
-      { name: "Travel & Border Entry Advisory", status: "Available", fileSize: "600 KB" }
-    ],
-    actionNotes: [
-      { id: "n1", author: "Rahul Sharma", text: "Application verified and officially approved. Canada 10-Year Multiple Entry eVisa issued.", date: "01 Aug 2026 10:30 AM" },
-      { id: "n2", author: "Dispatch Desk", text: "E-Visa emailed to applicant and courier dispatch scheduled via BlueDart.", date: "02 Aug 2026 09:15 AM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20265002",
-    grantNumber: "EV-AUS-4410981",
-    applicantName: "Rahul Sharma",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    passportNumber: "M1234567",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    country: "Australia",
-    category: "Student",
-    visaType: "Subclass 500 Student Grant",
-    approvedBy: "David Thomas (Consular Officer)",
-    approvalDate: "31 Jul 2026",
-    approvalTime: "04:15 PM",
-    visaIssueDate: "31 Jul 2026",
-    visaExpiryDate: "30 Jul 2028",
-    visaValidity: "2 Years Student Grant",
-    issuanceType: "Sticker Visa",
-    dispatchStatus: "Dispatched / In Transit",
-    courierPartner: "DHL Express",
-    waybillNumber: "DHL-77334411",
-    dispatchDate: "03 Aug 2026",
-    status: "Approved",
-    amountPaid: "₹18,930",
-    transactionId: "TXN-7733441",
-    dob: "1999-02-15",
-    gender: "Male",
-    maritalStatus: "Single",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    address: "Flat 301, Sunshine Heights",
-    cityState: "Mumbai, Maharashtra",
-    passportIssueDate: "10 Mar 2021",
-    passportExpiryDate: "09 Mar 2031",
-    passportIssuingAuthority: "Passport Office Mumbai",
-    passportPlaceOfIssue: "Mumbai",
-    travelDate: "2026-10-01",
-    expectedDepartureDate: "2028-07-30",
-    durationOfStay: "24 Months",
-    purposeOfVisit: "Higher Studies (Master of IT)",
-    portOfEntry: "Sydney Kingsford Smith (SYD)",
-    accommodationDetails: "University Campus Residence",
-    occupation: "Student",
-    employerName: "N/A",
-    annualIncome: "₹12,00,000 INR (Family)",
-    sponsorType: "Parents Sponsored",
-    embassyRefId: "AUS-EMB-55912",
-    biometricsDate: "20 Jul 2026",
-    vfsBranch: "VFS Global Mumbai",
-    issuedDocs: [
-      { name: "Australia Student Visa Grant Notice", status: "Issued", fileSize: "2.1 MB" },
-      { name: "VEVO Online Check Confirmation", status: "Issued", fileSize: "920 KB" },
-      { name: "Official Approval Certificate", status: "Issued", fileSize: "1.0 MB" },
-      { name: "Payment Receipt", status: "Available", fileSize: "350 KB" }
-    ],
-    actionNotes: [
-      { id: "n3", author: "David Thomas", text: "Subclass 500 Student Visa approved. Stamping completed and dispatched via DHL.", date: "31 Jul 2026 04:15 PM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20265003",
-    grantNumber: "EV-UAE-3319456",
-    applicantName: "Bikram Suman",
-    firstName: "Bikram",
-    lastName: "Suman",
-    passportNumber: "K4567890",
-    appliedBy: "Applicant",
-    country: "UAE",
-    category: "Business",
-    visaType: "30 Days Multiple Entry",
-    approvedBy: "Sarah Johnston (Consular Officer)",
-    approvalDate: "30 Jul 2026",
-    approvalTime: "02:00 PM",
-    visaIssueDate: "30 Jul 2026",
-    visaStatus: "Completed",
-    status: "Approved",
-    amountPaid: "₹8,670",
-    transactionId: "TXN-5511223",
-    dob: "1988-06-25",
-    gender: "Male",
-    maritalStatus: "Married",
-    nationality: "Indian",
-    residenceCountry: "India",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    address: "H.No 108, Sector 15",
-    cityState: "Gurugram, Haryana",
-    passportIssueDate: "05 Jun 2019",
-    passportExpiryDate: "04 Jun 2029",
-    passportIssuingAuthority: "Passport Office Gurgaon",
-    passportPlaceOfIssue: "Gurgaon",
-    travelDate: "2026-08-12",
-    expectedDepartureDate: "2026-08-25",
-    durationOfStay: "13 Days",
-    purposeOfVisit: "Business Meetings & Expo",
-    portOfEntry: "Dubai Intl Airport (DXB)",
-    accommodationDetails: "Grand Hyatt Dubai",
-    occupation: "Managing Director",
-    employerName: "Suman Tech Solutions",
-    annualIncome: "₹32,00,000 INR",
-    sponsorType: "Company Sponsored",
-    embassyRefId: "UAE-EMB-11029",
-    biometricsDate: "18 Jul 2026",
-    vfsBranch: "VFS Global New Delhi",
-    issuedDocs: [
-      { name: "UAE GDRFA Official E-Visa PDF", status: "Issued", fileSize: "1.8 MB" },
-      { name: "Approval Certificate", status: "Issued", fileSize: "950 KB" },
-      { name: "Payment Invoice", status: "Available", fileSize: "310 KB" }
-    ],
-    actionNotes: [
-      { id: "n4", author: "Sarah Johnston", text: "Approved UAE 30-Day Business Visa. E-Visa generated and ready for applicant download.", date: "30 Jul 2026 02:00 PM" }
-    ]
-  }
-];
+const MOCK_APPROVED_APPLICATIONS: ApprovedApplicationRecord[] = [];
 
 export default function ApprovedApplicationsManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [approvalStatusFilter, setApprovalStatusFilter] = useState("All");
@@ -301,7 +126,68 @@ export default function ApprovedApplicationsManagement() {
   const [dispatchFilter, setDispatchFilter] = useState("All");
 
   // Records State
-  const [approvedList, setApprovedList] = useState<ApprovedApplicationRecord[]>(MOCK_APPROVED_APPLICATIONS);
+  const [approvedList, setApprovedList] = useState<ApprovedApplicationRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const approved = contextApps.filter((a: any) => a.status === "Approved" || a.status === "Completed");
+      const mapped: ApprovedApplicationRecord[] = approved.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-5001",
+        grantNumber: `EV-${(app.destination || "CAN").substring(0, 3).toUpperCase()}-${Math.floor(1000000 + Math.random() * 9000000)}`,
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
+        lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        appliedBy: app.appliedBy || "Applicant",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        approvedBy: authSession?.user?.name ? `${authSession.user.name} (Consular Officer)` : "Consular Officer",
+        approvalDate: app.submissionDate || "01 Aug 2026",
+        approvalTime: "10:30 AM",
+        visaIssueDate: app.submissionDate || "01 Aug 2026",
+        visaStatus: "Visa Issued",
+        status: "Approved",
+        amountPaid: `₹${app.fees || 12350}`,
+        transactionId: "TXN-9988112",
+        dob: app.dob || "1994-08-12",
+        gender: "Female",
+        maritalStatus: "Single",
+        nationality: app.nationality || "Indian",
+        residenceCountry: "India",
+        email: app.email || "",
+        phone: app.phone || "",
+        address: app.address || "",
+        cityState: "New Delhi, Delhi",
+        passportIssueDate: "15 Jan 2020",
+        passportExpiryDate: app.passportExpiry || "14 Jan 2030",
+        passportIssuingAuthority: "Passport Office New Delhi",
+        passportPlaceOfIssue: "New Delhi",
+        travelDate: app.travelDates || "2026-09-20",
+        expectedDepartureDate: "2026-10-15",
+        durationOfStay: "25 Days",
+        purposeOfVisit: "Tourism",
+        portOfEntry: "YYZ",
+        accommodationDetails: "Hotel",
+        occupation: "Professional",
+        employerName: "TechCorp Global",
+        annualIncome: "₹18,50,000 INR",
+        sponsorType: "Self Sponsored",
+        embassyRefId: "CAN-EMB-88124",
+        biometricsDate: "22 Jul 2026",
+        vfsBranch: "VFS Global",
+        issuedDocs: [
+          { name: "Official E-Visa PDF", status: "Issued", fileSize: "1.4 MB" },
+          { name: "Visa Grant Notice & Confirmation", status: "Issued", fileSize: "850 KB" },
+          { name: "Payment Receipt & Invoice", status: "Available", fileSize: "420 KB" }
+        ],
+        actionNotes: []
+      }));
+      setApprovedList(mapped);
+    }
+  }, [contextApps, authSession]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

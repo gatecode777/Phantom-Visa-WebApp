@@ -62,7 +62,7 @@ export default function ApplicantUploadDocuments({
   onNavigateSupport
 }: ApplicantUploadDocumentsProps) {
   // Select active application
-  const [selectedAppId, setSelectedAppId] = useState<string>(applications[0]?.id || "VO-2026-1025");
+  const [selectedAppId, setSelectedAppId] = useState<string>(applications[0]?.id || "");
 
   const activeApp = useMemo(() => {
     return applications.find((a) => a.id === selectedAppId || a.applicationId === selectedAppId) || applications[0] || null;

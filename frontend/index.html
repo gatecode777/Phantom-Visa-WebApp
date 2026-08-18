@@ -2,6 +2,39 @@
 <html lang="en" class="h-full antialiased dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var customFavicon = localStorage.getItem("phantom_custom_favicon");
+          if (customFavicon) {
+            var existing = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']");
+            existing.forEach(function(el) { el.remove(); });
+            var mime = "image/png";
+            if (customFavicon.indexOf(".ico") !== -1) mime = "image/x-icon";
+            else if (customFavicon.indexOf(".svg") !== -1) mime = "image/svg+xml";
+            else if (customFavicon.indexOf(".jpg") !== -1 || customFavicon.indexOf(".jpeg") !== -1) mime = "image/jpeg";
+            else if (customFavicon.indexOf(".webp") !== -1) mime = "image/webp";
+
+            var link = document.createElement("link");
+            link.type = mime;
+            link.rel = "icon";
+            link.href = customFavicon;
+            document.head.appendChild(link);
+
+            var shortcut = document.createElement("link");
+            shortcut.type = mime;
+            shortcut.rel = "shortcut icon";
+            shortcut.href = customFavicon;
+            document.head.appendChild(shortcut);
+
+            var apple = document.createElement("link");
+            apple.rel = "apple-touch-icon";
+            apple.href = customFavicon;
+            document.head.appendChild(apple);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/logo-icon.png" />

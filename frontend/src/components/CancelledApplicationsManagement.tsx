@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Ban,
   Search,
@@ -39,6 +39,7 @@ import {
   HelpCircle,
   RotateCcw
 } from "lucide-react";
+import { useVisa } from "../context/VisaContext";
 
 export interface CancelledApplicationRecord {
   id: string;
@@ -118,110 +119,11 @@ export const COMMON_CANCELLATION_REASONS = [
   "Other"
 ];
 
-const MOCK_CANCELLED_APPLICATIONS: CancelledApplicationRecord[] = [
-  {
-    id: "1",
-    appId: "APP-20261601",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    appliedBy: "Applicant",
-    country: "Canada",
-    category: "Tourist",
-    visaType: "eVisa",
-    cancelledBy: "Applicant",
-    cancellationDate: "01 Aug 2026",
-    cancellationReason: "Travel Plans Changed",
-    cancellationRemarks: "Applicant postponed trip due to personal emergency.",
-    refundEligible: true,
-    refundAmount: "₹8,500",
-    refundStatus: "Pending",
-    refundMethod: "Bank Transfer",
-    status: "Cancelled",
-    dob: "1994-08-12",
-    gender: "Female",
-    nationality: "Indian",
-    email: "geeta.bisht@gmail.com",
-    phone: "+91 98123 45678",
-    communicationHistory: {
-      cancellationEmailSent: true,
-      smsSent: true,
-      inAppNotified: true,
-      applicantResponse: "Requested speed refund process."
-    },
-    actionNotes: [
-      { id: "n1", author: "Admin Vibhu", text: "Cancellation approved. Partial refund initiated.", date: "01 Aug 2026 02:00 PM" }
-    ]
-  },
-  {
-    id: "2",
-    appId: "APP-20261602",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    country: "Australia",
-    category: "Student",
-    visaType: "Sticker Visa",
-    cancelledBy: "Admin",
-    cancellationDate: "31 Jul 2026",
-    cancellationReason: "Duplicate Application",
-    cancellationRemarks: "System detected duplicate intake submission under APP-20261002.",
-    refundEligible: true,
-    refundAmount: "₹18,930",
-    refundStatus: "Processed",
-    refundMethod: "Original Payment Gateway",
-    refundTransactionId: "REF-8822114",
-    refundDate: "01 Aug 2026",
-    status: "Cancelled",
-    dob: "1999-02-15",
-    gender: "Male",
-    nationality: "Indian",
-    email: "rahul.sharma@outlook.com",
-    phone: "+91 91234 56789",
-    communicationHistory: {
-      cancellationEmailSent: true,
-      smsSent: true,
-      inAppNotified: true
-    },
-    actionNotes: [
-      { id: "n2", author: "Admin Vibhu", text: "100% refund credited back to agent portal balance.", date: "01 Aug 2026 11:00 AM" }
-    ]
-  },
-  {
-    id: "3",
-    appId: "APP-20261603",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    appliedBy: "Agent",
-    agentName: "Global Visa Solutions",
-    country: "UAE",
-    category: "Business",
-    visaType: "Multiple Entry",
-    cancelledBy: "Agent",
-    cancellationDate: "30 Jul 2026",
-    cancellationReason: "Personal Reason",
-    cancellationRemarks: "Client decided to travel on existing valid visa.",
-    refundEligible: false,
-    refundAmount: "₹0",
-    refundStatus: "Not Eligible",
-    status: "Cancelled",
-    dob: "1988-06-25",
-    gender: "Male",
-    nationality: "Indian",
-    email: "bikram.s@techsolutions.com",
-    phone: "+91 99887 76655",
-    communicationHistory: {
-      cancellationEmailSent: true,
-      smsSent: false,
-      inAppNotified: true
-    },
-    actionNotes: [
-      { id: "n3", author: "Global Visa Solutions", text: "Cancelled by agent prior to embassy submission.", date: "30 Jul 2026 04:30 PM" }
-    ]
-  }
-];
+const MOCK_CANCELLED_APPLICATIONS: CancelledApplicationRecord[] = [];
 
 export default function CancelledApplicationsManagement() {
+  const { applications: contextApps, authSession } = useVisa();
+
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [cancelledByFilter, setCancelledByFilter] = useState("All");
@@ -230,7 +132,46 @@ export default function CancelledApplicationsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [cancelledApps, setCancelledApps] = useState<CancelledApplicationRecord[]>(MOCK_CANCELLED_APPLICATIONS);
+  const [cancelledApps, setCancelledApps] = useState<CancelledApplicationRecord[]>([]);
+
+  useEffect(() => {
+    if (Array.isArray(contextApps)) {
+      const cancelled = contextApps.filter((a: any) => a.status === "Cancelled");
+      const mapped: CancelledApplicationRecord[] = cancelled.map((app: any) => ({
+        id: app.id || app._id || String(Math.random()),
+        appId: app.id || app.applicationId || "VO-2026-1601",
+        applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        appliedBy: app.appliedBy || "Applicant",
+        country: app.destination || app.countryName || "Canada",
+        category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",
+        visaType: app.visaType || "Tourist Visa",
+        cancelledBy: "Applicant",
+        cancellationDate: app.submissionDate || "01 Aug 2026",
+        cancellationReason: "Travel Plans Changed",
+        cancellationRemarks: "Applicant requested cancellation.",
+        refundEligible: true,
+        refundAmount: `₹${app.fees || 8500}`,
+        refundStatus: "Pending",
+        refundMethod: "Original Payment Method",
+        status: "Cancelled",
+        dob: app.dob || "1994-08-12",
+        gender: "Female",
+        nationality: app.nationality || "Indian",
+        email: app.email || "",
+        phone: app.phone || "",
+        communicationHistory: {
+          cancellationEmailSent: true,
+          smsSent: true,
+          inAppNotified: true,
+          applicantResponse: "Cancellation recorded."
+        },
+        actionNotes: []
+      }));
+      setCancelledApps(mapped);
+    }
+  }, [contextApps, authSession]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

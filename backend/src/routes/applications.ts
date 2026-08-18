@@ -9,6 +9,7 @@ import TransactionModel from "../models/Transaction.js";
 import { calculatePricing } from "./finance.js";
 import imagekit from "../lib/imagekit.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
+import { verifyAccessToken, TokenPayload } from "../lib/security/jwt.js";
 
 const router = Router();
 
@@ -29,180 +30,139 @@ function deduplicateRequirementDocuments(documents: any[] = []) {
 }
 
 /**
- * POST /api/v1/applications/upload-doc
- * Upload applicant document scan / PDF to ImageKit in folder /PHANTOM-VISA/documents/
- */
-router.post("/upload-doc", upload.single("file"), async (req: Request, res: Response) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "No document file provided for upload."));
-    }
-
-    const supportedVerificationMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
-    if (!supportedVerificationMimeTypes.has(req.file.mimetype)) {
-      return res.status(415).json(formatErrorEnvelope("UNSUPPORTED_MEDIA_TYPE", "Use a JPEG, PNG, WEBP, or PDF file. This format cannot be securely verified."));
-    }
-
-    const fileBase64 = req.file.buffer.toString("base64");
-    const fileName = `doc_${Date.now()}_${req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-    const result = await imagekit.upload({
-      file: fileBase64,
-      fileName,
-      folder: "/PHANTOM-VISA/documents/"
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Document uploaded to ImageKit successfully.",
-      data: {
-        url: result.url,
-        fileId: result.fileId,
-        fileName: result.name
-      }
-    });
-  } catch (error: any) {
-    console.error("ImageKit Document Upload Error:", error);
-    return res.status(500).json(
-      formatErrorEnvelope("IMAGEKIT_UPLOAD_ERROR", error.message || "Failed to upload document scan to ImageKit.")
-    );
-  }
-});
-
-/**
  * GET /api/v1/applications
- * Retrieve all visa applications from MongoDB (sorted by newest first)
+ * Retrieve visa applications scoped by Agent assignment, Available Pool, or Global Admin view
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    let applications = await ApplicationModel.find().sort({ createdAt: -1 });
-
-    // Seed defaults if database is empty so dashboard lists render smoothly
-    if (applications.length === 0) {
-      const defaultApps = [
-        {
-          applicationId: "VO-2026-9841",
-          countryName: "Canada",
-          countryCode: "CAN",
-          categoryName: "Tourist / Visitor",
-          visaTypeName: "Canada Express Visitor Visa",
-          processingSpeed: "express",
-          entryType: "Multiple Entry",
-          stayValidity: "180 Days",
-          personalDetails: {
-            givenName: "Geeta",
-            surname: "Sharma",
-            dob: "1995-06-12",
-            gender: "Female",
-            nationality: "Indian",
-            maritalStatus: "Single",
-            phone: "+91 98765 43210",
-            email: "geeta.sharma@gmail.com"
-          },
-          travelDetails: {
-            travelDate: "2026-10-15",
-            returnDate: "2026-11-15",
-            stayType: "Hotel Booking",
-            hostName: "Fairmont Royal York Toronto",
-            hostAddress: "100 Front St W, Toronto, ON"
-          },
-          passportDetails: {
-            passportType: "Ordinary / Regular",
-            passportNo: "Z9817264",
-            issuePlace: "New Delhi",
-            issueDate: "2023-12-21",
-            expiryDate: "2033-12-20"
-          },
-          employmentDetails: {
-            employmentStatus: "Employed",
-            employerName: "TechCorp Solutions Pvt Ltd",
-            jobTitle: "Senior Product Designer",
-            bankBalance: "₹6,50,000"
-          },
-          uploadedDocuments: [
-            { title: "Passport Bio Page", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png", status: "verified" },
-            { title: "Recent Photo (35x45mm)", documentType: "Image Scan", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_photo.png", status: "verified" },
-            { title: "6-Month Bank Statement", documentType: "PDF Document", isMandatory: true, fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf", status: "verified" }
-          ],
-          coTravelers: [
-            { id: "ct-1", name: "Rohan Sharma", relation: "Spouse", passportNo: "Z9817265", age: 32 }
-          ],
-          pricing: {
-            consularFee: 8500,
-            platformFee: 2500,
-            expressSurcharge: 2000,
-            promoDiscount: 0,
-            promoCode: "",
-            totalAmount: 13000
-          },
-          status: "Submitted",
-          workflowStage: 1
-        },
-        {
-          applicationId: "VO-2026-1229",
-          countryName: "Australia",
-          countryCode: "AUS",
-          categoryName: "Tourist / Visitor",
-          visaTypeName: "Subclass 600 Tourist Visa",
-          processingSpeed: "express",
-          entryType: "Single Entry",
-          stayValidity: "60 Days",
-          personalDetails: {
-            givenName: "Vikram",
-            surname: "Mehta",
-            dob: "1988-03-24",
-            gender: "Male",
-            nationality: "Indian",
-            maritalStatus: "Married",
-            phone: "+91 98112 33445",
-            email: "vikram.mehta@outlook.com"
-          },
-          travelDetails: {
-            travelDate: "2026-09-10",
-            returnDate: "2026-09-28",
-            stayType: "Hotel Booking",
-            hostName: "Shangri-La Sydney",
-            hostAddress: "176 Cumberland St, Sydney"
-          },
-          passportDetails: {
-            passportType: "Ordinary / Regular",
-            passportNo: "Z4481920",
-            issuePlace: "Mumbai",
-            issueDate: "2022-05-10",
-            expiryDate: "2032-05-09"
-          },
-          employmentDetails: {
-            employmentStatus: "Employed",
-            employerName: "Infosys Technologies",
-            jobTitle: "Project Lead",
-            bankBalance: "₹8,20,000"
-          },
-          uploadedDocuments: [],
-          coTravelers: [],
-          pricing: {
-            consularFee: 12500,
-            platformFee: 2500,
-            expressSurcharge: 2000,
-            promoDiscount: 1000,
-            promoCode: "WELCOME10",
-            totalAmount: 16000
-          },
-          status: "Submitted",
-          workflowStage: 1
-        }
-      ];
-
-      applications = await ApplicationModel.insertMany(defaultApps);
+    // Inspect Authorization Token if provided
+    let tokenUser: TokenPayload | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      tokenUser = verifyAccessToken(authHeader.slice(7));
     }
+
+    const { agentId, pool, status, search } = req.query as {
+      agentId?: string;
+      pool?: string;
+      status?: string;
+      search?: string;
+    };
+
+    const queryFilters: any[] = [];
+
+    // Determine target Agent ID from query param or verified Agent token
+    const effectiveAgentId = agentId || (tokenUser?.role === "Agent" ? tokenUser.agentId : undefined);
+
+    if (pool === "available") {
+      // Unassigned / general pickup pool
+      queryFilters.push({
+        $or: [
+          { assignedAgentId: { $in: ["", null, "Auto-assign / None"] } },
+          { assignedAgentId: { $exists: false } }
+        ]
+      });
+    } else if (effectiveAgentId && tokenUser?.role !== "Admin" && tokenUser?.role !== "Super Admin" && tokenUser?.role !== "Staff") {
+      // Agent-scoped assigned workload query
+      queryFilters.push({
+        $or: [
+          { assignedAgentId: effectiveAgentId },
+          { assignedAgentName: { $regex: effectiveAgentId, $options: "i" } }
+        ]
+      });
+    } else if (tokenUser?.role === "Applicant") {
+      // Applicant-scoped query
+      queryFilters.push({
+        $or: [
+          { userId: tokenUser.userId },
+          { "personalDetails.phone": tokenUser.phone }
+        ]
+      });
+    }
+
+    // Status filter
+    if (status && status !== "All") {
+      if (status === "New" || status === "Submitted") {
+        queryFilters.push({ status: "Submitted" });
+      } else if (status === "Under Review" || status === "Docs Pending" || status === "In Review") {
+        queryFilters.push({ status: { $in: ["Under Review", "Docs Pending", "Embassy Processing"] } });
+      } else {
+        queryFilters.push({ status: { $regex: new RegExp(`^${status}$`, "i") } });
+      }
+    }
+
+    // Keyword Search filter
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), "i");
+      queryFilters.push({
+        $or: [
+          { applicationId: searchRegex },
+          { "personalDetails.givenName": searchRegex },
+          { "personalDetails.surname": searchRegex },
+          { "passportDetails.passportNo": searchRegex },
+          { countryName: searchRegex },
+          { visaTypeName: searchRegex }
+        ]
+      });
+    }
+
+    const finalQuery = queryFilters.length > 0 ? { $and: queryFilters } : {};
+    const applications = await ApplicationModel.find(finalQuery).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
       count: applications.length,
+      scope: pool === "available" ? "available_pool" : effectiveAgentId ? `agent_${effectiveAgentId}` : "global",
       data: applications
     });
   } catch (error: any) {
     console.error("Get Applications Error:", error);
     return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to fetch applications."));
+  }
+});
+
+/**
+ * PUT /api/v1/applications/:id/assign
+ * Assign an application to an agent (or claim from Available Pool)
+ */
+router.put("/:id/assign", async (req: Request, res: Response) => {
+  try {
+    const targetId = String(req.params.id);
+    const { agentId, agentName } = req.body;
+
+    if (!agentId) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "agentId is required to assign application."));
+    }
+
+    const queryConditions: any[] = [{ applicationId: targetId }];
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      queryConditions.push({ _id: targetId });
+    }
+
+    const application = await ApplicationModel.findOneAndUpdate(
+      { $or: queryConditions },
+      {
+        $set: {
+          assignedAgentId: agentId,
+          assignedAgentName: agentName || agentId,
+          status: "Under Review"
+        }
+      },
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", "Application record not found."));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Application ${application.applicationId} successfully assigned to ${application.assignedAgentName}.`,
+      data: application
+    });
+  } catch (error: any) {
+    console.error("Assign Application Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to assign application."));
   }
 });
 
@@ -420,19 +380,19 @@ router.post("/submit", async (req: Request, res: Response) => {
         invoiceNo,
         applicationId,
         applicantName: applicantFullName,
-        passportNumber: passportDetails?.passportNo ? passportDetails.passportNo.toUpperCase() : "Z9817264",
-        nationality: safePersonalDetails.nationality || "Indian",
+        passportNumber: passportDetails?.passportNo ? passportDetails.passportNo.toUpperCase() : "",
+        nationality: safePersonalDetails.nationality || "",
         country: `${countryName}`,
         visaType: visaTypeName,
         visaCategory: categoryName?.toLowerCase().includes("business") ? "Business" : categoryName?.toLowerCase().includes("student") ? "Student" : "Tourist",
         paidBy: "Applicant",
         pricing: fullPricing,
-        paymentMethod: "UPI Instant (Google Pay)",
+        paymentMethod: "UPI",
         paymentGateway: "Razorpay",
-        paymentRef: `RAZOR-${passportDetails?.passportNo || "9817264"}-PAY`,
+        paymentRef: passportDetails?.passportNo ? `RAZOR-${passportDetails.passportNo}-PAY` : `RAZOR-${numSuffix}-PAY`,
         status: "Successful",
-        gstin: "27AAACG1234H1Z5",
-        billingAddress: "104, Park Street, Connaught Place, New Delhi - 110001",
+        gstin: "",
+        billingAddress: "",
         sacCode: "998311"
       });
 

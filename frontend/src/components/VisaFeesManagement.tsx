@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   CreditCard,
   Search,
@@ -71,110 +71,7 @@ export const PREDEFINED_FEE_STRUCTURE = [
   { label: "Tax (18%)", amount: "₹1,980" }
 ];
 
-const MOCK_FEE_RECORDS: VisaFeeRecord[] = [
-  {
-    id: "1",
-    feeId: "VF-001",
-    country: "Canada",
-    category: "Tourist Visa",
-    visaType: "Tourist E-Visa",
-    entryType: "Single Entry",
-    currency: "INR (₹)",
-    status: "Active",
-    components: {
-      embassyFee: "6,500",
-      serviceFee: "1,500",
-      processingFee: "250",
-      expressCharge: "1,000",
-      biometricsFee: "850",
-      insuranceFee: "750",
-      tax: "1,450",
-      otherCharges: "0"
-    },
-    totalFee: "12,350",
-    discounts: {
-      discountType: "Percentage",
-      discountAmount: "10%",
-      promoCode: "SUMMER10",
-      expiryDate: "2026-08-31"
-    },
-    paymentMethods: ["Credit Card", "Debit Card", "UPI", "Net Banking", "Wallet"],
-    refundPolicy: {
-      refundable: true,
-      cancellationFee: "₹500",
-      refundPercentage: "80%",
-      refundProcessingTime: "3-5 Working Days"
-    }
-  },
-  {
-    id: "2",
-    feeId: "VF-002",
-    country: "Australia",
-    category: "Business Visa",
-    visaType: "Sticker Visa",
-    entryType: "Multiple Entry",
-    currency: "INR (₹)",
-    status: "Active",
-    components: {
-      embassyFee: "10,500",
-      serviceFee: "1,800",
-      processingFee: "500",
-      expressCharge: "1,500",
-      biometricsFee: "1,200",
-      insuranceFee: "1,000",
-      tax: "2,430",
-      otherCharges: "0"
-    },
-    totalFee: "18,930",
-    discounts: {
-      discountType: "None",
-      discountAmount: "0",
-      promoCode: "",
-      expiryDate: ""
-    },
-    paymentMethods: ["Credit Card", "Debit Card", "UPI", "Net Banking", "Bank Transfer"],
-    refundPolicy: {
-      refundable: false,
-      cancellationFee: "Non-Refundable",
-      refundPercentage: "0%",
-      refundProcessingTime: "N/A"
-    }
-  },
-  {
-    id: "3",
-    feeId: "VF-003",
-    country: "UAE",
-    category: "Business Visa",
-    visaType: "Multiple Entry",
-    entryType: "Multiple Entry",
-    currency: "INR (₹)",
-    status: "Active",
-    components: {
-      embassyFee: "5,000",
-      serviceFee: "1,000",
-      processingFee: "200",
-      expressCharge: "800",
-      biometricsFee: "0",
-      insuranceFee: "500",
-      tax: "1,170",
-      otherCharges: "0"
-    },
-    totalFee: "8,670",
-    discounts: {
-      discountType: "Flat",
-      discountAmount: "₹500",
-      promoCode: "BIZ500",
-      expiryDate: "2026-12-31"
-    },
-    paymentMethods: ["Credit Card", "Debit Card", "UPI", "Wallet"],
-    refundPolicy: {
-      refundable: true,
-      cancellationFee: "₹300",
-      refundPercentage: "90%",
-      refundProcessingTime: "2-4 Working Days"
-    }
-  }
-];
+const MOCK_FEE_RECORDS: VisaFeeRecord[] = [];
 
 export default function VisaFeesManagement() {
   // Search & Filter States
@@ -185,7 +82,7 @@ export default function VisaFeesManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Records State
-  const [feeRecords, setFeeRecords] = useState<VisaFeeRecord[]>(MOCK_FEE_RECORDS);
+  const [feeRecords, setFeeRecords] = useState<VisaFeeRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

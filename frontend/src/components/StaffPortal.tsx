@@ -22,14 +22,14 @@ export default function StaffPortal() {
   } = useVisa();
 
   // Selected application inside the review queue
-  const [selectedAppId, setSelectedAppId] = useState<string>("PV-2026-0044"); // Defaults to the Submitted one for easy review
+  const [selectedAppId, setSelectedAppId] = useState<string>("");
 
   // Get applications that need review (Submitted, Docs Pending, Embassy Processing)
   const queueApps = applications.filter(
     (app) => app.status === "Submitted" || app.status === "Docs Pending" || app.status === "Embassy Processing"
   );
 
-  const selectedApp = applications.find((app) => app.id === selectedAppId);
+  const selectedApp = applications.find((app) => app.id === selectedAppId) || queueApps[0] || applications[0];
 
   // Reject dialog states
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -125,8 +125,13 @@ export default function StaffPortal() {
             </div>
           </div>
 
-          {queueApps.map((app, idx) => {
-            const isSlaBreached = idx === 0; // Mock SLA flag
+          {queueApps.map((app) => {
+            const isSlaBreached = (() => {
+              if (!app.submissionDate) return false;
+              const subTime = new Date(app.submissionDate).getTime();
+              if (isNaN(subTime)) return false;
+              return Date.now() - subTime > 7 * 24 * 60 * 60 * 1000 && (app.status === "Submitted" || app.status === "Embassy Processing");
+            })();
             return (
               <button
                 key={app.id}

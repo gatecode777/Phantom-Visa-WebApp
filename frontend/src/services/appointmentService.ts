@@ -70,102 +70,9 @@ export interface UnifiedAppointmentRecord {
 }
 
 /**
- * Canonical seed data.
- *
- * These three records are tied to the SAME applicationIds as
- * INITIAL_UNIFIED_TRANSACTIONS in paymentService.ts:
- *   VO-2026-1025  →  Geeta Sharma    (passport Z9817264)  Australia
- *   VO-2026-9841  →  Geeta Sharma    (passport Z9817264)  Canada
- *   VO-2026-0814  →  Amitabh Patel   (passport P8812301)  UK
- *
- * Traveler identity is consistent — one passport owns one applicant profile.
+ * Canonical seed data for client state initialization
  */
-export const INITIAL_UNIFIED_APPOINTMENTS: UnifiedAppointmentRecord[] = [
-  {
-    id: "apt-1025-bio",
-    aptId: "APT-2026-9910",
-    applicationId: "VO-2026-1025",
-    applicantName: "Geeta Sharma",
-    passportNumber: "Z9817264",
-    nationality: "Indian",
-    country: "Australia",
-    visaType: "Subclass 600 Tourist Visa",
-    appointmentType: "Biometric Submission",
-    dateOnly: "2026-08-15",
-    dateDisplay: "15 Aug 2026",
-    timeSlot: "11:00 AM - 11:30 AM",
-    vacCenter: "VFS Global Visa Application Centre",
-    address: "Shivaji Stadium Metro Station, Mezzanine Level, Connaught Place",
-    city: "New Delhi",
-    state: "Delhi",
-    status: "Upcoming",
-    bookedBy: "Applicant",
-    slotNo: "SLOT-B12",
-    qrCodeRef: "VFS-AU-9817264-DEL",
-    slipPdfName: "appointment_slip_APT-2026-9910.pdf",
-    rescheduleCount: 0,
-    appointmentNotes: "Bring original passport and printed appointment confirmation letter.",
-    sendConfirmation: true,
-    createdAt: "2026-08-07T10:15:00.000Z"
-  },
-  {
-    id: "apt-9841-doc",
-    aptId: "APT-2026-8812",
-    applicationId: "VO-2026-9841",
-    applicantName: "Geeta Sharma",
-    passportNumber: "Z9817264",
-    nationality: "Indian",
-    country: "Canada",
-    visaType: "Canada Express Visitor Visa",
-    appointmentType: "Document Verification",
-    dateOnly: "2026-07-26",
-    dateDisplay: "26 Jul 2026",
-    timeSlot: "09:30 AM - 10:00 AM",
-    vacCenter: "VFS Canada Application Centre",
-    address: "45, Residency Road, Shanthala Nagar",
-    city: "Bengaluru",
-    state: "Karnataka",
-    status: "Completed",
-    bookedBy: "Applicant",
-    slotNo: "SLOT-DV09",
-    qrCodeRef: "VFS-CA-9817264-BLR",
-    slipPdfName: "appointment_slip_APT-2026-8812.pdf",
-    rescheduleCount: 0,
-    appointmentNotes: "Document verification completed successfully.",
-    sendConfirmation: true,
-    createdAt: "2026-08-01T16:30:00.000Z"
-  },
-  {
-    id: "apt-0814-emb",
-    aptId: "APT-2026-7734",
-    applicationId: "VO-2026-0814",
-    applicantName: "Amitabh Patel",
-    passportNumber: "P8812301",
-    nationality: "Indian",
-    country: "United Kingdom",
-    visaType: "Standard Visitor 6 Months",
-    appointmentType: "Embassy Interview",
-    dateOnly: "2026-07-20",
-    dateDisplay: "20 Jul 2026",
-    timeSlot: "02:00 PM - 02:30 PM",
-    vacCenter: "VFS UK Application Hub",
-    address: "12, Marine Drive, Churchgate",
-    city: "Mumbai",
-    state: "Maharashtra",
-    status: "Rescheduled",
-    bookedBy: "Agent",
-    agentName: "Apex Travels",
-    primaryOfficer: "Consular Officer Sarah Jenkins",
-    slotNo: "SLOT-E04",
-    qrCodeRef: "VFS-UK-8812301-BOM",
-    slipPdfName: "appointment_slip_APT-2026-7734.pdf",
-    rescheduleCount: 1,
-    lastRescheduledDate: "2026-07-18",
-    appointmentNotes: "Rescheduled upon applicant request due to flight timing change.",
-    sendConfirmation: true,
-    createdAt: "2026-07-15T14:10:00.000Z"
-  }
-];
+export const INITIAL_UNIFIED_APPOINTMENTS: UnifiedAppointmentRecord[] = [];
 
 /** Generate a new canonical appointment ID: APT-YYYY-XXXX */
 export function generateAptId(): string {
@@ -214,38 +121,38 @@ export const APPOINTMENT_WORKFLOW_STEPS = [
 /**
  * GET /api/v1/appointments
  * Fetch all appointments from MongoDB.
- * Falls back to INITIAL_UNIFIED_APPOINTMENTS if the backend is unreachable.
+ * Falls back to an empty array if the backend is unreachable or returns no data.
  */
 export async function fetchUnifiedAppointments(): Promise<UnifiedAppointmentRecord[]> {
   try {
     const res = await fetch(`${API_V1_URL}/appointments`);
     const json = await res.json();
-    if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
-      return json.data.map((item: any): UnifiedAppointmentRecord => ({
-        id:              item._id || item.aptId,
-        aptId:           item.aptId,
-        applicationId:   item.applicationId,
-        applicantName:   item.applicantName,
-        passportNumber:  item.passportNumber,
-        nationality:     item.nationality || "Indian",
-        country:         item.country,
-        visaType:        item.visaType,
-        appointmentType: item.appointmentType as UnifiedAppointmentType,
-        dateOnly:        item.dateOnly,
-        dateDisplay:     item.dateDisplay,
-        timeSlot:        item.timeSlot,
-        vacCenter:       item.vacCenter,
-        address:         item.address || "",
-        city:            item.city,
-        state:           item.state || "",
-        status:          item.status as UnifiedAppointmentStatus,
-        bookedBy:        item.bookedBy || "Applicant",
-        agentName:       item.agentName || undefined,
-        primaryOfficer:  item.primaryOfficer || undefined,
-        slotNo:          item.slotNo || "",
-        qrCodeRef:       item.qrCodeRef || "",
-        slipPdfName:     item.slipPdfName || "",
-        rescheduleCount: item.rescheduleCount ?? 0,
+    if (res.ok && json.success && Array.isArray(json.data)) {
+      return json.data.map((item: any) => ({
+        id:                  item._id || item.aptId,
+        aptId:               item.aptId,
+        applicationId:       item.applicationId,
+        applicantName:       item.applicantName,
+        passportNumber:      item.passportNumber,
+        nationality:         item.nationality || "Indian",
+        country:             item.country,
+        visaType:            item.visaType,
+        appointmentType:     (item.appointmentType as UnifiedAppointmentType) || "Biometric Submission",
+        dateOnly:            item.dateOnly,
+        dateDisplay:         item.dateDisplay,
+        timeSlot:            item.timeSlot,
+        vacCenter:           item.vacCenter,
+        address:             item.address,
+        city:                item.city,
+        state:               item.state,
+        status:              (item.status as UnifiedAppointmentStatus) || "Upcoming",
+        bookedBy:            item.bookedBy || "Applicant",
+        agentName:           item.agentName || undefined,
+        primaryOfficer:      item.primaryOfficer || undefined,
+        slotNo:              item.slotNo,
+        qrCodeRef:           item.qrCodeRef,
+        slipPdfName:         item.slipPdfName,
+        rescheduleCount:     item.rescheduleCount || 0,
         lastRescheduledDate: item.lastRescheduledDate || undefined,
         appointmentNotes:    item.appointmentNotes || undefined,
         sendConfirmation:    item.sendConfirmation ?? true,
@@ -255,8 +162,7 @@ export async function fetchUnifiedAppointments(): Promise<UnifiedAppointmentReco
   } catch (err) {
     console.error("Failed to fetch appointments from backend API:", err);
   }
-  // Offline fallback — seed data
-  return INITIAL_UNIFIED_APPOINTMENTS;
+  return [];
 }
 
 /**

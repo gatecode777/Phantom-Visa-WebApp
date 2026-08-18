@@ -82,79 +82,62 @@ export interface ApplicantProfileRecord {
   pipeline: ProfilePipeline;
 }
 
-const DEFAULT_PROFILE: ApplicantProfileRecord = {
-  applicantId: "APP-2026-1025",
-  memberId: "APP-2026-1025",
+export const EMPTY_PROFILE: ApplicantProfileRecord = {
+  applicantId: "",
+  memberId: "",
   personalInfo: {
-    fullName: "Vibhu Sharma",
-    firstName: "Vibhu",
-    lastName: "Sharma",
-    dob: "1995-06-12",
-    gender: "Male",
-    nationality: "Indian",
-    phone: "+91 98765 43210",
-    email: "vibhu@phantomvisa.com",
-    country: "India",
-    address: "B-402, Highstreet Towers, MG Road, New Delhi, Delhi - 110001",
-    city: "New Delhi",
-    state: "Delhi",
-    postalCode: "110001",
-    occupation: "Senior Software Consultant",
-    employer: "TechCorp Solutions Pvt Ltd"
+    fullName: "",
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "",
+    nationality: "",
+    phone: "",
+    email: "",
+    country: "",
+    address: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    occupation: "",
+    employer: ""
   },
   passportDetails: {
-    passportNumber: "Z9817264",
-    passportType: "Regular Ordinary (Type P)",
-    dateOfIssue: "2023-12-21",
-    dateOfExpiry: "2033-12-20",
-    placeOfIssue: "New Delhi",
-    scannedStatus: "Verified & OCR Scanned"
+    passportNumber: "",
+    passportType: "",
+    dateOfIssue: "",
+    dateOfExpiry: "",
+    placeOfIssue: "",
+    scannedStatus: "Pending"
   },
-  coTravelers: [
-    {
-      id: "TRAVELER-1",
-      fullName: "Ananya Sharma",
-      relation: "Spouse",
-      passportNumber: "Z9817265",
-      dob: "1996-05-14",
-      kycStatus: "Verified"
-    },
-    {
-      id: "TRAVELER-2",
-      fullName: "Aarav Sharma",
-      relation: "Child",
-      passportNumber: "X1029481",
-      dob: "2020-08-02",
-      kycStatus: "Verified"
-    }
-  ],
+  coTravelers: [],
   preferences: {
-    twoFactorAuth: true,
+    twoFactorAuth: false,
     emailNotifications: true,
-    smsNotifications: true,
-    passportReminder: true
+    smsNotifications: false,
+    passportReminder: false
   },
   kycDetails: {
-    kycStatus: "Approved",
-    govtIdType: "National Identification & Address Proof",
-    aadhaarNumber: "5489 1234 9876",
-    panCardNumber: "ABCDE1234F"
+    kycStatus: "Pending",
+    govtIdType: "",
+    aadhaarNumber: "",
+    panCardNumber: ""
   },
   metrics: {
-    kycStatus: "Approved",
-    passportValidityLabel: "7 Years",
-    passportValidityYears: 7,
+    kycStatus: "Pending",
+    passportValidityLabel: "Not Provided",
+    passportValidityYears: 0,
     isPassportExpired: false,
-    visasIssuedCount: 1,
-    visasIssuedDestinations: ["Canada"],
-    travelHistoryCount: 1,
-    coTravelersCount: 2,
-    profileScore: 95
+    visasIssuedCount: 0,
+    visasIssuedDestinations: [],
+    travelHistoryCount: 0,
+    coTravelersCount: 0,
+    profileScore: 0
   },
   pipeline: {
-    stage1Complete: true,
-    stage2Complete: true,
-    stage3Complete: true,
+    stage1Complete: false,
+    stage2Complete: false,
+    stage3Complete: false,
     stage4Complete: false
   }
 };
@@ -170,13 +153,13 @@ export async function fetchProfileApi(token?: string): Promise<ApplicantProfileR
     const res = await fetch(`${API_V1_URL}/applicant/profile`, { headers });
     if (!res.ok) {
       console.warn("fetchProfileApi non-200 status:", res.status);
-      return DEFAULT_PROFILE;
+      return EMPTY_PROFILE;
     }
     const json = await res.json();
-    return json.data || DEFAULT_PROFILE;
+    return json.data || EMPTY_PROFILE;
   } catch (err) {
     console.error("fetchProfileApi network error:", err);
-    return DEFAULT_PROFILE;
+    return EMPTY_PROFILE;
   }
 }
 

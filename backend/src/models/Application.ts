@@ -88,7 +88,7 @@ export interface IApplication extends Document {
     promoCode?: string;
     totalAmount: number;
   };
-  status: "Draft" | "Submitted" | "Docs Pending" | "Embassy Processing" | "Approved" | "Rejected" | "Cancelled";
+  status: "Draft" | "Submitted" | "Under Review" | "Docs Pending" | "Embassy Processing" | "Approved" | "Rejected" | "Completed" | "Cancelled";
   rejectionReason?: string;
   workflowStage: number; // 1 = Applicant Fills & Submits, 2 = Agent AI & OCR, 3 = Embassy Consular Submission, 4 = Visa Decision Granted
   createdAt: Date;
@@ -131,7 +131,7 @@ const ApplicationSchema: Schema = new Schema(
     passportDetails: {
       passportType: { type: String, default: "Ordinary / Regular" },
       passportNo: { type: String, required: true },
-      issuePlace: { type: String, default: "New Delhi" },
+      issuePlace: { type: String, default: "" },
       issueDate: { type: String },
       expiryDate: { type: String, required: true }
     },
@@ -139,7 +139,7 @@ const ApplicationSchema: Schema = new Schema(
       employmentStatus: { type: String, default: "Employed" },
       employerName: { type: String, default: "" },
       jobTitle: { type: String, default: "" },
-      bankBalance: { type: String, default: "₹4,50,000" }
+      bankBalance: { type: String, default: "" }
     },
     uploadedDocuments: [
       {
@@ -189,7 +189,7 @@ const ApplicationSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Draft", "Submitted", "Docs Pending", "Embassy Processing", "Approved", "Rejected", "Cancelled"],
+      enum: ["Draft", "Submitted", "Under Review", "Docs Pending", "Embassy Processing", "Approved", "Rejected", "Completed", "Cancelled"],
       default: "Submitted"
     },
     rejectionReason: { type: String, default: "" },

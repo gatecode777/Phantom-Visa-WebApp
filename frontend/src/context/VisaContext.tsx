@@ -21,6 +21,7 @@ import {
   TicketMessage,
   fetchTickets
 } from "../services/supportService";
+import { fetchSystemSettings } from "../services/systemService";
 
 export function formatINR(val: number, decimals: number = 0): string {
   if (isNaN(val) || val === null || val === undefined) return "0";
@@ -43,10 +44,14 @@ export function formatINR(val: number, decimals: number = 0): string {
 export type VisaStatus =
   | "Draft"
   | "Docs Pending"
+  | "Document Pending"
   | "Submitted"
+  | "Under Review"
   | "Embassy Processing"
   | "Approved"
-  | "Rejected";
+  | "Rejected"
+  | "Cancelled"
+  | "Completed";
 
 export interface Application {
   id: string;
@@ -186,6 +191,9 @@ export interface AuthSession {
     phone?: string;
     name: string;
     role: "Admin" | "Agent" | "Staff" | "Applicant";
+    agentId?: string;
+    agencyName?: string;
+    applicantId?: string;
   };
   token: string;
 }
@@ -270,16 +278,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
         return JSON.parse(saved);
       }
     } catch (e) {}
-    return {
-      token: "mock-agent-session-token",
-      user: {
-        id: "AGENT-001",
-        name: "Geeta Bisht",
-        email: "geeta.bisht@phantomvisa.com",
-        role: "Agent",
-        phone: "+919876543212"
-      }
-    };
+    return null;
   });
 
   const [currentRole, setCurrentRole] = useState<"Agent" | "Staff" | "Customer" | "Super Admin">(() => {
@@ -293,10 +292,10 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
           Staff: "Staff",
           Agent: "Agent"
         };
-        return roleMap[parsed.user?.role] || "Agent";
+        return roleMap[parsed.user?.role] || "Customer";
       }
     } catch (e) {}
-    return "Agent";
+    return "Customer";
   });
 
   const [applicantDashboardData, setApplicantDashboardData] = useState<{
@@ -315,11 +314,14 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   const fetchUnifiedAppointmentsList = async () => {
     try {
       const data = await fetchUnifiedAppointments();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setUnifiedAppointments(data);
+      } else {
+        setUnifiedAppointments([]);
       }
     } catch (err) {
       console.error("Failed to fetch unified appointments list:", err);
+      setUnifiedAppointments([]);
     }
   };
 
@@ -402,11 +404,14 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   const fetchUnifiedTransactionsList = async () => {
     try {
       const data = await fetchUnifiedTransactions();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setUnifiedTransactions(data);
+      } else {
+        setUnifiedTransactions([]);
       }
     } catch (err) {
       console.error("Failed to fetch unified transactions list:", err);
+      setUnifiedTransactions([]);
     }
   };
 
@@ -556,6 +561,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkAndRefreshToken();
+    fetchSystemSettings();
   }, []);
 
   // Fetch applicant dashboard data once on initial mount only
@@ -580,8 +586,11 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("phantom_auth_session");
       localStorage.removeItem("customer_active_tab");
       localStorage.removeItem("customer_active_subtab");
+      localStorage.removeItem("admin_active_section");
+      localStorage.removeItem("admin_active_subitem");
     } catch (e) {}
     setAuthSession(null);
+    setCurrentRole("Customer");
     setApplicantDashboardData(null);
     setCustomerTab("dashboard");
   };
@@ -613,114 +622,14 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
     return "dashboard";
   });
   
-  const [applications, setApplications] = useState<Application[]>([
-    {
-      id: "PV-2026-0041",
-      travelerName: "Sophia Martinez",
-      dob: "1992-04-12",
-      passportNumber: "US8829102",
-      passportExpiry: "2032-10-15",
-      nationality: "United States",
-      destination: "Germany",
-      visaType: "Schengen Tourist",
-      travelDates: "2026-09-01 to 2026-09-15",
-      status: "Approved",
-      fees: 13280,
-      submissionDate: "2026-07-15",
-      verifiedDocs: {
-        passport: "verified",
-        photo: "verified",
-      },
-      checklist: { employed: false, sponsored: false }
-    },
-    {
-      id: "PV-2026-0042",
-      travelerName: "Liam Chen",
-      dob: "1988-11-23",
-      passportNumber: "CN9928172",
-      passportExpiry: "2029-05-18",
-      nationality: "China",
-      destination: "France",
-      visaType: "Schengen Business",
-      travelDates: "2026-08-10 to 2026-08-25",
-      status: "Embassy Processing",
-      fees: 17430,
-      submissionDate: "2026-07-18",
-      verifiedDocs: {
-        passport: "verified",
-        photo: "verified",
-        nocLetter: "verified",
-      },
-      checklist: { employed: true, sponsored: false }
-    },
-    {
-      id: "PV-2026-0043",
-      travelerName: "Amara Okafor",
-      dob: "1995-07-02",
-      passportNumber: "NG1182736",
-      passportExpiry: "2030-08-12",
-      nationality: "Nigeria",
-      destination: "United Kingdom",
-      visaType: "Standard Visitor",
-      travelDates: "2026-10-05 to 2026-10-20",
-      status: "Docs Pending",
-      fees: 16185,
-      submissionDate: "2026-07-20",
-      verifiedDocs: {
-        passport: "needs_review",
-        photo: "pending",
-        sponsorLetter: "pending"
-      },
-      checklist: { employed: false, sponsored: true },
-      reason: "Passport photo is blurred. Please re-upload a clear high-res scan."
-    },
-    {
-      id: "PV-2026-0044",
-      travelerName: "Yusuf Al-Farsi",
-      dob: "1994-02-14",
-      passportNumber: "AE8827361",
-      passportExpiry: "2034-01-09",
-      nationality: "United Arab Emirates",
-      destination: "Canada",
-      visaType: "Student Visa",
-      travelDates: "2026-09-01 to 2027-06-30",
-      status: "Submitted",
-      fees: 23240,
-      submissionDate: "2026-07-21",
-      verifiedDocs: {
-        passport: "verified",
-        photo: "verified",
-      },
-      checklist: { employed: false, sponsored: false }
-    },
-    {
-      id: "PV-2026-0045",
-      travelerName: "Emma Watson",
-      dob: "1990-04-15",
-      passportNumber: "GB7728391",
-      passportExpiry: "2030-12-31",
-      nationality: "United Kingdom",
-      destination: "Japan",
-      visaType: "Transit Visa",
-      travelDates: "2026-08-01 to 2026-08-03",
-      status: "Rejected",
-      fees: 7885,
-      submissionDate: "2026-07-10",
-      verifiedDocs: {
-        passport: "verified",
-        photo: "verified"
-      },
-      checklist: { employed: false, sponsored: false },
-      reason: "Flight itinerary shows layover exceeds transit limits. Apply for full tourist entry."
-    }
-  ]);
+  const [applications, setApplications] = useState<Application[]>([]);
 
   useEffect(() => {
     const fetchApplicationsFromBackend = async () => {
       try {
         const res = await fetch(`${API_V1_URL}/applications`);
         const json = await res.json();
-        if (res.ok && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (res.ok && json.success && Array.isArray(json.data)) {
           const parsed = json.data.map((item: any) => {
             const givenName = item.personalDetails?.givenName || item.givenName || "";
             const surname = item.personalDetails?.surname || item.surname || "";
@@ -728,18 +637,18 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
               ? `${givenName} ${surname}`.trim()
               : item.travelerName || "Applicant";
 
-            const destination = item.countryName || item.destination || "Canada";
-            const visaType = item.visaTypeName || item.visaType || "Visitor / Tourist Visa";
-            const passportNumber = item.passportDetails?.passportNo || item.passportNumber || "Z9817264";
-            const passportExpiry = item.passportDetails?.expiryDate || item.passportExpiry || "2033-12-20";
-            const dob = item.personalDetails?.dob || item.dob || "1995-06-12";
-            const nationality = item.personalDetails?.nationality || item.nationality || "Indian";
+            const destination = item.countryName || item.destination || "";
+            const visaType = item.visaTypeName || item.visaType || "";
+            const passportNumber = item.passportDetails?.passportNo || item.passportNumber || "";
+            const passportExpiry = item.passportDetails?.expiryDate || item.passportExpiry || "";
+            const dob = item.personalDetails?.dob || item.dob || "";
+            const nationality = item.personalDetails?.nationality || item.nationality || "";
             
             const travelDates = (item.travelDetails?.travelDate && item.travelDetails?.returnDate)
               ? `${item.travelDetails.travelDate} to ${item.travelDetails.returnDate}`
-              : item.travelDates || "Upcoming Travel";
+              : item.travelDates || "";
             
-            const fees = item.pricing?.totalAmount || item.fees || 11000;
+            const fees = item.pricing?.totalAmount || item.fees || 0;
             const isApproved = (item.status || "Submitted") === "Approved";
             const docStatus = isApproved ? "verified" : "pending";
 
@@ -768,117 +677,25 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
           });
 
           setApplications(parsed);
+        } else {
+          setApplications([]);
         }
       } catch (err) {
         console.error("Failed to fetch applications from MongoDB:", err);
+        setApplications([]);
       }
     };
 
     fetchApplicationsFromBackend();
   }, []);
 
-  const [walletBalance, setWalletBalance] = useState<number>(2037650);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
 
-  const [ledger, setLedger] = useState<LedgerEntry[]>([
-    {
-      id: "TXN-9812",
-      date: "2026-07-21 11:30",
-      type: "deposit",
-      amount: 415000,
-      description: "Added Funds - Agent Portal Top Up",
-      reference: "STRIPE_CH_908123"
-    },
-    {
-      id: "TXN-9811",
-      date: "2026-07-21 09:15",
-      type: "debit",
-      amount: 23240,
-      description: "Visa Application Fee - Yusuf Al-Farsi",
-      reference: "PV-2026-0044"
-    },
-    {
-      id: "TXN-9810",
-      date: "2026-07-20 16:45",
-      type: "debit",
-      amount: 16185,
-      description: "Visa Application Fee - Amara Okafor",
-      reference: "PV-2026-0043"
-    },
-    {
-      id: "TXN-9809",
-      date: "2026-07-18 14:10",
-      type: "debit",
-      amount: 17430,
-      description: "Visa Application Fee - Liam Chen",
-      reference: "PV-2026-0042"
-    },
-    {
-      id: "TXN-9808",
-      date: "2026-07-15 10:05",
-      type: "debit",
-      amount: 13280,
-      description: "Visa Application Fee - Sophia Martinez",
-      reference: "PV-2026-0041"
-    }
-  ]);
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
 
-  const [commissions, setCommissions] = useState<Commission[]>([
-    {
-      id: "COM-001",
-      date: "2026-07-15",
-      applicationId: "PV-2026-0041",
-      travelerName: "Sophia Martinez",
-      amount: 3984, // 30% of ₹13,280 fee
-      status: "paid"
-    },
-    {
-      id: "COM-002",
-      date: "2026-07-18",
-      applicationId: "PV-2026-0042",
-      travelerName: "Liam Chen",
-      amount: 5229, // 30% of ₹17,430 fee
-      status: "pending"
-    },
-    {
-      id: "COM-003",
-      date: "2026-07-21",
-      applicationId: "PV-2026-0044",
-      travelerName: "Yusuf Al-Farsi",
-      amount: 6972, // 30% of ₹23,240 fee
-      status: "pending"
-    }
-  ]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([
-    {
-      id: "AUD-991",
-      actor: "Agent vibhu",
-      action: "Created Application PV-2026-0044 for Yusuf Al-Farsi",
-      timestamp: "2026-07-21 09:15:32",
-      ipAddress: "192.168.1.45"
-    },
-    {
-      id: "AUD-990",
-      actor: "Agent vibhu",
-      action: "Topped up wallet balance with ₹4,15,000.00",
-      timestamp: "2026-07-21 11:30:00",
-      ipAddress: "192.168.1.45"
-    },
-    {
-      id: "AUD-989",
-      actor: "Staff reviewer",
-      action: "Updated Amara Okafor (PV-2026-0043) document status: Photo NEEDS_REVIEW",
-      timestamp: "2026-07-20 18:22:15",
-      ipAddress: "10.0.4.122"
-    },
-    {
-      id: "AUD-988",
-      actor: "Super Admin",
-      action: "Modified Role Matrix: Grant 'Approve Visa' permission to Staff",
-      timestamp: "2026-07-19 10:11:02",
-      ipAddress: "10.0.1.15"
-    }
-  ]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   const [companies] = useState<Company[]>([
     { id: "C-01", name: "Apex Travel Ltd", logo: "✈️", color: "from-blue-600 to-indigo-700", activeApplications: 12 },

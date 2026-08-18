@@ -40,30 +40,8 @@ export default function ApplicantRejectedApplications({
   onNavigateApply,
   onNavigateSupport
 }: ApplicantRejectedApplicationsProps) {
-  // Extract rejected applications from context or provide rich fallback records
   const rejectedApps = useMemo(() => {
-    const list = applications.filter((a) => a.status === "Rejected");
-    if (list.length > 0) return list;
-
-    return [
-      {
-        id: "VO-2026-0912",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "United Kingdom",
-        visaType: "Business Visitor Visa",
-        travelDates: "02 Jul 2026",
-        status: "Rejected" as const,
-        fees: 18500,
-        submissionDate: "02 Jul 2026",
-        reason: "Refusal Clause 4.2: Insufficient proof of employment ties in home country and unverified HR stamp on NOC letter.",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "needs_review" as const, sponsorLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      }
-    ];
+    return applications.filter((a) => a.status === "Rejected");
   }, [applications]);
 
   // Search & Filter State
@@ -73,11 +51,11 @@ export default function ApplicantRejectedApplications({
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
   // Selected Rejected App ID for Inspector
-  const [selectedAppId, setSelectedAppId] = useState<string>(rejectedApps[0]?.id || "VO-2026-0912");
+  const [selectedAppId, setSelectedAppId] = useState<string>(rejectedApps[0]?.id || "");
 
   // Active App Object
   const activeApp = useMemo(() => {
-    return rejectedApps.find((a) => a.id === selectedAppId) || rejectedApps[0];
+    return rejectedApps.find((a) => a.id === selectedAppId) || rejectedApps[0] || null;
   }, [rejectedApps, selectedAppId]);
 
   // Subtab inside Inspector

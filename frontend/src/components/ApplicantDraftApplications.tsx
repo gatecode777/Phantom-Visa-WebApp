@@ -47,77 +47,23 @@ export default function ApplicantDraftApplications({
   onCreateNewDraft,
   onUpdateDocs
 }: ApplicantDraftApplicationsProps) {
-  // Extract draft applications from context or provide rich fallback draft records
   const draftApps = useMemo(() => {
-    const drafts = applications.filter((a) => a.status === "Draft");
-    if (drafts.length > 0) return drafts;
-
-    // Default rich sample draft applications for full interactive demonstration
-    return [
-      {
-        id: "DFT-2026-8819",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "United Kingdom",
-        visaType: "Standard Visitor Visa",
-        travelDates: "2026-10-15 to 2026-10-30",
-        status: "Draft" as const,
-        fees: 18500,
-        submissionDate: "05 Aug 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "pending" as const, sponsorLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "DFT-2026-7412",
-        travelerName: "Rahul Sharma",
-        dob: "1992-03-24",
-        passportNumber: "P4512981",
-        passportExpiry: "2031-08-14",
-        nationality: "India",
-        destination: "Schengen (France)",
-        visaType: "Tourist Short Stay",
-        travelDates: "2026-12-01 to 2026-12-15",
-        status: "Draft" as const,
-        fees: 16200,
-        submissionDate: "02 Aug 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "needs_review" as const, nocLetter: "pending" as const, sponsorLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "DFT-2026-6105",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Japan",
-        visaType: "Short-term Business Visa",
-        travelDates: "2026-11-20 to 2026-11-28",
-        status: "Draft" as const,
-        fees: 9800,
-        submissionDate: "28 Jul 2026",
-        verifiedDocs: { passport: "pending" as const, photo: "pending" as const },
-        checklist: { employed: true, sponsored: true }
-      }
-    ];
+    return applications.filter((a) => a.status === "Draft");
   }, [applications]);
 
   // State for search, filter & sorting
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"recently_saved" | "completion" | "expiry">("recently_saved");
+  const [sortBy, setSortBy] = useState<"newest" | "completion">("newest");
 
-  // Selected Draft ID for expanded inspector
-  const [selectedDraftId, setSelectedDraftId] = useState<string>(draftApps[0]?.id || "DFT-2026-8819");
-  
-  // Selected Draft object
-  const activeDraft = useMemo(() => {
-    return draftApps.find((d) => d.id === selectedDraftId) || draftApps[0];
-  }, [draftApps, selectedDraftId]);
+  // Selected Draft App ID for Inspector
+  const [selectedAppId, setSelectedAppId] = useState<string>(draftApps[0]?.id || "");
+
+  // Active Draft App Object
+  const activeApp = useMemo(() => {
+    return draftApps.find((a) => a.id === selectedAppId) || draftApps[0] || null;
+  }, [draftApps, selectedAppId]);
 
   // Subtab inside Inspector
   const [inspectorTab, setInspectorTab] = useState<"health" | "personal" | "trip" | "documents" | "pricing" | "history">("health");
@@ -127,15 +73,15 @@ export default function ApplicantDraftApplications({
   const [docUploadFeedback, setDocUploadFeedback] = useState<string | null>(null);
 
   // Notes state
-  const [draftNotes, setDraftNotes] = useState("Remember to collect official HR stamp on NOC before final submission on Friday.");
+  const [draftNotes, setDraftNotes] = useState("");
 
   const handleSimulateUpload = (docKey: keyof Application["verifiedDocs"]) => {
     setUploadingDocKey(docKey);
     setTimeout(() => {
       setUploadingDocKey(null);
       setDocUploadFeedback(`Document '${docKey}' uploaded and verified locally in draft.`);
-      if (onUpdateDocs && activeDraft) {
-        onUpdateDocs(activeDraft.id, docKey, "verified");
+      if (onUpdateDocs && activeApp) {
+        onUpdateDocs(activeApp.id, docKey, "verified");
       }
       setTimeout(() => setDocUploadFeedback(null), 3500);
     }, 1200);
@@ -175,7 +121,7 @@ export default function ApplicantDraftApplications({
     }).length;
     const readyToSubmit = draftApps.filter((d) => getCompletionPercentage(d) >= 90).length;
     const incompleteDetails = total - readyToSubmit;
-    const expiringSoon = 1;
+    const expiringSoon = 0;
     const avgCompletion = Math.round(
       draftApps.reduce((acc, curr) => acc + getCompletionPercentage(curr), 0) / (total || 1)
     );

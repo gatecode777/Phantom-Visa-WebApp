@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   RotateCcw,
   Search,
@@ -35,6 +35,7 @@ import {
   FileText,
   BarChart3
 } from "lucide-react";
+import { fetchUnifiedTransactions } from "../services/paymentService";
 
 export interface RefundRequestRecord {
   id: string;
@@ -90,6 +91,14 @@ export const REFUND_WORKFLOW_STEPS = [
   "Applicant Notified"
 ];
 
+export const REFUND_REASONS = [
+  "Application Cancelled",
+  "Duplicate Payment",
+  "Visa Rejected",
+  "Overcharged Amount",
+  "Technical Error"
+];
+
 export const COMMON_REFUND_REASONS = [
   "Application Cancelled",
   "Visa Rejected by Embassy",
@@ -103,74 +112,7 @@ export const COMMON_REFUND_REASONS = [
   "Other"
 ];
 
-const MOCK_REFUND_REQUESTS: RefundRequestRecord[] = [
-  {
-    id: "1",
-    refundId: "RFD-8001",
-    txnId: "TXN-L80501",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    requestedBy: "Applicant",
-    refundAmount: 8500,
-    originalAmount: 8500,
-    refundMethod: "UPI",
-    refundReason: "Application Cancelled",
-    requestDate: "01 Aug 2026",
-    requestDateTime: "01 Aug 2026 11:30 AM",
-    status: "Pending Approval",
-    actionRemarks: "Applicant cancelled travel plans prior to document submission to embassy.",
-    actionNotes: [
-      { id: "n1", author: "System", text: "Refund request initiated by user from self-service portal.", date: "01 Aug 2026 11:30 AM" }
-    ]
-  },
-  {
-    id: "2",
-    refundId: "RFD-8002",
-    txnId: "TXN-L80502",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    requestedBy: "Agent",
-    agentName: "Apex Travels",
-    refundAmount: 12000,
-    originalAmount: 24000,
-    refundMethod: "Credit Card",
-    refundReason: "Duplicate Payment",
-    requestDate: "01 Aug 2026",
-    requestDateTime: "01 Aug 2026 01:15 PM",
-    status: "Approved",
-    approvedBy: "Admin Vibhu",
-    approvedDate: "01 Aug 2026 02:00 PM",
-    payoutRefNo: "PAYOUT_RZP_776655",
-    actionRemarks: "Duplicate charge confirmed by payment gateway audit.",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    refundId: "RFD-8003",
-    txnId: "TXN-L80503",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    requestedBy: "Applicant",
-    refundAmount: 15500,
-    originalAmount: 15500,
-    refundMethod: "Net Banking",
-    refundReason: "Visa Rejected",
-    requestDate: "01 Aug 2026",
-    requestDateTime: "01 Aug 2026 03:45 PM",
-    status: "Processed",
-    approvedBy: "Admin Vibhu",
-    approvedDate: "01 Aug 2026 04:00 PM",
-    payoutRefNo: "HDFC_REFUND_998811",
-    actionRemarks: "Service fee refund policy applied for rejected embassy application.",
-    actionNotes: []
-  }
-];
+const MOCK_REFUND_REQUESTS: RefundRequestRecord[] = [];
 
 export default function RefundRequestsManagement() {
   // Search & Filter States
@@ -181,7 +123,38 @@ export default function RefundRequestsManagement() {
   const [methodFilter, setMethodFilter] = useState("All");
 
   // Records State
-  const [refundsList, setRefundsList] = useState<RefundRequestRecord[]>(MOCK_REFUND_REQUESTS);
+  const [refundsList, setRefundsList] = useState<RefundRequestRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedTransactions().then((txns) => {
+      if (Array.isArray(txns) && txns.length > 0) {
+        const mapped: RefundRequestRecord[] = txns
+          .filter((t: any) => t.status === "Refunded" || t.status === "Refund Processing" || t.type?.includes("Refund"))
+          .map((t: any) => ({
+            id: t.id,
+            refundId: `RFD-${t.id}`,
+            txnId: t.txnRef || t.id,
+            appId: t.appId || "APP-20261001",
+            applicantName: t.user || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            requestedBy: t.role || "Applicant",
+            refundAmount: typeof t.amount === "number" ? t.amount : 8500,
+            originalAmount: typeof t.amount === "number" ? t.amount : 8500,
+            refundMethod: t.channel || "UPI",
+            refundReason: "Application Cancelled",
+            requestDate: t.date || "01 Aug 2026",
+            requestDateTime: `${t.date || "01 Aug 2026"} 11:30 AM`,
+            status: "Pending Approval",
+            actionRemarks: "Refund initiated.",
+            actionNotes: []
+          }));
+        setRefundsList(mapped);
+      } else {
+        setRefundsList([]);
+      }
+    });
+  }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

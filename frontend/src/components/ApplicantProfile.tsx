@@ -27,8 +27,12 @@ import {
   Briefcase,
   RefreshCw,
   X,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  Upload
 } from "lucide-react";
+import { uploadImageToImageKit } from "../services/imageKitService";
 import {
   ApplicantProfileRecord,
   CoTravelerRecord,
@@ -63,38 +67,67 @@ export default function ApplicantProfile({
 
   // Editable Form Buffers
   const [personalForm, setPersonalForm] = useState<ProfilePersonalInfo>({
-    fullName: "Vibhu Sharma",
-    firstName: "Vibhu",
-    lastName: "Sharma",
-    dob: "1995-06-12",
-    gender: "Male",
-    nationality: "Indian",
-    phone: "+91 98765 43210",
-    email: "vibhu@phantomvisa.com",
-    country: "India",
-    address: "B-402, Highstreet Towers, MG Road, New Delhi, Delhi - 110001",
-    city: "New Delhi",
-    state: "Delhi",
-    postalCode: "110001",
-    occupation: "Senior Software Consultant",
-    employer: "TechCorp Solutions Pvt Ltd"
+    fullName: "",
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "",
+    nationality: "",
+    phone: "",
+    email: "",
+    country: "",
+    address: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    occupation: "",
+    employer: ""
   });
 
   const [passportForm, setPassportForm] = useState<ProfilePassportDetails>({
-    passportNumber: "Z9817264",
-    passportType: "Regular Ordinary (Type P)",
-    dateOfIssue: "2023-12-21",
-    dateOfExpiry: "2033-12-20",
-    placeOfIssue: "New Delhi",
-    scannedStatus: "Verified & OCR Scanned"
+    passportNumber: "",
+    passportType: "",
+    dateOfIssue: "",
+    dateOfExpiry: "",
+    placeOfIssue: "",
+    scannedStatus: "Pending Upload"
   });
 
   const [preferences, setPreferences] = useState<ProfilePreferences>({
-    twoFactorAuth: true,
+    twoFactorAuth: false,
     emailNotifications: true,
-    smsNotifications: true,
-    passportReminder: true
+    smsNotifications: false,
+    passportReminder: false
   });
+
+  // Avatar ImageKit State
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("phantom_applicant_avatar");
+    } catch {}
+    return null;
+  });
+  const [uploadingAvatar, setUploadingAvatar] = useState<boolean>(false);
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    setErrorMsg(null);
+    try {
+      const res = await uploadImageToImageKit(file, "/PHANTOM-VISA/avatars/");
+      setAvatarUrl(res.url);
+      localStorage.setItem("phantom_applicant_avatar", res.url);
+      setSavedSuccess("Avatar photo uploaded to ImageKit CDN successfully!");
+      setTimeout(() => setSavedSuccess(null), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to upload avatar to ImageKit.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   // Co-Travelers list
   const [coTravelers, setCoTravelers] = useState<CoTravelerRecord[]>([]);
@@ -400,31 +433,55 @@ export default function ApplicantProfile({
         </div>
       </div>
 
+      {/* Hidden Avatar File Input */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        onChange={handleAvatarUpload}
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        className="hidden"
+      />
+
       {/* ============================================================ */}
       {/* SECTION 3: USER AVATAR & HERO IDENTITY CARD */}
       {/* ============================================================ */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#4848F7] to-indigo-400 text-white flex items-center justify-center font-black text-3xl shadow-md border-4 border-white">
-              {(personalForm.firstName[0] || "V")}
-              {(personalForm.lastName[0] || "S")}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Applicant Avatar"
+                className="w-24 h-24 rounded-full object-cover shadow-md border-4 border-white bg-slate-100"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#4848F7] to-indigo-400 text-white flex items-center justify-center font-black text-3xl shadow-md border-4 border-white">
+                {(personalForm.firstName[0] || "V")}
+                {(personalForm.lastName[0] || "S")}
+              </div>
+            )}
             <button
-              onClick={() => alert("Upload new avatar photo...")}
-              className="absolute bottom-0 right-0 p-2 bg-slate-900 text-white rounded-full hover:bg-[#4848F7] transition shadow-xs cursor-pointer"
-              title="Upload Avatar Photo"
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute bottom-0 right-0 p-2 bg-slate-900 text-white rounded-full hover:bg-[#4848F7] transition shadow-xs cursor-pointer disabled:opacity-50"
+              title="Upload photo to ImageKit CDN"
             >
-              <Camera size={14} />
+              <Camera size={14} className={uploadingAvatar ? "animate-spin" : ""} />
             </button>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <h2 className="text-xl font-black text-slate-900">{personalForm.firstName} {personalForm.lastName}</h2>
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                 <CheckCircle2 size={10} className="text-emerald-600" /> Verified Traveler
               </span>
+              {avatarUrl && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#4848F7] border border-blue-200 flex items-center gap-1">
+                  ImageKit Hosted ✓
+                </span>
+              )}
             </div>
 
             <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center justify-center sm:justify-start gap-3">
@@ -435,6 +492,39 @@ export default function ApplicantProfile({
             <p className="text-[11px] text-slate-500 font-mono">
               Applicant Member ID: <span className="font-bold text-slate-800">{memberId}</span> &bull; Occupation: <span className="font-bold text-slate-700">{personalForm.occupation || "Consultant"}</span>
             </p>
+
+            {avatarUrl && (
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 max-w-md">
+                <span className="text-[9px] font-bold uppercase text-slate-400 shrink-0">ImageKit URL:</span>
+                <input
+                  type="text"
+                  readOnly
+                  value={avatarUrl}
+                  className="w-full bg-transparent text-[10px] font-mono text-slate-600 select-all outline-none truncate"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(avatarUrl);
+                    setSavedSuccess("ImageKit URL copied to clipboard!");
+                    setTimeout(() => setSavedSuccess(null), 2000);
+                  }}
+                  className="p-1 hover:bg-slate-200 text-slate-500 rounded cursor-pointer shrink-0"
+                  title="Copy ImageKit URL"
+                >
+                  <Copy size={11} />
+                </button>
+                <a
+                  href={avatarUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1 hover:bg-slate-200 text-slate-500 rounded cursor-pointer shrink-0"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={11} />
+                </a>
+              </div>
+            )}
           </div>
         </div>
 

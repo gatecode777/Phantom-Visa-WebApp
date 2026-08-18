@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Clock,
   Search,
@@ -82,116 +82,7 @@ export const PROCESSING_TYPES_LIST = [
   "24-Hour Processing"
 ];
 
-const MOCK_PROCESSING_RULES: ProcessingTimeRecord[] = [
-  {
-    id: "1",
-    ruleId: "PT-001",
-    ruleName: "Canada Tourist Visa SLA Schedule",
-    country: "Canada",
-    category: "Tourist Visa",
-    visaType: "Tourist E-Visa",
-    entryType: "Single Entry",
-    status: "Active",
-    regular: { minDays: 10, maxDays: 15, text: "10-15 Days" },
-    express: { minDays: 5, maxDays: 7, text: "5-7 Days" },
-    urgent: { minDays: 2, maxDays: 3, text: "2-3 Days" },
-    sla: {
-      workingDaysOnly: true,
-      excludeWeekends: true,
-      excludePublicHolidays: true,
-      expectedCompletionTime: "5:00 PM EST"
-    },
-    additional: {
-      priorityLevel: "High",
-      remarks: "High demand during summer travel season.",
-      specialConditions: "Biometrics appointment completed required"
-    },
-    exceptions: {
-      peakSeasonDelay: "+3 Days",
-      holidayDelay: "+2 Days",
-      embassyDelay: "+5 Days",
-      docDelay: "+4 Days"
-    },
-    stats: {
-      avgCompletionTime: "6.2 Days",
-      fastestProcessing: "24 Hours",
-      longestProcessing: "22 Days",
-      applicationsProcessed: 3420
-    }
-  },
-  {
-    id: "2",
-    ruleId: "PT-002",
-    ruleName: "Australia Student Visa Turnaround",
-    country: "Australia",
-    category: "Student Visa",
-    visaType: "Student Long Stay",
-    entryType: "Multiple Entry",
-    status: "Active",
-    regular: { minDays: 15, maxDays: 20, text: "15-20 Days" },
-    express: { minDays: 10, maxDays: 12, text: "10-12 Days" },
-    urgent: { minDays: 5, maxDays: 7, text: "5-7 Days" },
-    sla: {
-      workingDaysOnly: true,
-      excludeWeekends: true,
-      excludePublicHolidays: true,
-      expectedCompletionTime: "4:00 PM AEST"
-    },
-    additional: {
-      priorityLevel: "Medium",
-      remarks: "Academic intake semester peak.",
-      specialConditions: "Health examination clearance needed"
-    },
-    exceptions: {
-      peakSeasonDelay: "+5 Days",
-      holidayDelay: "+3 Days",
-      embassyDelay: "+4 Days",
-      docDelay: "+2 Days"
-    },
-    stats: {
-      avgCompletionTime: "11.4 Days",
-      fastestProcessing: "3 Days",
-      longestProcessing: "30 Days",
-      applicationsProcessed: 2150
-    }
-  },
-  {
-    id: "3",
-    ruleId: "PT-003",
-    ruleName: "UAE Business Fast-Track Schedule",
-    country: "UAE",
-    category: "Business Visa",
-    visaType: "Multiple Entry Business",
-    entryType: "Multiple Entry",
-    status: "Active",
-    regular: { minDays: 5, maxDays: 7, text: "5-7 Days" },
-    express: { minDays: 2, maxDays: 3, text: "2-3 Days" },
-    urgent: { minDays: 1, maxDays: 1, text: "24 Hours" },
-    sla: {
-      workingDaysOnly: false,
-      excludeWeekends: false,
-      excludePublicHolidays: true,
-      expectedCompletionTime: "6:00 PM GST"
-    },
-    additional: {
-      priorityLevel: "High",
-      remarks: "Corporate express clearance channel.",
-      specialConditions: "Pre-approved host company sponsor"
-    },
-    exceptions: {
-      peakSeasonDelay: "+1 Day",
-      holidayDelay: "+2 Days",
-      embassyDelay: "+2 Days",
-      docDelay: "+1 Day"
-    },
-    stats: {
-      avgCompletionTime: "2.1 Days",
-      fastestProcessing: "12 Hours",
-      longestProcessing: "10 Days",
-      applicationsProcessed: 4890
-    }
-  }
-];
+const MOCK_PROCESSING_RULES: ProcessingTimeRecord[] = [];
 
 export default function ProcessingTimeManagement() {
   // Search & Filter States
@@ -202,7 +93,7 @@ export default function ProcessingTimeManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Records State
-  const [rules, setRules] = useState<ProcessingTimeRecord[]>(MOCK_PROCESSING_RULES);
+  const [rules, setRules] = useState<ProcessingTimeRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Popup Details Modal State

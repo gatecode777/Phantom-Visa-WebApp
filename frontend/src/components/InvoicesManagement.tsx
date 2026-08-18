@@ -111,125 +111,7 @@ export const STANDARD_INVOICE_FORMAT_ITEMS = [
   "Terms & Conditions"
 ];
 
-const MOCK_INVOICES: InvoiceRecord[] = [
-  {
-    id: "1",
-    invoiceNo: "INV-2026-501",
-    txnId: "TXN-L80501",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    appliedBy: "Applicant",
-    invoiceAmount: 8500,
-    invoiceDate: "01 Aug 2026",
-    invoiceDateTime: "01 Aug 2026 10:15 AM",
-    invoiceType: "Tax Invoice",
-    status: "Paid",
-    country: "Canada",
-    visaCategory: "Tourist",
-    paymentMethod: "UPI",
-    sacCode: "998311",
-    gstin: "07AAAAA0000A1Z5",
-    breakdown: {
-      visaFee: 5000,
-      serviceCharge: 1500,
-      processingFee: 1000,
-      discount: 0,
-      cgst: 500,
-      sgst: 500,
-      igst: 0,
-      totalTax: 1000
-    },
-    companyDetails: {
-      name: "Phantom Visa Services Pvt Ltd",
-      gstin: "07AAAAA0000A1Z5",
-      address: "Suite 402, Trade Tower, Connaught Place, New Delhi 110001",
-      email: "billing@phantomvisa.com",
-      signatory: "Authorized Finance Officer"
-    },
-    actionNotes: [
-      { id: "n1", author: "System", text: "Automated GST Tax Invoice generated on payment completion.", date: "01 Aug 2026 10:15 AM" }
-    ]
-  },
-  {
-    id: "2",
-    invoiceNo: "INV-2026-502",
-    txnId: "TXN-L80502",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    invoiceAmount: 12000,
-    invoiceDate: "01 Aug 2026",
-    invoiceDateTime: "01 Aug 2026 11:45 AM",
-    invoiceType: "Agent B2B Invoice",
-    status: "Pending",
-    country: "Australia",
-    visaCategory: "Business",
-    paymentMethod: "Credit Card",
-    sacCode: "998311",
-    gstin: "27BBBBB1111B1Z2",
-    breakdown: {
-      visaFee: 7500,
-      serviceCharge: 2000,
-      processingFee: 1500,
-      discount: 0,
-      cgst: 500,
-      sgst: 500,
-      igst: 0,
-      totalTax: 1000
-    },
-    companyDetails: {
-      name: "Phantom Visa Services Pvt Ltd",
-      gstin: "07AAAAA0000A1Z5",
-      address: "Suite 402, Trade Tower, Connaught Place, New Delhi 110001",
-      email: "billing@phantomvisa.com",
-      signatory: "Authorized Finance Officer"
-    },
-    actionNotes: []
-  },
-  {
-    id: "3",
-    invoiceNo: "INV-2026-503",
-    txnId: "TXN-L80503",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    appliedBy: "Applicant",
-    invoiceAmount: 15500,
-    invoiceDate: "01 Aug 2026",
-    invoiceDateTime: "01 Aug 2026 01:20 PM",
-    invoiceType: "Tax Invoice",
-    status: "Cancelled",
-    country: "UAE",
-    visaCategory: "Tourist",
-    paymentMethod: "Net Banking",
-    sacCode: "998311",
-    gstin: "07AAAAA0000A1Z5",
-    breakdown: {
-      visaFee: 9500,
-      serviceCharge: 2500,
-      processingFee: 2000,
-      discount: 0,
-      cgst: 750,
-      sgst: 750,
-      igst: 0,
-      totalTax: 1500
-    },
-    companyDetails: {
-      name: "Phantom Visa Services Pvt Ltd",
-      gstin: "07AAAAA0000A1Z5",
-      address: "Suite 402, Trade Tower, Connaught Place, New Delhi 110001",
-      email: "billing@phantomvisa.com",
-      signatory: "Authorized Finance Officer"
-    },
-    actionNotes: []
-  }
-];
+const MOCK_INVOICES: InvoiceRecord[] = [];
 
 export default function InvoicesManagement() {
   const { unifiedTransactions } = useVisa();
@@ -273,6 +155,23 @@ export default function InvoicesManagement() {
       const igst = t.pricing?.igst || 0;
       const totalTax = t.pricing?.totalTax || 2700;
 
+      // Dynamically load company profile from single source of truth (Company Profile Settings)
+      let companyProfile: any = null;
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("phantom_company_profile");
+          if (stored) companyProfile = JSON.parse(stored);
+        } catch (e) {}
+      }
+
+      const activeCompanyName = companyProfile?.companyName || "Phantom Visa Private Limited";
+      const activeGstin = companyProfile?.gstinNumber || t.gstin || "06AABCP1234H1Z5";
+      const activeAddress = companyProfile?.streetAddress
+        ? `${companyProfile.streetAddress}, ${companyProfile.buildingSuite ? companyProfile.buildingSuite + ", " : ""}${companyProfile.city || ""}, ${companyProfile.state || ""} ${companyProfile.postalCode || ""}`.trim()
+        : (t.billingAddress || "101 Visa Tower, Cyber City, Phase 2, Gurugram, Haryana 122002");
+      const activeEmail = companyProfile?.supportEmail || companyProfile?.officialEmail || "billing@phantomvisa.com";
+      const activeSignatory = companyProfile?.officerName ? `${companyProfile.officerName} (${companyProfile.designation || "Managing Director"})` : "Authorized Finance Officer";
+
       return {
         id: String(idx + 1),
         invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId.split("-")[2] || "501"}`,
@@ -292,7 +191,7 @@ export default function InvoicesManagement() {
         visaCategory: t.visaCategory || "Tourist",
         paymentMethod: methodClean as any,
         sacCode: t.sacCode || "998311",
-        gstin: t.gstin || "07AAAAA0000A1Z5",
+        gstin: activeGstin,
         breakdown: {
           visaFee,
           serviceCharge,
@@ -304,11 +203,11 @@ export default function InvoicesManagement() {
           totalTax
         },
         companyDetails: {
-          name: "Phantom Visa Services Pvt Ltd",
-          gstin: "07AAAAA0000A1Z5",
-          address: t.billingAddress || "Suite 402, Trade Tower, Connaught Place, New Delhi 110001",
-          email: "billing@phantomvisa.com",
-          signatory: "Authorized Finance Officer"
+          name: activeCompanyName,
+          gstin: activeGstin,
+          address: activeAddress,
+          email: activeEmail,
+          signatory: activeSignatory
         },
         actionNotes: [
           { id: "n1", author: "System", text: `Automated GST Tax Invoice generated on payment completion (${t.status}).`, date: dateTimeStr }
@@ -316,6 +215,16 @@ export default function InvoicesManagement() {
       };
     });
   }, [unifiedTransactions]);
+
+  // Derived metrics from invoice ledger
+  const metrics = useMemo(() => {
+    const total = invoicesList.length;
+    const paid = invoicesList.filter((i) => i.status === "Paid").length;
+    const pending = invoicesList.filter((i) => i.status === "Pending").length;
+    const cancelled = invoicesList.filter((i) => i.status === "Cancelled").length;
+    const grossAmount = invoicesList.reduce((acc, i) => acc + (i.invoiceAmount || 0), 0);
+    return { total, paid, pending, cancelled, grossAmount };
+  }, [invoicesList]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 

@@ -47,45 +47,9 @@ export default function ApplicantUnderReviewApplications({
 }: ApplicantUnderReviewApplicationsProps) {
   // Extract under-review applications from context or provide rich fallback records
   const reviewApps = useMemo(() => {
-    const list = applications.filter((a) =>
+    return applications.filter((a) =>
       ["Submitted", "Embassy Processing", "Docs Uploaded"].includes(a.status)
     );
-    if (list.length > 0) return list;
-
-    return [
-      {
-        id: "VO-2026-1025",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Canada",
-        visaType: "Tourist Visa",
-        travelDates: "2026-11-10 to 2026-11-25",
-        status: "Embassy Processing" as const,
-        fees: 14500,
-        submissionDate: "18 Jul 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "needs_review" as const, sponsorLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "VO-2026-1104",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Germany",
-        visaType: "Schengen Business Visa",
-        travelDates: "2026-12-10 to 2026-12-20",
-        status: "Submitted" as const,
-        fees: 17200,
-        submissionDate: "01 Aug 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "verified" as const, sponsorLetter: "verified" as const },
-        checklist: { employed: true, sponsored: false }
-      }
-    ];
   }, [applications]);
 
   // State for search, filter & sorting
@@ -95,11 +59,11 @@ export default function ApplicantUnderReviewApplications({
   const [sortBy, setSortBy] = useState<"review_start" | "decision_est">("review_start");
 
   // Selected Under Review App ID for inspector
-  const [selectedAppId, setSelectedAppId] = useState<string>(reviewApps[0]?.id || "VO-2026-1025");
+  const [selectedAppId, setSelectedAppId] = useState<string>(reviewApps[0]?.id || "");
 
   // Active App Object
   const activeApp = useMemo(() => {
-    return reviewApps.find((a) => a.id === selectedAppId) || reviewApps[0];
+    return reviewApps.find((a) => a.id === selectedAppId) || reviewApps[0] || null;
   }, [reviewApps, selectedAppId]);
 
   // Subtab inside Inspector

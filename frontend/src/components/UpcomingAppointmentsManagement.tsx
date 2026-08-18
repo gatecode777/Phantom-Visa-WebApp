@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Calendar,
   Search,
@@ -110,104 +110,7 @@ export const PROFESSIONAL_FEATURES = [
   "Attendance Tracking"
 ];
 
-const MOCK_UPCOMING_APPOINTMENTS: UpcomingAppointmentRecord[] = [
-  {
-    id: "1",
-    aptId: "APT-U1001",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    presentAddress: "House No 42, Sector 15, Chandigarh, India",
-    mobileNumber: "+91 9876543210",
-    appliedBy: "Applicant",
-    appointmentType: "Biometrics",
-    country: "Canada",
-    dateOnly: "05 Aug 2026",
-    timeOnly: "10:00 AM",
-    location: "Embassy - VFS",
-    address: "Mezzanine Floor, Shivaji Stadium Metro Station, Connaught Place, New Delhi",
-    city: "New Delhi",
-    state: "Delhi",
-    googleMapLink: "https://maps.google.com/?q=VFS+Delhi",
-    status: "Scheduled",
-    bookedBy: "Applicant",
-    primaryOfficer: "Officer D. Kumar",
-    prepInstructions: "Carry original passport, barcoded appointment letter, and payment receipt.",
-    reminderStatus: "Sent",
-    reminderDate: "04 Aug 2026 09:00 AM",
-    emailStatus: "Delivered",
-    smsStatus: "Delivered",
-    whatsappStatus: "Delivered",
-    totalRemindersSent: 2,
-    actionNotes: [
-      { id: "n1", author: "System", text: "Automated 24hr reminder dispatched via Email & SMS.", date: "04 Aug 2026 09:00 AM" }
-    ]
-  },
-  {
-    id: "2",
-    aptId: "APT-U1002",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    presentAddress: "Flat 201, Sunshine Heights, Andheri West, Mumbai, India",
-    mobileNumber: "+91 9811223344",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    appointmentType: "Embassy Interview",
-    country: "Australia",
-    dateOnly: "06 Aug 2026",
-    timeOnly: "11:30 AM",
-    location: "Consulate General",
-    address: "Australian Consulate-General, Express Towers, Nariman Point, Mumbai",
-    city: "Mumbai",
-    state: "Maharashtra",
-    googleMapLink: "https://maps.google.com/?q=Australian+Consulate+Mumbai",
-    status: "Rescheduled",
-    bookedBy: "Agent",
-    primaryOfficer: "Consular Officer Sarah Jenkins",
-    prepInstructions: "Arrive 15 minutes prior to slot. Electronic devices prohibited inside consulate.",
-    reminderStatus: "Pending",
-    reminderDate: "05 Aug 2026 09:00 AM",
-    emailStatus: "Pending",
-    smsStatus: "Pending",
-    whatsappStatus: "Pending",
-    totalRemindersSent: 0,
-    actionNotes: []
-  },
-  {
-    id: "3",
-    aptId: "APT-U1003",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    presentAddress: "3rd Cross, Indiranagar, Bengaluru, Karnataka, India",
-    mobileNumber: "+91 9988776655",
-    appliedBy: "Applicant",
-    appointmentType: "Medical Examination",
-    country: "Germany",
-    dateOnly: "07 Aug 2026",
-    timeOnly: "09:30 AM",
-    location: "Apollo Hospital",
-    address: "Apollo Health City, Jubilee Hills, Hyderabad",
-    city: "Hyderabad",
-    state: "Telangana",
-    googleMapLink: "https://maps.google.com/?q=Apollo+Hospital+Hyderabad",
-    status: "Confirmed",
-    bookedBy: "Applicant",
-    primaryOfficer: "Dr. A. K. Varma",
-    prepInstructions: "Fast for 8 hours prior to medical examination.",
-    reminderStatus: "Sent",
-    reminderDate: "03 Aug 2026 10:00 AM",
-    emailStatus: "Delivered",
-    smsStatus: "Delivered",
-    whatsappStatus: "Delivered",
-    totalRemindersSent: 1,
-    actionNotes: []
-  }
-];
+const MOCK_UPCOMING_APPOINTMENTS: UpcomingAppointmentRecord[] = [];
 
 export default function UpcomingAppointmentsManagement() {
   // Search & Filter States
@@ -218,7 +121,50 @@ export default function UpcomingAppointmentsManagement() {
   const [bookedByFilter, setBookedByFilter] = useState("All");
 
   // Records State
-  const [upcomingList, setUpcomingList] = useState<UpcomingAppointmentRecord[]>(MOCK_UPCOMING_APPOINTMENTS);
+  const [upcomingList, setUpcomingList] = useState<UpcomingAppointmentRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedAppointments().then((apts) => {
+      if (Array.isArray(apts) && apts.length > 0) {
+        const mapped: UpcomingAppointmentRecord[] = apts
+          .filter((a: any) => a.status === "Scheduled" || a.status === "Confirmed" || a.status === "Rescheduled")
+          .map((a: any) => ({
+            id: a.id,
+            aptId: a.reference || a.id,
+            appId: a.appId || "APP-20261001",
+            applicantName: a.applicant || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            presentAddress: "New Delhi, India",
+            mobileNumber: "+91 9876543210",
+            appliedBy: "Applicant",
+            appointmentType: a.type || "Biometrics",
+            country: a.country || "Canada",
+            dateOnly: a.date || "05 Aug 2026",
+            timeOnly: a.time || "10:00 AM",
+            location: a.location || "VFS Global",
+            address: a.location || "Mezzanine Floor, Shivaji Stadium Metro Station, Connaught Place, New Delhi",
+            city: "New Delhi",
+            state: "Delhi",
+            googleMapLink: "https://maps.google.com/?q=VFS+Delhi",
+            status: a.status === "Rescheduled" ? "Rescheduled" : "Scheduled",
+            bookedBy: "Applicant",
+            primaryOfficer: a.officer || "Officer D. Kumar",
+            prepInstructions: "Carry original passport and appointment letter.",
+            reminderStatus: "Sent",
+            reminderDate: "04 Aug 2026 09:00 AM",
+            emailStatus: "Delivered",
+            smsStatus: "Delivered",
+            whatsappStatus: "Delivered",
+            totalRemindersSent: 1,
+            actionNotes: []
+          }));
+        setUpcomingList(mapped);
+      } else {
+        setUpcomingList([]);
+      }
+    });
+  }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State

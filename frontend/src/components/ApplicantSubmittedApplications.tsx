@@ -48,61 +48,9 @@ export default function ApplicantSubmittedApplications({
 }: ApplicantSubmittedApplicationsProps) {
   // Extract submitted applications from context or provide rich fallback records
   const submittedApps = useMemo(() => {
-    const list = applications.filter((a) =>
+    return applications.filter((a) =>
       ["Submitted", "Embassy Processing", "Docs Uploaded"].includes(a.status)
     );
-    if (list.length > 0) return list;
-
-    return [
-      {
-        id: "VO-2026-1025",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Canada",
-        visaType: "Tourist Visa",
-        travelDates: "2026-11-10 to 2026-11-25",
-        status: "Embassy Processing" as const,
-        fees: 14500,
-        submissionDate: "18 Jul 2026, 09:15 AM",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "needs_review" as const, sponsorLetter: "pending" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "VO-2026-1104",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Germany",
-        visaType: "Schengen Business Visa",
-        travelDates: "2026-12-10 to 2026-12-20",
-        status: "Submitted" as const,
-        fees: 17200,
-        submissionDate: "01 Aug 2026, 02:40 PM",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "verified" as const, sponsorLetter: "verified" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "VO-2026-0891",
-        travelerName: "Rahul Sharma",
-        dob: "1992-03-24",
-        passportNumber: "P4512981",
-        passportExpiry: "2031-08-14",
-        nationality: "India",
-        destination: "United Kingdom",
-        visaType: "Standard Visitor",
-        travelDates: "2026-10-01 to 2026-10-15",
-        status: "Submitted" as const,
-        fees: 18500,
-        submissionDate: "25 Jul 2026, 11:00 AM",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "verified" as const },
-        checklist: { employed: true, sponsored: false }
-      }
-    ];
   }, [applications]);
 
   // State for search, filter & sorting
@@ -112,11 +60,11 @@ export default function ApplicantSubmittedApplications({
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
   // Selected Submitted App ID for inspector
-  const [selectedAppId, setSelectedAppId] = useState<string>(submittedApps[0]?.id || "VO-2026-1025");
+  const [selectedAppId, setSelectedAppId] = useState<string>(submittedApps[0]?.id || "");
 
   // Active App Object
   const activeApp = useMemo(() => {
-    return submittedApps.find((a) => a.id === selectedAppId) || submittedApps[0];
+    return submittedApps.find((a) => a.id === selectedAppId) || submittedApps[0] || null;
   }, [submittedApps, selectedAppId]);
 
   // Subtab inside Inspector

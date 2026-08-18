@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Application, formatINR } from "../context/VisaContext";
+import { API_V1_URL } from "../config/api";
 import {
   FileText,
   ShieldCheck,
@@ -24,7 +25,8 @@ import {
   FileSpreadsheet,
   QrCode,
   Sparkles,
-  Award
+  Award,
+  RefreshCw
 } from "lucide-react";
 
 export interface CountryRequirementRecord {
@@ -51,93 +53,83 @@ export default function ApplicantVisaRequirements({
   onNavigateUpload,
   onNavigateSupport
 }: ApplicantVisaRequirementsProps) {
-  // Mock Dataset matching wireframe
-  const [requirementsData] = useState<CountryRequirementRecord[]>([
-    {
-      id: "REQ-AU",
-      country: "Australia",
-      flag: "🇦🇺",
-      subclass: "Tourist Subclass 600",
-      mandatoryDocsCount: 7,
-      minBankBalance: "₹1.5 Lakhs",
-      itrRequired: "3 Years ITR-V",
-      biometricsMandate: true,
-      photoSpecs: "35mm x 45mm, White background, 80% face coverage, Matte finish",
-      checklistItems: [
-        { title: "Original Passport (Color Scans)", category: "Identity", mandatory: true, tip: "Must have at least 6 months validity from travel date" },
-        { title: "Bank Balance Certificate & 6 Mo Statements", category: "Financial", mandatory: true, tip: "Must carry official bank stamp & signature" },
-        { title: "Income Tax Returns (ITR-V) 3 Years", category: "Financial", mandatory: true, tip: "Form 16 or ITR verification acknowledgement" },
-        { title: "Employment NOC / Leave Sanction Letter", category: "Employment", mandatory: true, tip: "On official company letterhead with HR contact" },
-        { title: "Cover Letter with Day-wise Itinerary", category: "Itinerary", mandatory: true, tip: "Highlight travel dates, places to visit & stay" },
-        { title: "Confirmed Flight Reservations & Hotel Bookings", category: "Itinerary", mandatory: true, tip: "Must match cover letter itinerary exactly" },
-        { title: "2 Passport Size Photographs", category: "Identity", mandatory: true, tip: "35mm x 45mm, matte finish, 80% face close-up" }
-      ]
-    },
-    {
-      id: "REQ-FR",
-      country: "France (Schengen)",
-      flag: "🇫🇷",
-      subclass: "Short-Stay Type C Schengen",
-      mandatoryDocsCount: 8,
-      minBankBalance: "₹2.0 Lakhs",
-      itrRequired: "3 Years ITR-V",
-      biometricsMandate: true,
-      photoSpecs: "35mm x 45mm, Off-white background, Neutral expression, No glasses",
-      checklistItems: [
-        { title: "Schengen Visa Application Form", category: "Identity", mandatory: true, tip: "Duly signed on VFS Portal" },
-        { title: "Passport (Current & Previous Passports)", category: "Identity", mandatory: true, tip: "Must have at least 2 blank visa pages" },
-        { title: "Schengen Travel Medical Insurance (€30,000)", category: "Medical", mandatory: true, tip: "Covers all 27 Schengen states for full stay" },
-        { title: "Personal Bank Statements 6 Months", category: "Financial", mandatory: true, tip: "Original bank stamp required" },
-        { title: "ITR Returns 3 Years / Form 16", category: "Financial", mandatory: true, tip: "Clear copy with tax filing proof" },
-        { title: "Leave Sanction / Salary Slips 3 Months", category: "Employment", mandatory: true, tip: "Employer NOC required" },
-        { title: "Roundtrip Flight Itinerary & Hotel Proof", category: "Itinerary", mandatory: true, tip: "Confirmed voucher vouchers" }
-      ]
-    },
-    {
-      id: "REQ-UK",
-      country: "United Kingdom",
-      flag: "🇬🇧",
-      subclass: "Standard Visitor 6 Months",
-      mandatoryDocsCount: 7,
-      minBankBalance: "₹2.5 Lakhs",
-      itrRequired: "2 Years ITR-V",
-      biometricsMandate: true,
-      photoSpecs: "45mm x 35mm, Cream/light grey background, Taken within last 1 month",
-      checklistItems: [
-        { title: "UK Home Office Online Form Summary", category: "Identity", mandatory: true, tip: "Printed GWF application confirmation" },
-        { title: "Valid Passport & Old Expired Passports", category: "Identity", mandatory: true, tip: "Original physical passport needed for stamping" },
-        { title: "Financial Proof of Savings & Assets", category: "Financial", mandatory: true, tip: "Bank statements, FD receipts, property papers" },
-        { title: "Proof of Employment / Business Incorporation", category: "Employment", mandatory: true, tip: "Company GSTIN / Salary certificate" },
-        { title: "Detailed Travel Plan & Accommodation Details", category: "Itinerary", mandatory: true, tip: "Include host invitation if staying with family" }
-      ]
-    },
-    {
-      id: "REQ-US",
-      country: "United States",
-      flag: "🇺🇸",
-      subclass: "B1/B2 Visitor Visa",
-      mandatoryDocsCount: 5,
-      minBankBalance: "₹3.0 Lakhs",
-      itrRequired: "3 Years ITR-V",
-      biometricsMandate: true,
-      photoSpecs: "2 x 2 inches (51mm x 51mm), Square format, Plain white background",
-      checklistItems: [
-        { title: "DS-160 Confirmation Page with Barcode", category: "Identity", mandatory: true, tip: "Printed high-resolution barcode page" },
-        { title: "US Visa Appointment Confirmation Letter", category: "Identity", mandatory: true, tip: "OFV & Consular interview appointment slip" },
-        { title: "Original Passport (Valid 6+ months)", category: "Identity", mandatory: true, tip: "Must bring physical passport to interview" },
-        { title: "Financial Ties & Liquid Assets Proof", category: "Financial", mandatory: true, tip: "Bank statements, property deeds, investments" }
-      ]
-    }
-  ]);
+  // Live dataset loaded from MongoDB
+  const [requirementsData, setRequirementsData] = useState<CountryRequirementRecord[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [travelerType, setTravelerType] = useState("employed");
-  const [selectedReqId, setSelectedReqId] = useState<string>("REQ-AU");
+  const [selectedReqId, setSelectedReqId] = useState<string>("");
+
+  useEffect(() => {
+    async function loadRequirements() {
+      setIsLoading(true);
+      try {
+        const [reqRes, countryRes, typeRes] = await Promise.all([
+          fetch(`${API_V1_URL}/visa/requirements`),
+          fetch(`${API_V1_URL}/country`),
+          fetch(`${API_V1_URL}/visa/types`)
+        ]);
+        const [reqJson, countryJson, typeJson] = await Promise.all([
+          reqRes.json().catch(() => ({})),
+          countryRes.json().catch(() => ({})),
+          typeRes.json().catch(() => ({}))
+        ]);
+
+        const rawReqs = (reqJson.success && Array.isArray(reqJson.data)) ? reqJson.data : [];
+        const rawCountries = (countryJson.success && Array.isArray(countryJson.data)) ? countryJson.data : [];
+        const rawTypes = (typeJson.success && Array.isArray(typeJson.data)) ? typeJson.data : [];
+
+        if (rawCountries.length > 0 || rawReqs.length > 0) {
+          const activeCountries = rawCountries.filter((c: any) => c.status !== "Inactive" && c.name);
+          const activeReqs = rawReqs.filter((r: any) => r.status !== "Inactive");
+
+          if (activeCountries.length > 0) {
+            const records: CountryRequirementRecord[] = activeCountries.map((c: any) => {
+              const countryTypes = rawTypes.filter((t: any) => t.country?.toLowerCase() === c.name?.toLowerCase());
+              const typeTitle = countryTypes[0]?.title || "Tourist Visa";
+              const checklistItems = activeReqs.map((r: any) => ({
+                title: r.title,
+                category: r.category || "Identity",
+                mandatory: r.isMandatory !== false,
+                tip: r.description || "Mandatory consular documentation requirement."
+              }));
+
+              return {
+                id: `REQ-${c.code || c.name.slice(0, 2).toUpperCase()}`,
+                country: c.name,
+                flag: c.flag || "🌐",
+                subclass: typeTitle,
+                mandatoryDocsCount: checklistItems.filter((i: any) => i.mandatory).length,
+                minBankBalance: "Bank Proof Required",
+                itrRequired: "ITR / Form 16",
+                biometricsMandate: true,
+                photoSpecs: "35mm x 45mm, White background, 80% face coverage",
+                checklistItems
+              };
+            });
+            setRequirementsData(records);
+            if (records.length > 0) setSelectedReqId(records[0].id);
+          } else {
+            setRequirementsData([]);
+          }
+        } else {
+          setRequirementsData([]);
+        }
+      } catch (err) {
+        console.warn("Could not load visa requirements:", err);
+        setRequirementsData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadRequirements();
+  }, []);
 
   const activeReq = useMemo(() => {
-    return requirementsData.find((r) => r.id === selectedReqId) || requirementsData[0];
+    return requirementsData.find((r) => r.id === selectedReqId) || requirementsData[0] || null;
   }, [requirementsData, selectedReqId]);
 
   // Filtered List

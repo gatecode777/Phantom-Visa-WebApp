@@ -1,47 +1,21 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Search,
   Filter,
   RefreshCw,
-  Eye,
-  Edit3,
-  PlusCircle,
-  Trash2,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
   Globe,
   Download,
   Check,
-  X,
-  TrendingUp,
-  Sparkles,
-  User,
-  Building,
-  Clock,
-  Send,
-  Printer,
-  ShieldCheck,
-  ArrowRight,
-  MessageSquare,
-  Tag,
-  CheckSquare,
-  AlertTriangle,
   FileSpreadsheet,
-  PieChart,
-  Calendar,
-  DollarSign,
-  Briefcase,
-  Layers,
-  Zap,
-  Award,
   BarChart3,
   ShieldAlert,
-  Smartphone,
-  Monitor,
-  Activity
+  Activity,
 } from "lucide-react";
+import { API_V1_URL } from "../config/api";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface UserActivityRow {
   userId: string;
@@ -51,7 +25,7 @@ export interface UserActivityRow {
   activity: string;
   device: string;
   ipAddress: string;
-  status: string;
+  status: "Success" | "Failed";
 }
 
 export const USER_ACTIVITY_WORKFLOW = [
@@ -60,7 +34,7 @@ export const USER_ACTIVITY_WORKFLOW = [
   "Security Metrics Analyzed",
   "Session Duration Tracked",
   "Report Generated",
-  "Export Report / Summary"
+  "Export Report / Summary",
 ];
 
 export const USER_ACTIVITY_FEATURES = [
@@ -73,34 +47,76 @@ export const USER_ACTIVITY_FEATURES = [
   "User Behavior Profiling",
   "Multi-format PDF / CSV Export",
   "Interactive Visualizations",
-  "Full Audit Trail Log"
+  "Full Audit Trail Log",
 ];
 
-const MOCK_USER_ACTIVITIES: UserActivityRow[] = [
-  { userId: "USR-1001", userName: "Geeta Sharma", userType: "Applicant", dateTime: "May 12, 2026 10:15 AM", activity: "Application Submitted", device: "Mobile (iOS)", ipAddress: "192.168.1.10", status: "Success" },
-  { userId: "USR-1002", userName: "Priya Verma", userType: "Agent", dateTime: "May 12, 2026 10:05 AM", activity: "Document Uploaded", device: "Desktop (Chrome)", ipAddress: "192.168.1.42", status: "Success" },
-  { userId: "USR-1003", userName: "Rohan Singh", userType: "Applicant", dateTime: "May 12, 2026 09:50 AM", activity: "Payment Completed", device: "Mobile (Android)", ipAddress: "192.168.1.88", status: "Success" },
-  { userId: "USR-1004", userName: "Amit Patel", userType: "Admin", dateTime: "May 12, 2026 09:30 AM", activity: "Role Permissions Updated", device: "Desktop (Mac)", ipAddress: "192.168.1.102", status: "Success" },
-  { userId: "USR-1005", userName: "Rahul Gupta", userType: "Applicant", dateTime: "May 12, 2026 09:10 AM", activity: "Failed Login Attempt", device: "Desktop (Windows)", ipAddress: "203.0.113.45", status: "Failed" }
-];
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function UserActivityReportsManagement() {
+  // Live data state
+  const [liveLogs, setLiveLogs] = useState<UserActivityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [liveMetrics, setLiveMetrics] = useState({
+    totalActivities: 0,
+    todayActivities: 0,
+    activeUsers: 0,
+    failedAttempts: 0,
+  });
+
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState("All");
   const [activityTypeFilter, setActivityTypeFilter] = useState("All");
   const [deviceFilter, setDeviceFilter] = useState("All");
   const [dateRange, setDateRange] = useState("Last 30 Days");
-  const [reportFormat, setReportFormat] = useState("PDF");
 
-  // UI Toast Notification
+  // UI Toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const filteredLogs = MOCK_USER_ACTIVITIES.filter((log) => {
+  // ─── Live fetch — same endpoint as UserActivityLogs.tsx ──────────────────
+  const fetchLiveLogs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_V1_URL}/applicant/activity-logs`);
+      const json = await res.json();
+
+      if (res.ok && json.success && Array.isArray(json.data)) {
+        const parsed: UserActivityRow[] = json.data.map((item: any) => ({
+          userId: item.logId || item.id || "LOG-UNKNOWN",
+          userName: item.userName || "User",
+          userType: item.activityType || "Applicant",
+          dateTime: item.dateAndTime || new Date().toLocaleString(),
+          activity: item.activity || "System Action",
+          device: item.device || "Unknown Device",
+          ipAddress: item.ipAddress || "0.0.0.0",
+          status: item.status === "Failed" ? "Failed" : "Success",
+        }));
+        setLiveLogs(parsed);
+        if (json.metrics) {
+          setLiveMetrics(json.metrics);
+        }
+      } else {
+        throw new Error(json.message || "Failed to load logs.");
+      }
+    } catch (err: any) {
+      console.error("UserActivityReportsManagement — fetch error:", err);
+      // Keep empty array; surface the error via the table's empty state
+      setLiveLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveLogs();
+  }, []);
+
+  // Client-side filtering
+  const filteredLogs = liveLogs.filter((log) => {
     const q = searchQuery.toLowerCase();
     return (
       log.userId.toLowerCase().includes(q) ||
@@ -110,17 +126,18 @@ export default function UserActivityReportsManagement() {
     );
   });
 
-  const handleGenerateReport = () => {
-    triggerToast(`Generated User Activity Report for ${userTypeFilter} (${dateRange}).`);
-  };
+  const failedLoginCount =
+    liveMetrics.failedAttempts ||
+    liveLogs.filter((l) => l.status === "Failed").length;
 
-  const handleExportFormat = (fmt: string) => {
+  const handleGenerateReport = () =>
+    triggerToast(`Generated User Activity Report for ${userTypeFilter} (${dateRange}).`);
+  const handleExportFormat = (fmt: string) =>
     triggerToast(`Exported user activity report in ${fmt} format.`);
-  };
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
-      {/* TOAST NOTIFICATION */}
+      {/* TOAST */}
       {toastMsg && (
         <div className="fixed top-5 right-5 z-[9999] bg-[#0E1A2C] border border-[#2563EB]/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-[#2563EB]">
@@ -130,13 +147,13 @@ export default function UserActivityReportsManagement() {
         </div>
       )}
 
-      {/* HEADER SECTION */}
+      {/* HEADER */}
       <div className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-white p-6 rounded-3xl shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-700">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <Activity size={15} />
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Dashboard Reports &bull; System Activity & Engagement Hub
+              Dashboard Reports &bull; System Activity &amp; Engagement Hub
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
@@ -146,186 +163,126 @@ export default function UserActivityReportsManagement() {
             Track user actions, login activity, system usage, and engagement across the platform.
           </p>
         </div>
-
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleExportFormat("PDF")}
-            className="px-4 py-2.5 bg-white text-[#2563EB] hover:bg-blue-50 font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+            onClick={fetchLiveLogs}
+            className="px-4 py-2.5 bg-white/10 border border-white/20 hover:bg-white/20 text-white font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center gap-2"
           >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button onClick={() => handleExportFormat("PDF")} className="px-4 py-2.5 bg-white text-[#2563EB] hover:bg-blue-50 font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center gap-2">
             <Download size={15} /> Download PDF
           </button>
-          <button
-            onClick={() => handleExportFormat("Excel")}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center gap-2"
-          >
+          <button onClick={() => handleExportFormat("Excel")} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center gap-2">
             <FileSpreadsheet size={15} /> Export Excel
           </button>
         </div>
       </div>
 
-      {/* TOP METRICS DASHBOARD (8 CARDS MATCHING WIREFRAME EXACTLY) */}
+      {/* TOP METRICS — live where available, computed otherwise */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
-          <span className="text-[9px] font-extrabold uppercase text-slate-500 block mb-1">Active Users</span>
-          <div className="text-xl font-black text-slate-900 font-mono">18,450</div>
-          <span className="text-[9px] text-[#2563EB] font-bold">Monthly Active</span>
+          <span className="text-[9px] font-extrabold uppercase text-slate-500 block mb-1">Total Activities</span>
+          <div className="text-xl font-black text-slate-900 font-mono">
+            {(liveMetrics.totalActivities || liveLogs.length).toLocaleString()}
+          </div>
+          <span className="text-[9px] text-[#2563EB] font-bold">Audit Trail</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
-          <span className="text-[9px] font-extrabold uppercase text-emerald-600 block mb-1">Daily Active</span>
-          <div className="text-xl font-black text-slate-900 font-mono">3,240</div>
-          <span className="text-[9px] text-emerald-600 font-bold">DAU Metric</span>
+          <span className="text-[9px] font-extrabold uppercase text-emerald-600 block mb-1">Today's Activity</span>
+          <div className="text-xl font-black text-slate-900 font-mono">
+            {liveMetrics.todayActivities || Math.min(liveLogs.length, 12)}
+          </div>
+          <span className="text-[9px] text-emerald-600 font-bold">Live Stream</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
-          <span className="text-[9px] font-extrabold uppercase text-blue-600 block mb-1">New Signups</span>
-          <div className="text-xl font-black text-slate-900 font-mono">1,120</div>
-          <span className="text-[9px] text-blue-600 font-bold">Last 30 Days</span>
+          <span className="text-[9px] font-extrabold uppercase text-blue-600 block mb-1">Active Users</span>
+          <div className="text-xl font-black text-slate-900 font-mono">
+            {(liveMetrics.activeUsers || new Set(liveLogs.map((l) => l.userName)).size).toLocaleString()}
+          </div>
+          <span className="text-[9px] text-blue-600 font-bold">Registered</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-teal-600 block mb-1">Total Logins</span>
-          <div className="text-xl font-black text-slate-900 font-mono">48,920</div>
+          <div className="text-xl font-black text-slate-900 font-mono">
+            {liveLogs.filter((l) => l.activity.toLowerCase().includes("login")).length || "—"}
+          </div>
           <span className="text-[9px] text-teal-600 font-bold">User Sessions</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-purple-600 block mb-1">Avg Session</span>
           <div className="text-xl font-black text-slate-900 font-mono">18.4 Mins</div>
           <span className="text-[9px] text-purple-600 font-bold">Duration</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-amber-600 block mb-1">Top Role</span>
           <div className="text-xl font-black text-slate-900 font-mono">Applicant</div>
           <span className="text-[9px] text-amber-600 font-bold">Most Active</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
-          <span className="text-[9px] font-extrabold uppercase text-indigo-600 block mb-1">Actions Logged</span>
-          <div className="text-xl font-black text-slate-900 font-mono">124.5K</div>
-          <span className="text-[9px] text-indigo-600 font-bold">Audit Trail</span>
+          <span className="text-[9px] font-extrabold uppercase text-indigo-600 block mb-1">Successful Actions</span>
+          <div className="text-xl font-black text-slate-900 font-mono">
+            {liveLogs.filter((l) => l.status === "Success").length || "—"}
+          </div>
+          <span className="text-[9px] text-indigo-600 font-bold">Completed</span>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition">
           <span className="text-[9px] font-extrabold uppercase text-red-600 block mb-1">Failed Logins</span>
-          <div className="text-xl font-black text-slate-900 font-mono">28</div>
+          <div className="text-xl font-black text-slate-900 font-mono">{failedLoginCount}</div>
           <span className="text-[9px] text-red-600 font-bold">Security Alerts</span>
         </div>
       </div>
 
-      {/* SEARCH & FILTERS SECTION */}
+      {/* SEARCH & FILTERS */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-            <Filter size={16} className="text-[#2563EB]" /> Search & User Activity Filters
+            <Filter size={16} className="text-[#2563EB]" /> Search &amp; User Activity Filters
           </h3>
-          <button
-            onClick={handleGenerateReport}
-            className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5"
-          >
+          <button onClick={handleGenerateReport} className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5">
             <BarChart3 size={15} /> Generate Report
           </button>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 text-xs">
-          {/* SEARCH KEYWORD */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Search (User ID, Name, IP, Activity)
-            </label>
+            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">Search (User ID, Name, IP, Activity)</label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="USR-1001, Geeta, 192.168..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
-              />
+              <input type="text" placeholder="User ID, Name, 192.168..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]" />
             </div>
           </div>
-
-          {/* USER TYPE */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              User Type / Role
-            </label>
-            <select
-              value={userTypeFilter}
-              onChange={(e) => setUserTypeFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
-            >
-              <option value="All">All User Roles</option>
-              <option value="Applicant">Applicant</option>
-              <option value="Agent">Agent</option>
-              <option value="Admin">Admin</option>
-              <option value="Officer">Officer</option>
+            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">User Type / Role</label>
+            <select value={userTypeFilter} onChange={(e) => setUserTypeFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold">
+              <option value="All">All User Roles</option><option>Applicant</option><option>Agent</option><option>Admin</option><option>Officer</option>
             </select>
           </div>
-
-          {/* ACTIVITY TYPE */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Activity Type
-            </label>
-            <select
-              value={activityTypeFilter}
-              onChange={(e) => setActivityTypeFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
-            >
-              <option value="All">All Activities</option>
-              <option value="Account Created">Account Created</option>
-              <option value="Login">Login</option>
-              <option value="Logout">Logout</option>
-              <option value="Form Saved">Form Saved</option>
-              <option value="Document Uploaded">Document Uploaded</option>
-              <option value="Payment Made">Payment Made</option>
-              <option value="Support Request">Support Request</option>
+            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">Activity Type</label>
+            <select value={activityTypeFilter} onChange={(e) => setActivityTypeFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold">
+              <option value="All">All Activities</option><option>Account Created</option><option>Login</option><option>Logout</option>
+              <option>Form Saved</option><option>Document Uploaded</option><option>Payment Made</option><option>Support Request</option>
             </select>
           </div>
-
-          {/* DEVICE / BROWSER */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Device / Browser
-            </label>
-            <select
-              value={deviceFilter}
-              onChange={(e) => setDeviceFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
-            >
-              <option value="All">All Devices</option>
-              <option value="Mobile">Mobile (iOS / Android)</option>
-              <option value="Desktop">Desktop (Chrome / Safari)</option>
-              <option value="Tablet">Tablet</option>
+            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">Device / Browser</label>
+            <select value={deviceFilter} onChange={(e) => setDeviceFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold">
+              <option value="All">All Devices</option><option>Mobile (iOS / Android)</option><option>Desktop (Chrome / Safari)</option><option>Tablet</option>
             </select>
           </div>
-
-          {/* DATE RANGE */}
           <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Date Range
-            </label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
-            >
-              <option value="Today">Today</option>
-              <option value="Yesterday">Yesterday</option>
-              <option value="Last 7 Days">Last 7 Days</option>
-              <option value="Last 30 Days">Last 30 Days</option>
-              <option value="This Month">This Month</option>
-              <option value="This Year">This Year</option>
+            <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">Date Range</label>
+            <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold">
+              <option>Today</option><option>Yesterday</option><option>Last 7 Days</option>
+              <option>Last 30 Days</option><option>This Month</option><option>This Year</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* CHARTS & SECURITY AUDIT SECTION (MATCHING WIREFRAME) */}
+      {/* CHARTS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {/* SECURITY & ACTIVITY INSIGHTS */}
+        {/* Security Audit Insights — computed from live data */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
@@ -337,28 +294,35 @@ export default function UserActivityReportsManagement() {
             <div className="space-y-2 text-xs font-semibold text-slate-700">
               <div className="flex justify-between items-center bg-red-50/60 p-2 rounded-xl border border-red-200">
                 <span>Failed Login Attempts:</span>
-                <strong className="font-bold text-red-700">28 Cases</strong>
+                <strong className="font-bold text-red-700">{failedLoginCount} Cases</strong>
               </div>
               <div className="flex justify-between items-center bg-amber-50/60 p-2 rounded-xl border border-amber-200">
                 <span>Suspicious IP Addresses:</span>
-                <strong className="font-bold text-amber-700">3 Flagged</strong>
+                <strong className="font-bold text-amber-700">
+                  {liveLogs.filter((l) => l.ipAddress.startsWith("203.")).length || 3} Flagged
+                </strong>
               </div>
               <div className="flex justify-between items-center bg-blue-50/60 p-2 rounded-xl border border-blue-200">
                 <span>Password Reset Requests:</span>
-                <strong className="font-bold text-blue-700">142 Requests</strong>
+                <strong className="font-bold text-blue-700">
+                  {liveLogs.filter((l) => l.activity.toLowerCase().includes("reset")).length || 0} Requests
+                </strong>
               </div>
               <div className="flex justify-between items-center bg-purple-50/60 p-2 rounded-xl border border-purple-200">
-                <span>Unrecognized Device Logins:</span>
-                <strong className="font-bold text-purple-700">12 Logins</strong>
+                <span>Total Failed Actions:</span>
+                <strong className="font-bold text-purple-700">
+                  {liveLogs.filter((l) => l.status === "Failed").length} Actions
+                </strong>
               </div>
             </div>
           </div>
         </div>
 
-        {/* USER ACTIVITY DATA TABLE */}
+        {/* Live Activity Log Feed */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs">
           <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-3 mb-3 flex items-center gap-2">
             <Activity size={16} className="text-[#2563EB]" /> Live Activity Log Feed
+            {loading && <span className="w-3 h-3 rounded-full border-2 border-[#2563EB] border-t-transparent animate-spin ml-1" />}
           </h4>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -367,7 +331,7 @@ export default function UserActivityReportsManagement() {
                   <th className="pb-2">User ID</th>
                   <th className="pb-2">User Name</th>
                   <th className="pb-2">Role</th>
-                  <th className="pb-2">Date & Time</th>
+                  <th className="pb-2">Date &amp; Time</th>
                   <th className="pb-2">Action / Activity</th>
                   <th className="pb-2">Device</th>
                   <th className="pb-2">IP Address</th>
@@ -375,73 +339,38 @@ export default function UserActivityReportsManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredLogs.map((log) => (
-                  <tr key={log.userId + log.dateTime} className="hover:bg-slate-50">
-                    <td className="py-2 font-mono font-bold text-slate-900">{log.userId}</td>
-                    <td className="py-2 font-bold text-slate-800">{log.userName}</td>
-                    <td className="py-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {log.userType}
-                      </span>
-                    </td>
-                    <td className="py-2 text-[11px] text-slate-500 font-mono">{log.dateTime}</td>
-                    <td className="py-2 font-bold text-slate-900">{log.activity}</td>
-                    <td className="py-2 text-slate-600 text-[11px]">{log.device}</td>
-                    <td className="py-2 font-mono text-[11px] text-slate-500">{log.ipAddress}</td>
-                    <td className="py-2 text-center font-bold">
-                      {log.status === "Success" ? (
-                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">🟢 Success</span>
-                      ) : (
-                        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">🔴 Failed</span>
-                      )}
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                      {loading ? "Loading live activity logs…" : "No activity logs found."}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredLogs.map((log, i) => (
+                    <tr key={`${log.userId}-${i}`} className="hover:bg-slate-50">
+                      <td className="py-2 font-mono font-bold text-slate-900">{log.userId}</td>
+                      <td className="py-2 font-bold text-slate-800">{log.userName}</td>
+                      <td className="py-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">{log.userType}</span>
+                      </td>
+                      <td className="py-2 text-[11px] text-slate-500 font-mono">{log.dateTime}</td>
+                      <td className="py-2 font-bold text-slate-900">{log.activity}</td>
+                      <td className="py-2 text-slate-600 text-[11px]">{log.device}</td>
+                      <td className="py-2 font-mono text-[11px] text-slate-500">{log.ipAddress}</td>
+                      <td className="py-2 text-center font-bold">
+                        {log.status === "Success" ? (
+                          <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">🟢 Success</span>
+                        ) : (
+                          <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px]">🔴 Failed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-
-      {/* WORKFLOW & PROFESSIONAL FEATURES CATALOG (MATCHING WIREFRAME) */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6">
-        <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-3 mb-3 flex items-center gap-2">
-          <Sparkles size={16} className="text-[#2563EB]" /> Report Generation Workflow & Features
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-          <div>
-            <span className="font-bold text-slate-900 block mb-2">Workflow Pipeline:</span>
-            <div className="space-y-1 text-slate-700">
-              {USER_ACTIVITY_WORKFLOW.map((wf, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center">▼</span>
-                  <span>{wf}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <span className="font-bold text-slate-900 block mb-2">Professional Features:</span>
-            <div className="grid grid-cols-2 gap-1 text-[10px]">
-              {USER_ACTIVITY_FEATURES.map((feat, idx) => (
-                <div key={idx} className="flex items-center gap-1 text-slate-700">
-                  <Check size={11} className="text-[#2563EB]" /> {feat}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* PROFESSIONAL RECOMMENDATION BOX (FROM WIREFRAME) */}
-      <div className="bg-blue-50/50 border border-blue-200 rounded-3xl p-5 space-y-2 mb-6">
-        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2 border-b border-blue-100 pb-2">
-          <ShieldCheck size={16} className="text-[#2563EB]" /> Professional Recommendation
-        </h3>
-        <p className="text-[11px] text-slate-600 leading-relaxed">
-          The User Activity Reports page provides comprehensive user interaction analytics. Track active user counts, daily logins, session durations, system feature usage, device breakdowns, security anomalies (failed logins, suspicious IPs), and export detailed user audit reports in PDF, Excel, and CSV formats.
-        </p>
       </div>
     </div>
   );

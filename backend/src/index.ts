@@ -16,6 +16,8 @@ import visaRouter from "./routes/visa.js";
 import countryRouter from "./routes/country.js";
 import appointmentsRouter from "./routes/appointments.js";
 import supportRouter from "./routes/support.js";
+import systemRouter from "./routes/system.js";
+import adminRouter from "./routes/admin.js";
 
 dotenv.config();
 
@@ -82,8 +84,11 @@ app.use("/api/v1/applicant", applicantRouter);
 app.use("/api/v1/agent", agentRouter);
 app.use("/api/v1/visa", visaRouter);
 app.use("/api/v1/countries", countryRouter);
+app.use("/api/v1/country", countryRouter);
 app.use("/api/v1/appointments", appointmentsRouter);
 app.use("/api/v1/support", supportRouter);
+app.use("/api/v1/system", systemRouter);
+app.use("/api/v1/admin", adminRouter);
 
 app.listen(PORT, () => {
   console.log(`⚡ Phantom Visa OS Backend running on http://localhost:${PORT}`);

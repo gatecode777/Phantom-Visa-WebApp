@@ -91,9 +91,9 @@ const TransactionSchema: Schema = new Schema(
       enum: ["Successful", "Pending", "Failed", "Refunded", "Cancelled", "Proforma"],
       default: "Successful"
     },
-    gstin: { type: String, default: "27AAACG1234H1Z5" },
-    billingAddress: { type: String, default: "104, Park Street, Connaught Place, New Delhi - 110001" },
-    sacCode: { type: String, default: "998311" },
+    gstin: { type: String, default: "" },
+    billingAddress: { type: String, default: "" },
+    sacCode: { type: String, default: "" },
     refundDetails: {
       status: String,
       amount: Number,

@@ -40,45 +40,8 @@ export default function ApplicantApprovedApplications({
   onSelectAppForTracking,
   onNavigateSupport
 }: ApplicantApprovedApplicationsProps) {
-  // Extract approved applications from context or provide rich fallback records
   const approvedApps = useMemo(() => {
-    const list = applications.filter((a) => a.status === "Approved");
-    if (list.length > 0) return list;
-
-    return [
-      {
-        id: "VO-2026-0987",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "Australia",
-        visaType: "Subclass 600 Tourist Visa",
-        travelDates: "10 Aug 2026 to 10 Aug 2027",
-        status: "Approved" as const,
-        fees: 16500,
-        submissionDate: "10 Jul 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const, nocLetter: "verified" as const, sponsorLetter: "verified" as const },
-        checklist: { employed: true, sponsored: false }
-      },
-      {
-        id: "VO-2026-0742",
-        travelerName: "Geeta Sharma",
-        dob: "1995-06-12",
-        passportNumber: "Z9817264",
-        passportExpiry: "2033-12-20",
-        nationality: "India",
-        destination: "United Arab Emirates",
-        visaType: "30-Day Express Tourist E-Visa",
-        travelDates: "01 Nov 2026 to 30 Nov 2026",
-        status: "Approved" as const,
-        fees: 8500,
-        submissionDate: "15 Jun 2026",
-        verifiedDocs: { passport: "verified" as const, photo: "verified" as const },
-        checklist: { employed: true, sponsored: false }
-      }
-    ];
+    return applications.filter((a) => a.status === "Approved");
   }, [applications]);
 
   // Search & Filter State
@@ -88,11 +51,11 @@ export default function ApplicantApprovedApplications({
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
   // Selected Approved App ID for Inspector
-  const [selectedAppId, setSelectedAppId] = useState<string>(approvedApps[0]?.id || "VO-2026-0987");
+  const [selectedAppId, setSelectedAppId] = useState<string>(approvedApps[0]?.id || "");
 
   // Active App Object
   const activeApp = useMemo(() => {
-    return approvedApps.find((a) => a.id === selectedAppId) || approvedApps[0];
+    return approvedApps.find((a) => a.id === selectedAppId) || approvedApps[0] || null;
   }, [approvedApps, selectedAppId]);
 
   // Subtab inside Inspector

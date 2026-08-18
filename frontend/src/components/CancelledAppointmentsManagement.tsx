@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   XCircle,
   Search,
@@ -90,8 +90,7 @@ export const RECOMMENDED_CANCELLED_TABS = [
 ];
 
 export const CANCELLED_WORKFLOW_STEPS = [
-  "Appointment Scheduled",
-  "Cancellation Requested",
+  "Cancellation Initiated",
   "Cancellation Reason Recorded",
   "Slot Released to System",
   "Applicant Notified",
@@ -111,87 +110,7 @@ export const COMMON_CANCELLATION_REASONS = [
   "Other"
 ];
 
-const MOCK_CANCELLED_APPOINTMENTS: CancelledAppointmentRecord[] = [
-  {
-    id: "1",
-    aptId: "APT-C1001",
-    appId: "APP-20261001",
-    applicantName: "Geeta Bisht",
-    passportNumber: "Z9876543",
-    nationality: "Indian",
-    presentAddress: "House No 42, Sector 15, Chandigarh, India",
-    mobileNumber: "+91 9876543210",
-    appliedBy: "Applicant",
-    appointmentType: "Biometrics",
-    country: "Canada",
-    cancelledBy: "Applicant",
-    cancelledDate: "02 Aug 2026",
-    cancelledDateTime: "02 Aug 2026 11:15 AM",
-    cancellationReason: "Personal Reasons",
-    scheduledDate: "05 Aug 2026",
-    scheduledTime: "10:00 AM",
-    location: "VFS - Delhi",
-    status: "Cancelled",
-    systemRemarks: "Applicant cancelled appointment via portal due to urgent personal travel.",
-    rescheduleRequested: true,
-    rescheduleStatus: "Requested",
-    actionNotes: [
-      { id: "n1", author: "System", text: "Slot B12 released back to available inventory pool.", date: "02 Aug 2026 11:16 AM" }
-    ]
-  },
-  {
-    id: "2",
-    aptId: "APT-C1002",
-    appId: "APP-20261002",
-    applicantName: "Rahul Sharma",
-    passportNumber: "M1234567",
-    nationality: "Indian",
-    presentAddress: "Flat 201, Sunshine Heights, Andheri West, Mumbai, India",
-    mobileNumber: "+91 9811223344",
-    appliedBy: "Agent",
-    agentName: "Apex Travels",
-    appointmentType: "Embassy Interview",
-    country: "Australia",
-    cancelledBy: "Embassy",
-    cancelledDate: "02 Aug 2026",
-    cancelledDateTime: "02 Aug 2026 01:30 PM",
-    cancellationReason: "Embassy Cancelled",
-    scheduledDate: "06 Aug 2026",
-    scheduledTime: "11:30 AM",
-    location: "Embassy - Mumbai",
-    status: "Cancelled",
-    systemRemarks: "Consulate closed for emergency maintenance on scheduled date.",
-    rescheduleRequested: true,
-    rescheduleStatus: "Approved",
-    rescheduledAptId: "APT-9002",
-    actionNotes: []
-  },
-  {
-    id: "3",
-    aptId: "APT-C1003",
-    appId: "APP-20261003",
-    applicantName: "Bikram Suman",
-    passportNumber: "K4567890",
-    nationality: "Indian",
-    presentAddress: "3rd Cross, Indiranagar, Bengaluru, Karnataka, India",
-    mobileNumber: "+91 9988776655",
-    appliedBy: "Applicant",
-    appointmentType: "Medical Examination",
-    country: "Germany",
-    cancelledBy: "Admin",
-    cancelledDate: "01 Aug 2026",
-    cancelledDateTime: "01 Aug 2026 04:20 PM",
-    cancellationReason: "Incomplete Documents",
-    scheduledDate: "04 Aug 2026",
-    scheduledTime: "02:00 PM",
-    location: "Apollo Hospital",
-    status: "Cancelled",
-    systemRemarks: "Cancelled by Admin due to missing blood test clearance form.",
-    rescheduleRequested: false,
-    rescheduleStatus: "None",
-    actionNotes: []
-  }
-];
+const MOCK_CANCELLED_APPOINTMENTS: CancelledAppointmentRecord[] = [];
 
 export default function CancelledAppointmentsManagement() {
   // Search & Filter States
@@ -202,7 +121,45 @@ export default function CancelledAppointmentsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
 
   // Records State
-  const [cancelledList, setCancelledList] = useState<CancelledAppointmentRecord[]>(MOCK_CANCELLED_APPOINTMENTS);
+  const [cancelledList, setCancelledList] = useState<CancelledAppointmentRecord[]>([]);
+
+  useEffect(() => {
+    fetchUnifiedAppointments().then((apts) => {
+      if (Array.isArray(apts) && apts.length > 0) {
+        const mapped: CancelledAppointmentRecord[] = apts
+          .filter((a: any) => a.status === "Cancelled" || a.status === "Declined")
+          .map((a: any) => ({
+            id: a.id,
+            aptId: a.reference || a.id,
+            appId: a.appId || "APP-20261001",
+            applicantName: a.applicant || "Applicant",
+            passportNumber: "Z9876543",
+            nationality: "Indian",
+            presentAddress: "New Delhi, India",
+            mobileNumber: "+91 9876543210",
+            appliedBy: "Applicant",
+            appointmentType: a.type || "Biometrics",
+            country: a.country || "Canada",
+            cancelledBy: "Applicant",
+            cancelledDate: a.date || "02 Aug 2026",
+            cancelledDateTime: `${a.date || "02 Aug 2026"} 11:15 AM`,
+            cancellationReason: "Personal Reasons",
+            scheduledDate: a.date || "05 Aug 2026",
+            scheduledTime: a.time || "10:00 AM",
+            location: a.location || "VFS - Delhi",
+            status: "Cancelled",
+            systemRemarks: "Appointment cancelled.",
+            rescheduleRequested: false,
+            rescheduleStatus: "None",
+            actionNotes: []
+          }));
+        setCancelledList(mapped);
+      } else {
+        setCancelledList([]);
+      }
+    });
+  }, []);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Centered Details Modal State
