@@ -1297,17 +1297,10 @@ export default function CustomerPortal() {
 
           {/* PAYMENTS VIEW */}
           {customerTab === "payments" && (
-            paymentSubTab === "invoices" ? (
-              <ApplicantInvoices
-                applications={applications}
-                onNavigateSupport={() => setCustomerTab("support")}
-              />
-            ) : (
-              <ApplicantPaymentHistory
-                applications={applications}
-                onNavigateSupport={() => setCustomerTab("support")}
-              />
-            )
+            <ApplicantPaymentHistory
+              applications={applications}
+              onNavigateSupport={() => setCustomerTab("support")}
+            />
           )}
 
           {/* APPOINTMENTS VIEW */}

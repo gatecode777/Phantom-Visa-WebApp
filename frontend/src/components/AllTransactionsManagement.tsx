@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useVisa } from "../context/VisaContext";
 import {
   CreditCard,
@@ -101,8 +101,14 @@ export const SUPPORTED_PAYMENT_METHODS = [
   "Payment Gateway (Razorpay/Stripe)"
 ];
 
-export default function AllTransactionsManagement() {
-  const { unifiedTransactions, updateUnifiedTransactionStatus } = useVisa();
+import { fetchUnifiedTransactions, UnifiedTransactionRecord } from "../services/paymentService";
+
+export interface AllTransactionsManagementProps {
+  agentId?: string;
+}
+
+export default function AllTransactionsManagement({ agentId: propAgentId }: AllTransactionsManagementProps = {}) {
+  const { authSession, currentRole, updateUnifiedTransactionStatus } = useVisa();
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,10 +118,48 @@ export default function AllTransactionsManagement() {
   const [countryFilter, setCountryFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  // Map unifiedTransactions to TransactionRecord list
+  // State for agent-scoped transactions
+  const [dbTransactions, setDbTransactions] = useState<UnifiedTransactionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const isAgentScope =
+    Boolean(propAgentId) ||
+    currentRole === "Agent" ||
+    (typeof window !== "undefined" && (window.location.pathname.includes("agent") || window.location.search.includes("agent")));
+
+  const effectiveAgentId =
+    propAgentId ||
+    authSession?.user?.agentId ||
+    (authSession as any)?.agentId ||
+    (authSession?.user as any)?.id ||
+    (isAgentScope ? "AGT-1001" : "");
+
+  const loadTransactions = async (showRefresh = false) => {
+    try {
+      if (showRefresh) setIsRefreshing(true);
+      else setLoading(true);
+
+      const targetAgentId = isAgentScope ? effectiveAgentId : undefined;
+      const data = await fetchUnifiedTransactions(targetAgentId);
+      setDbTransactions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load transactions error:", err);
+      setDbTransactions([]);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTransactions();
+  }, [authSession, currentRole, propAgentId]);
+
+  // Map dbTransactions to TransactionRecord list
   const transactionsList = useMemo<TransactionRecord[]>(() => {
-    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
-    return unifiedTransactions.map((t) => {
+    if (!dbTransactions || dbTransactions.length === 0) return [];
+    return dbTransactions.map((t) => {
       const dateStr = t.createdAt
         ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
         : "01 Aug 2026";
@@ -141,7 +185,7 @@ export default function AllTransactionsManagement() {
         txnDate: dateStr,
         txnDateTime: dateTimeStr,
         status: (t.status === "Proforma" ? "Pending" : t.status) as any,
-        country: t.country.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
+        country: (t.country || "General").replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
         visaCategory: t.visaCategory || "Tourist",
         paymentGateway: (t.paymentGateway || "Razorpay") as any,
         paymentRefNo: t.paymentRef || "RAZOR-PAY",
@@ -158,7 +202,7 @@ export default function AllTransactionsManagement() {
         ]
       };
     });
-  }, [unifiedTransactions]);
+  }, [dbTransactions]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -221,6 +265,7 @@ export default function AllTransactionsManagement() {
   const handleVerifyPayment = async (txn: TransactionRecord) => {
     await updateUnifiedTransactionStatus(txn.txnId, "Successful");
     triggerToast(`Payment ${txn.txnId} verified successfully!`);
+    loadTransactions(true);
     if (activeModalTxn?.id === txn.id) {
       setActiveModalTxn((prev) => (prev ? { ...prev, status: "Successful" } : null));
     }
@@ -229,6 +274,7 @@ export default function AllTransactionsManagement() {
   const handleProcessRefund = async (txn: TransactionRecord) => {
     await updateUnifiedTransactionStatus(txn.txnId, "Refunded", "Admin Approved Refund", txn.amount);
     triggerToast(`Refund processed for ${txn.txnId} (₹${txn.amount.toLocaleString()}).`);
+    loadTransactions(true);
     if (activeModalTxn?.id === txn.id) {
       setActiveModalTxn((prev) => (prev ? { ...prev, status: "Refunded" } : null));
     }
@@ -238,6 +284,11 @@ export default function AllTransactionsManagement() {
     triggerToast(`Transaction record ${txn.txnId} highlighted.`);
     if (activeModalTxn?.id === txn.id) setActiveModalTxn(null);
   };
+
+  // Dynamic live metric calculations
+  const totalClearedCollection = transactionsList
+    .filter((t) => t.status === "Successful")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-800 font-sans min-h-screen p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
@@ -267,6 +318,15 @@ export default function AllTransactionsManagement() {
             View, track, and manage all payments, refunds, and invoices across applicants and B2B agents.
           </p>
         </div>
+
+        <button
+          onClick={() => loadTransactions(true)}
+          disabled={isRefreshing}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-white/20 self-start sm:self-auto cursor-pointer"
+        >
+          <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+          <span>{isRefreshing ? "Syncing..." : "Sync Live Ledger"}</span>
+        </button>
       </div>
 
       {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS */}
@@ -646,13 +706,6 @@ export default function AllTransactionsManagement() {
                           <Eye size={15} />
                         </button>
                         <button
-                          onClick={() => triggerToast(`Downloading receipt for ${t.txnId}...`)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="Download Receipt"
-                        >
-                          <Receipt size={15} />
-                        </button>
-                        <button
                           onClick={() => handleVerifyPayment(t)}
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
                           title="Verify Payment"
@@ -723,85 +776,63 @@ export default function AllTransactionsManagement() {
               </button>
             </div>
 
-            {/* TAB BAR WITH LIGHT-BLUE SLIM SCROLLBAR */}
-            <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {RECOMMENDED_TRANSACTION_TABS.map((tab) => {
-                const active = modalTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
-                      ? "bg-[#2563EB] text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                      }`}
-                  >
-                    <span>{tab}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* MODAL BODY */}
+            {/* MODAL BODY - OVERVIEW ONLY */}
             <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {/* TAB 1: OVERVIEW */}
-              {modalTab === "Overview" && (
-                <div className="space-y-6 animate-in fade-in duration-150">
-                  {/* SUMMARY TILES */}
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
-                      Payment & Gateway Details
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Transaction ID</span>
-                        <strong className="text-[#2563EB] font-mono font-bold">{activeModalTxn.txnId}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Gateway & Ref</span>
-                        <strong className="text-slate-900 font-bold">{activeModalTxn.paymentGateway} ({activeModalTxn.paymentRefNo})</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
-                        <strong className="text-purple-700 font-mono font-bold">{activeModalTxn.invoiceNo}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Status</span>
-                        <strong className="text-emerald-700 font-bold">{activeModalTxn.status}</strong>
-                      </div>
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* SUMMARY TILES */}
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                    Payment & Gateway Details
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Transaction ID</span>
+                      <strong className="text-[#2563EB] font-mono font-bold">{activeModalTxn.txnId}</strong>
                     </div>
-                  </div>
-
-                  {/* SERVICE BREAKDOWN CARD */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
-                      <Receipt size={16} className="text-[#2563EB]" /> Service Fee Breakdown
-                    </h4>
-                    <div className="space-y-2 text-xs font-medium text-slate-700">
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>Embassy Service Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalTxn.breakdown.embassyFee.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>VFS / Service Center Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalTxn.breakdown.vfsFee.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>Courier & Doorstep Logistics</span>
-                        <span className="font-mono font-bold">₹{activeModalTxn.breakdown.courierCharge.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>Portal Processing & Convenience Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalTxn.breakdown.processingFee.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
-                        <span>Total Paid Amount</span>
-                        <span className="font-mono text-[#2563EB]">₹{activeModalTxn.amount.toLocaleString("en-IN")}</span>
-                      </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Gateway & Ref</span>
+                      <strong className="text-slate-900 font-bold">{activeModalTxn.paymentGateway} ({activeModalTxn.paymentRefNo})</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
+                      <strong className="text-purple-700 font-mono font-bold">{activeModalTxn.invoiceNo}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Status</span>
+                      <strong className="text-emerald-700 font-bold">{activeModalTxn.status}</strong>
                     </div>
                   </div>
                 </div>
-              )}
+
+                {/* SERVICE BREAKDOWN CARD */}
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
+                    <Receipt size={16} className="text-[#2563EB]" /> Service Fee Breakdown
+                  </h4>
+                  <div className="space-y-2 text-xs font-medium text-slate-700">
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>Embassy Service Fee</span>
+                      <span className="font-mono font-bold">₹{activeModalTxn.breakdown.embassyFee.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>VFS / Service Center Fee</span>
+                      <span className="font-mono font-bold">₹{activeModalTxn.breakdown.vfsFee.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>Courier & Doorstep Logistics</span>
+                      <span className="font-mono font-bold">₹{activeModalTxn.breakdown.courierCharge.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>Portal Processing & Convenience Fee</span>
+                      <span className="font-mono font-bold">₹{activeModalTxn.breakdown.processingFee.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
+                      <span>Total Paid Amount</span>
+                      <span className="font-mono text-[#2563EB]">₹{activeModalTxn.amount.toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* MODAL FOOTER */}

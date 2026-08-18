@@ -123,9 +123,17 @@ export const APPOINTMENT_WORKFLOW_STEPS = [
  * Fetch all appointments from MongoDB.
  * Falls back to an empty array if the backend is unreachable or returns no data.
  */
-export async function fetchUnifiedAppointments(): Promise<UnifiedAppointmentRecord[]> {
+export async function fetchUnifiedAppointments(agentId?: string): Promise<UnifiedAppointmentRecord[]> {
   try {
-    const res = await fetch(`${API_V1_URL}/appointments`);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const url = agentId
+      ? `${API_V1_URL}/appointments?agentId=${encodeURIComponent(agentId)}`
+      : `${API_V1_URL}/appointments`;
+
+    const res = await fetch(url, { headers });
     const json = await res.json();
     if (res.ok && json.success && Array.isArray(json.data)) {
       return json.data.map((item: any) => ({

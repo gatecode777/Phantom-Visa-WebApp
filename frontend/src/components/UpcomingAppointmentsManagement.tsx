@@ -1,41 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { fetchUnifiedAppointments } from "../services/appointmentService";
 import {
   Calendar,
   Search,
   Filter,
   RefreshCw,
   Eye,
-  Edit3,
-  PlusCircle,
   Trash2,
   CheckCircle2,
-  XCircle,
   AlertCircle,
-  Globe,
-  Download,
-  Check,
-  X,
-  TrendingUp,
-  Sparkles,
-  User,
-  Building,
   Clock,
-  Send,
-  Printer,
   ShieldCheck,
-  ArrowRight,
-  MessageSquare,
-  Tag,
-  CheckSquare,
-  AlertTriangle,
   FileText,
   MapPin,
-  Map,
-  RotateCcw,
   QrCode,
   Bell,
-  Smartphone,
-  Share2
+  X,
+  Sparkles,
+  Check
 } from "lucide-react";
 
 export interface UpcomingAppointmentRecord {
@@ -47,15 +29,9 @@ export interface UpcomingAppointmentRecord {
   nationality: string;
   presentAddress: string;
   mobileNumber: string;
-  appliedBy: "Applicant" | "Agent";
+  appliedBy: string;
   agentName?: string;
-  appointmentType:
-  | "Biometrics"
-  | "Embassy Interview"
-  | "Document Verification"
-  | "Medical Examination"
-  | "Passport Submission"
-  | "VFS Collection";
+  appointmentType: string;
   country: string;
   dateOnly: string;
   timeOnly: string;
@@ -65,7 +41,7 @@ export interface UpcomingAppointmentRecord {
   state: string;
   googleMapLink: string;
   status: "Scheduled" | "Confirmed" | "Rescheduled" | "Reminder Pending";
-  bookedBy: "Applicant" | "Agent" | "Admin" | "Embassy Direct";
+  bookedBy: string;
   primaryOfficer?: string;
   prepInstructions: string;
   reminderStatus: "Sent" | "Pending" | "Failed";
@@ -76,17 +52,6 @@ export interface UpcomingAppointmentRecord {
   totalRemindersSent: number;
   actionNotes?: { id: string; author: string; text: string; date: string }[];
 }
-
-export const RECOMMENDED_UPCOMING_TABS = [
-  "Overview",
-  "Applicant Details",
-  "Appointment Details",
-  "Location",
-  "Reminder History",
-  "Confirmation Details",
-  "Activity Logs",
-  "Action Notes"
-];
 
 export const UPCOMING_WORKFLOW_STEPS = [
   "Appointment Scheduled",
@@ -110,9 +75,7 @@ export const PROFESSIONAL_FEATURES = [
   "Attendance Tracking"
 ];
 
-const MOCK_UPCOMING_APPOINTMENTS: UpcomingAppointmentRecord[] = [];
-
-export default function UpcomingAppointmentsManagement() {
+export default function UpcomingAppointmentsManagement({ agentId }: { agentId?: string }) {
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
@@ -122,37 +85,54 @@ export default function UpcomingAppointmentsManagement() {
 
   // Records State
   const [upcomingList, setUpcomingList] = useState<UpcomingAppointmentRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    fetchUnifiedAppointments().then((apts) => {
-      if (Array.isArray(apts) && apts.length > 0) {
+  // Centered Details Modal State
+  const [activeModalApt, setActiveModalApt] = useState<UpcomingAppointmentRecord | null>(null);
+
+  // UI Toast Notification
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const effectiveAgentId = agentId || "AGT-1001";
+
+  const loadAppointments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const apts = await fetchUnifiedAppointments(effectiveAgentId);
+      if (Array.isArray(apts)) {
         const mapped: UpcomingAppointmentRecord[] = apts
-          .filter((a: any) => a.status === "Scheduled" || a.status === "Confirmed" || a.status === "Rescheduled")
+          .filter((a: any) => a.status === "Scheduled" || a.status === "Confirmed" || a.status === "Rescheduled" || a.status === "Upcoming")
           .map((a: any) => ({
-            id: a.id,
-            aptId: a.reference || a.id,
-            appId: a.appId || "APP-20261001",
-            applicantName: a.applicant || "Applicant",
-            passportNumber: "Z9876543",
-            nationality: "Indian",
-            presentAddress: "New Delhi, India",
-            mobileNumber: "+91 9876543210",
-            appliedBy: "Applicant",
-            appointmentType: a.type || "Biometrics",
-            country: a.country || "Canada",
-            dateOnly: a.date || "05 Aug 2026",
-            timeOnly: a.time || "10:00 AM",
-            location: a.location || "VFS Global",
-            address: a.location || "Mezzanine Floor, Shivaji Stadium Metro Station, Connaught Place, New Delhi",
-            city: "New Delhi",
-            state: "Delhi",
-            googleMapLink: "https://maps.google.com/?q=VFS+Delhi",
-            status: a.status === "Rescheduled" ? "Rescheduled" : "Scheduled",
-            bookedBy: "Applicant",
-            primaryOfficer: a.officer || "Officer D. Kumar",
-            prepInstructions: "Carry original passport and appointment letter.",
+            id: a.id || a._id || a.aptId,
+            aptId: a.aptId || a.reference || a.id,
+            appId: a.applicationId || a.appId || "VO-2026-0000",
+            applicantName: a.applicantName || a.applicant || "Applicant",
+            passportNumber: a.passportNumber || "N/A",
+            nationality: a.nationality || "Indian",
+            presentAddress: a.address || a.city || "New Delhi, India",
+            mobileNumber: a.mobileNumber || "+91 9876543210",
+            appliedBy: a.bookedBy || "Applicant",
+            appointmentType: a.appointmentType || a.type || "Biometric Submission",
+            country: a.country || "General",
+            dateOnly: a.dateDisplay || a.dateOnly || "Upcoming",
+            timeOnly: a.timeSlot || a.time || "10:00 AM",
+            location: a.vacCenter || a.location || "VFS Global",
+            address: a.address || a.vacCenter || "VFS Center",
+            city: a.city || "New Delhi",
+            state: a.state || "Delhi",
+            googleMapLink: `https://maps.google.com/?q=${encodeURIComponent(a.vacCenter || a.city || "VFS")}`,
+            status: a.status === "Rescheduled" ? "Rescheduled" : a.status === "Confirmed" ? "Confirmed" : "Scheduled",
+            bookedBy: a.bookedBy || "Applicant",
+            agentName: a.agentName,
+            primaryOfficer: a.primaryOfficer || "Officer In-charge",
+            prepInstructions: a.appointmentNotes || "Carry original passport, visa application form, and appointment slip.",
             reminderStatus: "Sent",
-            reminderDate: "04 Aug 2026 09:00 AM",
+            reminderDate: `${a.dateDisplay || a.dateOnly} (Auto-Scheduled)`,
             emailStatus: "Delivered",
             smsStatus: "Delivered",
             whatsappStatus: "Delivered",
@@ -163,38 +143,48 @@ export default function UpcomingAppointmentsManagement() {
       } else {
         setUpcomingList([]);
       }
-    });
-  }, []);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    } catch (err) {
+      console.error("Error loading appointments:", err);
+      setUpcomingList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [effectiveAgentId]);
 
-  // Centered Details Modal State
-  const [activeModalApt, setActiveModalApt] = useState<UpcomingAppointmentRecord | null>(null);
-  const [modalTab, setModalTab] = useState<string>("Overview");
+  useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
 
-  // UI Toast Notification
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
-  };
+  // Dynamic Statistics
+  const totalUpcoming = upcomingList.length;
+  const confirmedCount = upcomingList.filter((a) => a.status === "Confirmed").length;
+  const scheduledCount = upcomingList.filter((a) => a.status === "Scheduled").length;
+  const rescheduledCount = upcomingList.filter((a) => a.status === "Rescheduled").length;
 
   // Filter Logic
-  const filteredAppointments = upcomingList.filter((apt) => {
-    const q = searchQuery.toLowerCase();
-    const matchesQuery =
-      apt.aptId.toLowerCase().includes(q) ||
-      apt.appId.toLowerCase().includes(q) ||
-      apt.applicantName.toLowerCase().includes(q) ||
-      apt.passportNumber.toLowerCase().includes(q) ||
-      (apt.agentName && apt.agentName.toLowerCase().includes(q));
+  const filteredAppointments = useMemo(() => {
+    return upcomingList.filter((apt) => {
+      const q = searchQuery.toLowerCase();
+      const matchesQuery =
+        apt.aptId.toLowerCase().includes(q) ||
+        apt.appId.toLowerCase().includes(q) ||
+        apt.applicantName.toLowerCase().includes(q) ||
+        apt.passportNumber.toLowerCase().includes(q) ||
+        (apt.agentName && apt.agentName.toLowerCase().includes(q));
 
-    const matchesType = typeFilter === "All" || apt.appointmentType === typeFilter;
-    const matchesStatus = statusFilter === "All" || apt.status === statusFilter;
-    const matchesCountry = countryFilter === "All" || apt.country === countryFilter;
-    const matchesBookedBy = bookedByFilter === "All" || apt.bookedBy === bookedByFilter;
+      const matchesType = typeFilter === "All" || apt.appointmentType === typeFilter;
+      const matchesStatus = statusFilter === "All" || apt.status === statusFilter;
+      const matchesCountry = countryFilter === "All" || apt.country === countryFilter;
+      const matchesBookedBy = bookedByFilter === "All" || apt.bookedBy === bookedByFilter;
 
-    return matchesQuery && matchesType && matchesStatus && matchesCountry && matchesBookedBy;
-  });
+      return matchesQuery && matchesType && matchesStatus && matchesCountry && matchesBookedBy;
+    });
+  }, [upcomingList, searchQuery, typeFilter, statusFilter, countryFilter, bookedByFilter]);
+
+  // Unique country filters
+  const uniqueCountries = useMemo(() => {
+    return Array.from(new Set(upcomingList.map((a) => a.country))).filter(Boolean);
+  }, [upcomingList]);
 
   // Selection Logic
   const handleSelectAll = () => {
@@ -222,7 +212,7 @@ export default function UpcomingAppointmentsManagement() {
 
   const handleDeleteRecord = (apt: UpcomingAppointmentRecord) => {
     setUpcomingList((prev) => prev.filter((a) => a.id !== apt.id));
-    triggerToast(`Upcoming appointment ${apt.aptId} deleted.`);
+    triggerToast(`Upcoming appointment ${apt.aptId} removed.`);
     if (activeModalApt?.id === apt.id) setActiveModalApt(null);
   };
 
@@ -244,67 +234,76 @@ export default function UpcomingAppointmentsManagement() {
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <Clock size={15} />
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Scheduled Future Slots & Reminder Queue
+              Scheduled Future Slots &amp; Reminder Queue
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-outfit">
             Upcoming Appointments
           </h1>
-          <p className="text-xs text-blue-100 font-medium mt-1">
-            Manage all upcoming visa appointments scheduled for today, tomorrow, and future dates.
+          <p className="text-xs text-blue-100 mt-1 max-w-2xl font-medium">
+            Manage all upcoming visa biometric, interview, and consular appointments for your assigned applications.
           </p>
         </div>
+
+        <button
+          onClick={() => {
+            loadAppointments();
+            triggerToast("Appointments re-synced with server.");
+          }}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-white/20 self-start sm:self-auto"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Sync Queue
+        </button>
       </div>
 
-      {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
+      {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* LEFT CARDS: 6 METRICS */}
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
             <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">Total Upcoming</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">412</div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{totalUpcoming}</div>
             <span className="text-[10px] text-[#2563EB] font-bold">Upcoming Queue</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Today's Upcoming</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">76</div>
-            <span className="text-[10px] text-emerald-600 font-bold">Today's Schedule</span>
+            <span className="text-[10px] font-extrabold uppercase text-emerald-600 block mb-1">Confirmed Slots</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{confirmedCount}</div>
+            <span className="text-[10px] text-emerald-600 font-bold">Ready for Biometrics</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Tomorrow's Upcoming</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">94</div>
-            <span className="text-[10px] text-blue-600 font-bold">Tomorrow's Schedule</span>
+            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Scheduled Slots</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{scheduledCount}</div>
+            <span className="text-[10px] text-blue-600 font-bold">Awaiting Verification</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">This Week</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">188</div>
-            <span className="text-[10px] text-purple-600 font-bold">7-Day Window</span>
+            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Rescheduled</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{rescheduledCount}</div>
+            <span className="text-[10px] text-amber-600 font-bold">Modified Slots</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-teal-600 block mb-1">Next 30 Days</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">412</div>
-            <span className="text-[10px] text-teal-600 font-bold">Monthly Schedule</span>
+            <span className="text-[10px] font-extrabold uppercase text-teal-600 block mb-1">Assigned Queue</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{totalUpcoming}</div>
+            <span className="text-[10px] text-teal-600 font-bold">Agent Scoped</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-amber-600 block mb-1">Reminders Pending</span>
-            <div className="text-2xl font-black text-slate-900 font-mono">48</div>
-            <span className="text-[10px] text-amber-600 font-bold">Notification Queue</span>
+            <span className="text-[10px] font-extrabold uppercase text-purple-600 block mb-1">Reminders Active</span>
+            <div className="text-2xl font-black text-slate-900 font-mono">{totalUpcoming}</div>
+            <span className="text-[10px] text-purple-600 font-bold">Auto-Notified</span>
           </div>
         </div>
 
-        {/* RIGHT CARD: WORKFLOW & PROFESSIONAL FEATURES CATALOG (FROM WIREFRAME) */}
+        {/* RIGHT CARD: WORKFLOW & PROFESSIONAL FEATURES */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex flex-col justify-between space-y-4">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-2">
               <Sparkles size={16} className="text-[#2563EB]" /> Upcoming Appointment Workflow
             </h3>
 
-            {/* WORKFLOW FLOW */}
             <div className="space-y-1 text-[11px] text-slate-700 font-medium mb-3">
               {UPCOMING_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -316,7 +315,6 @@ export default function UpcomingAppointmentsManagement() {
               ))}
             </div>
 
-            {/* PROFESSIONAL FEATURES CATALOG */}
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] font-semibold text-slate-600">
               <span className="text-slate-900 font-bold block mb-1">Professional Features:</span>
               <div className="grid grid-cols-2 gap-1 text-[10px] max-h-24 overflow-y-auto [scrollbar-width:thin]">
@@ -335,7 +333,7 @@ export default function UpcomingAppointmentsManagement() {
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs mb-6 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 font-outfit">
-            <Filter size={16} className="text-[#2563EB]" /> Search & Upcoming Filters
+            <Filter size={16} className="text-[#2563EB]" /> Search &amp; Upcoming Filters
           </h3>
           <span className="text-xs text-slate-500 font-mono font-bold">
             Showing {filteredAppointments.length} of {upcomingList.length} Upcoming Appointments
@@ -343,24 +341,22 @@ export default function UpcomingAppointmentsManagement() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 text-xs">
-          {/* SEARCH KEYWORD */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Search (Apt ID, App ID, Applicant, Passport, Agent)
+              Search (Apt ID, App ID, Applicant, Passport)
             </label>
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
               <input
                 type="text"
-                placeholder="APT-U1001, APP-20261001..."
+                placeholder="APT-2026-..., VO-2026-..., Name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#2563EB] transition"
               />
             </div>
           </div>
 
-          {/* APPOINTMENT TYPE */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
               Appointment Type
@@ -368,19 +364,18 @@ export default function UpcomingAppointmentsManagement() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#2563EB] transition"
             >
               <option value="All">All Types</option>
-              <option value="Biometrics">Biometrics</option>
+              <option value="Biometric Submission">Biometric Submission</option>
               <option value="Embassy Interview">Embassy Interview</option>
               <option value="Document Verification">Document Verification</option>
               <option value="Medical Examination">Medical Examination</option>
-              <option value="Passport Submission">Passport Submission</option>
-              <option value="VFS Collection">VFS Collection</option>
+              <option value="VAC / VFS Collection">VAC / VFS Collection</option>
+              <option value="Passport Collection">Passport Collection</option>
             </select>
           </div>
 
-          {/* APPOINTMENT STATUS */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
               Appointment Status
@@ -388,17 +383,15 @@ export default function UpcomingAppointmentsManagement() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#2563EB] transition"
             >
               <option value="All">All Statuses</option>
               <option value="Scheduled">Scheduled</option>
               <option value="Confirmed">Confirmed</option>
               <option value="Rescheduled">Rescheduled</option>
-              <option value="Reminder Pending">Reminder Pending</option>
             </select>
           </div>
 
-          {/* COUNTRY */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
               Country
@@ -406,16 +399,15 @@ export default function UpcomingAppointmentsManagement() {
             <select
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#2563EB] transition"
             >
               <option value="All">All Countries</option>
-              <option value="Canada">Canada</option>
-              <option value="Australia">Australia</option>
-              <option value="Germany">Germany</option>
+              {uniqueCountries.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </div>
 
-          {/* BOOKED BY */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
               Booked By
@@ -423,7 +415,7 @@ export default function UpcomingAppointmentsManagement() {
             <select
               value={bookedByFilter}
               onChange={(e) => setBookedByFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#2563EB] transition"
             >
               <option value="All">All Bookers</option>
               <option value="Applicant">Applicant</option>
@@ -434,89 +426,55 @@ export default function UpcomingAppointmentsManagement() {
         </div>
       </div>
 
-      {/* CONTEXTUAL BULK ACTIONS TOOLBAR */}
-      {selectedIds.length > 0 && (
-        <div className="bg-[#0E1A2C] border border-[#2563EB]/40 text-white p-3.5 rounded-2xl shadow-xl mb-4 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="w-6 h-6 rounded-lg bg-[#2563EB] text-white flex items-center justify-center font-mono font-bold text-xs">
-              {selectedIds.length}
-            </span>
-            <span>Upcoming Appointments Selected</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => triggerToast(`Sending email reminders for ${selectedIds.length} items.`)}
-              className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <Send size={14} /> Send Email Reminders
-            </button>
-            <button
-              onClick={() => triggerToast(`Sending SMS reminders for ${selectedIds.length} items.`)}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <Smartphone size={14} /> Send SMS Reminders
-            </button>
-            <button
-              onClick={() => triggerToast(`Sending WhatsApp reminders for ${selectedIds.length} items.`)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <MessageSquare size={14} /> Send WhatsApp
-            </button>
-            <button
-              onClick={() => triggerToast(`Confirmed ${selectedIds.length} appointments.`)}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
-            >
-              <CheckCircle2 size={14} /> Confirm Selected
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* UPCOMING APPOINTMENTS TABLE (COLUMNS MATCH WIREFRAME EXACTLY) */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden mb-6">
+      {/* TABLE SECTION */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xs overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold font-outfit uppercase tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredAppointments.length && filteredAppointments.length > 0}
+                    checked={
+                      filteredAppointments.length > 0 &&
+                      selectedIds.length === filteredAppointments.length
+                    }
                     onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
+                    className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
                   />
                 </th>
-                <th className="py-3.5 px-4 font-mono">Appointment ID</th>
-                <th className="py-3.5 px-4 font-mono">Application ID</th>
+                <th className="py-3.5 px-4">Appointment ID</th>
+                <th className="py-3.5 px-4">Application ID</th>
                 <th className="py-3.5 px-4">Applicant</th>
                 <th className="py-3.5 px-4">Appointment Type</th>
                 <th className="py-3.5 px-4">Country</th>
-                <th className="py-3.5 px-4 font-mono">Date</th>
-                <th className="py-3.5 px-4 font-mono">Time</th>
+                <th className="py-3.5 px-4">Date</th>
+                <th className="py-3.5 px-4">Time</th>
                 <th className="py-3.5 px-4">Location</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+            <tbody className="divide-y divide-slate-100">
               {filteredAppointments.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="py-12 text-center text-slate-400">
-                    <Clock size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                    <p className="font-bold text-slate-600">No upcoming appointments found matching your filters.</p>
+                    <AlertCircle size={32} className="mx-auto text-slate-300 mb-2" />
+                    <p className="font-bold text-slate-600">No upcoming appointments found</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Appointments booked for your assigned applications will appear here automatically.
+                    </p>
                   </td>
                 </tr>
               ) : (
                 filteredAppointments.map((apt) => (
-                  <tr key={apt.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={apt.id} className="hover:bg-blue-50/30 transition">
                     <td className="py-3.5 px-4 text-center">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(apt.id)}
                         onChange={() => handleToggleSelect(apt.id)}
-                        className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
+                        className="rounded border-slate-300 text-[#2563EB] focus:ring-0 cursor-pointer"
                       />
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
@@ -525,17 +483,17 @@ export default function UpcomingAppointmentsManagement() {
                     <td className="py-3.5 px-4 font-mono font-bold text-[#2563EB]">
                       {apt.appId}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {apt.applicantName}
-                      {apt.agentName && <span className="block text-[10px] text-slate-400 font-normal">({apt.agentName})</span>}
+                    <td className="py-3.5 px-4">
+                      <strong className="text-slate-900 block font-bold">{apt.applicantName}</strong>
+                      <span className="text-[10px] text-slate-400 font-mono">{apt.passportNumber}</span>
                     </td>
                     <td className="py-3.5 px-4 font-bold text-purple-700">
                       {apt.appointmentType}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-800">
+                    <td className="py-3.5 px-4 font-semibold text-slate-700">
                       {apt.country}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500">
+                    <td className="py-3.5 px-4 font-semibold text-slate-700">
                       {apt.dateOnly}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
@@ -566,12 +524,9 @@ export default function UpcomingAppointmentsManagement() {
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => {
-                            setActiveModalApt(apt);
-                            setModalTab("Overview");
-                          }}
+                          onClick={() => setActiveModalApt(apt)}
                           className="p-1.5 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="View Details & Preparation List"
+                          title="View Details"
                         >
                           <Eye size={15} />
                         </button>
@@ -607,35 +562,35 @@ export default function UpcomingAppointmentsManagement() {
 
         {/* PAGINATION FOOTER */}
         <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing 1-10 of 412 Upcoming Appointments</div>
+          <div>
+            Showing {filteredAppointments.length > 0 ? 1 : 0}&ndash;{filteredAppointments.length} of {upcomingList.length} Upcoming Appointments
+          </div>
           <div className="flex items-center gap-1 font-mono font-bold">
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
+            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40" disabled>
               Previous
             </button>
             <button className="px-3 py-1 bg-[#2563EB] text-white rounded-lg">1</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">2</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">3</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">
+            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40" disabled>
               Next
             </button>
           </div>
         </div>
       </div>
 
-      {/* PROFESSIONAL RECOMMENDATION BOX (FROM WIREFRAME) */}
+      {/* PROFESSIONAL RECOMMENDATION BOX */}
       <div className="bg-blue-50/50 border border-blue-200 rounded-3xl p-5 space-y-2 mb-6">
         <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2 border-b border-blue-100 pb-2">
-          <ShieldCheck size={16} className="text-[#2563EB]" /> Professional Upcoming Audit & Reminders
+          <ShieldCheck size={16} className="text-[#2563EB]" /> Professional Upcoming Audit &amp; Reminders
         </h3>
         <p className="text-[11px] text-slate-600 leading-relaxed">
           Features active: Calendar slot optimization, automated SMS/Email/WhatsApp notification dispatch, QR code pass generation, Google Calendar sync, and map direction routing.
         </p>
       </div>
 
-      {/* CENTERED POPUP DETAILS MODAL (8 RECOMMENDED TABS FROM WIREFRAME) */}
+      {/* CENTERED POPUP DETAILS MODAL */}
       {activeModalApt && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+          <div className="bg-white border border-slate-200 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             {/* MODAL HEADER */}
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
@@ -651,7 +606,9 @@ export default function UpcomingAppointmentsManagement() {
                       {activeModalApt.status.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">App ID: <strong className="text-blue-300">{activeModalApt.appId}</strong> &bull; Applicant: {activeModalApt.applicantName} ({activeModalApt.passportNumber})</p>
+                  <p className="text-xs text-slate-400">
+                    App ID: <strong className="text-blue-300">{activeModalApt.appId}</strong> &bull; Applicant: {activeModalApt.applicantName} ({activeModalApt.passportNumber})
+                  </p>
                 </div>
               </div>
 
@@ -663,66 +620,44 @@ export default function UpcomingAppointmentsManagement() {
               </button>
             </div>
 
-            {/* TAB BAR WITH LIGHT-BLUE SLIM SCROLLBAR */}
-            <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {RECOMMENDED_UPCOMING_TABS.map((tab) => {
-                const active = modalTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
-                      ? "bg-[#2563EB] text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                      }`}
-                  >
-                    <span>{tab}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             {/* MODAL BODY */}
             <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {/* TAB 1: OVERVIEW */}
-              {modalTab === "Overview" && (
-                <div className="space-y-6 animate-in fade-in duration-150">
-                  {/* OVERVIEW TILES */}
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
-                      Upcoming Appointment Summary
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Appointment ID</span>
-                        <strong className="text-[#2563EB] font-mono font-bold">{activeModalApt.aptId}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Appointment Type</span>
-                        <strong className="text-purple-700 font-bold">{activeModalApt.appointmentType}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Scheduled Date & Time</span>
-                        <strong className="text-emerald-700 font-mono font-bold">{activeModalApt.dateOnly} @ {activeModalApt.timeOnly}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Reminder Status</span>
-                        <strong className="text-slate-900 font-bold">{activeModalApt.reminderStatus} ({activeModalApt.totalRemindersSent} Sent)</strong>
-                      </div>
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* OVERVIEW TILES */}
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                    Upcoming Appointment Summary
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Appointment ID</span>
+                      <strong className="text-[#2563EB] font-mono font-bold">{activeModalApt.aptId}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Appointment Type</span>
+                      <strong className="text-purple-700 font-bold">{activeModalApt.appointmentType}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Scheduled Date &amp; Time</span>
+                      <strong className="text-emerald-700 font-mono font-bold">{activeModalApt.dateOnly} @ {activeModalApt.timeOnly}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Center Location</span>
+                      <strong className="text-slate-900 font-bold">{activeModalApt.location}</strong>
                     </div>
                   </div>
-
-                  {/* PREPARATION INSTRUCTIONS CARD */}
-                  <div className="bg-blue-50/60 border border-blue-200 rounded-3xl p-5 space-y-2">
-                    <h4 className="text-xs font-extrabold text-[#2563EB] uppercase tracking-wider font-outfit flex items-center gap-2">
-                      <FileText size={16} /> Preparation & Checklist Instructions
-                    </h4>
-                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                      "{activeModalApt.prepInstructions}"
-                    </p>
-                  </div>
                 </div>
-              )}
+
+                {/* PREPARATION INSTRUCTIONS CARD */}
+                <div className="bg-blue-50/60 border border-blue-200 rounded-3xl p-5 space-y-2">
+                  <h4 className="text-xs font-extrabold text-[#2563EB] uppercase tracking-wider font-outfit flex items-center gap-2">
+                    <FileText size={16} /> Preparation &amp; Checklist Instructions
+                  </h4>
+                  <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                    "{activeModalApt.prepInstructions}"
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* MODAL FOOTER */}
@@ -743,10 +678,10 @@ export default function UpcomingAppointmentsManagement() {
               </div>
 
               <button
-                onClick={() => triggerToast(`Sending reminder to ${activeModalApt.applicantName}...`)}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
+                onClick={() => setActiveModalApt(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
               >
-                <Send size={14} /> Send Reminder
+                Close
               </button>
             </div>
           </div>

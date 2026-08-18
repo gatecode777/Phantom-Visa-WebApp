@@ -32,13 +32,13 @@ export interface LoginAuditLog {
 
 // Pre-provisioned users database
 const INITIAL_USERS: UserProfile[] = [
-  { id: "usr_admin_1", phone: "+919810011001", role: "Admin", name: "Vibhu Sharma (Super Admin)" },
-  { id: "usr_admin_legacy", phone: "+919876543210", role: "Admin", name: "Vibhu Sharma (Admin)" },
-  { id: "usr_app_1", phone: "+919822233001", role: "Applicant", name: "Rajesh Kumar (Applicant)" },
+  { id: "usr_admin_1", phone: "+919810099001", role: "Admin", name: "Vikramaditya Singhania (Super Admin)" },
+  { id: "usr_admin_legacy", phone: "+919876543210", role: "Admin", name: "Vikramaditya Singhania (Admin)" },
+  { id: "usr_app_1", phone: "+919810011001", role: "Applicant", name: "Vibhu Sharma (Applicant)" },
   { id: "usr_app_legacy", phone: "+910123456789", role: "Applicant", name: "Default Applicant" },
   { id: "usr_staff_1", phone: "+919876543211", role: "Staff", name: "Consular Reviewer Staff" },
-  { id: "usr_agent_1", phone: "+919876543212", role: "Agent", name: "Global Visa Agency Ltd", agentId: "AGT-1001", agencyName: "Global Visa Agency Ltd" },
-  { id: "usr_app_2", phone: "+919876543213", role: "Applicant", name: "Rajesh Kumar (Applicant)" },
+  { id: "usr_agent_1", phone: "+919876543212", role: "Agent", name: "Priyanshu Chauhan (Global Visa Agency)", agentId: "AGT-1001", agencyName: "Global Visa Agency Ltd" },
+  { id: "usr_app_2", phone: "+919876543213", role: "Applicant", name: "Swapnil Patel (Applicant)" },
   { id: "usr_disabled", phone: "+919999999999", role: "Applicant", name: "Suspended User", isDeactivated: true }
 ];
 

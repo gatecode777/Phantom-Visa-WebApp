@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { fetchUnifiedAppointments } from "../services/appointmentService";
 import {
   XCircle,
   Search,
@@ -133,7 +134,7 @@ export default function CancelledAppointmentsManagement() {
             aptId: a.reference || a.id,
             appId: a.appId || "APP-20261001",
             applicantName: a.applicant || "Applicant",
-            passportNumber: "Z9876543",
+            passportNumber: "Z9817264",
             nationality: "Indian",
             presentAddress: "New Delhi, India",
             mobileNumber: "+91 9876543210",

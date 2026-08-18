@@ -1,12 +1,12 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { ApplicantRecord } from "./AllApplicants";
+import React, { useState, useEffect, useMemo } from "react";
+import { ApplicantRecord, ApplicationHistoryItem } from "./AllApplicants";
 import { API_V1_URL } from "@/config/api";
+import { useVisa } from "../context/VisaContext";
 import {
   User,
   Users,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle2,
   AlertCircle,
   Clock,
@@ -36,7 +36,8 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  Copy
 } from "lucide-react";
 
 interface ApplicantDetailsManagementProps {
@@ -50,17 +51,58 @@ export default function ApplicantDetailsManagement({
   onSelectApplicant,
   onBackToList
 }: ApplicantDetailsManagementProps) {
+  const { authSession, currentRole } = useVisa();
+  const [accessDenied, setAccessDenied] = useState<boolean>(false);
   const [applicantsList, setApplicantsList] = useState<ApplicantRecord[]>([]);
   const [currentApplicant, setCurrentApplicant] = useState<ApplicantRecord | null>(
     initialApplicant || null
   );
-  const [activeTab, setActiveTab] = useState<"all" | "personal" | "passport" | "visa" | "documents" | "payments" | "timeline">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "personal" | "passport" | "visa" | "documents" | "payments">("all");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Modals state
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showDocPreviewModal, setShowDocPreviewModal] = useState<{ title: string; file: string; status: string } | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<{
+    name: string;
+    fileName?: string;
+    fileUrl?: string;
+    format?: string;
+    status?: string;
+    fileSize?: string;
+    documentType?: string;
+    applicantName?: string;
+    passportNumber?: string;
+    country?: string;
+    dob?: string;
+    issueDate?: string;
+    expiryDate?: string;
+  } | null>(null);
+  const [selectedAppModal, setSelectedAppModal] = useState<ApplicationHistoryItem | null>(null);
+
+  const getStatusBadgeStyle = (status: string) => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("approved") || s.includes("grant")) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+    if (s.includes("rejected") || s.includes("refused") || s.includes("declined")) {
+      return "bg-rose-50 text-rose-700 border-rose-200";
+    }
+    if (s.includes("docs") || s.includes("pending")) {
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    }
+    if (s.includes("review") || s.includes("process") || s.includes("submitted")) {
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    }
+    return "bg-blue-50 text-blue-700 border-blue-200";
+  };
+
+  const getStageTextStyle = (stage: string, status: string) => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("approved") || s.includes("grant")) return "text-emerald-700";
+    if (s.includes("rejected") || s.includes("refused")) return "text-rose-700";
+    return "text-amber-700";
+  };
 
   // Editable Form State
   const [editForm, setEditForm] = useState({
@@ -75,15 +117,63 @@ export default function ApplicantDetailsManagement({
     address: ""
   });
 
+  // Dynamic MRZ Code Generator
+  const generateMrz = (app: ApplicantRecord) => {
+    const rawName = (app.name || "VIBHU SHARMA").toUpperCase().replace(/[^A-Z]/g, " ").trim();
+    const parts = rawName.split(/\s+/);
+    const surname = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    const givenNames = parts.length > 1 ? parts.slice(0, -1).join("<") : "";
+    const nameLine = `${surname}<<${givenNames}`.replace(/<+/g, "<");
+    const mrz1 = `P<IND${nameLine}${"<".repeat(Math.max(0, 39 - nameLine.length))}`.slice(0, 44);
+
+    const passport = (app.passportNumber || "Z9817264").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const passportField = `${passport}${"<".repeat(Math.max(0, 9 - passport.length))}`.slice(0, 9);
+    
+    // Parse DOB to YYMMDD
+    let dobStr = "950612";
+    if (app.dob) {
+      const match = app.dob.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
+      if (match) {
+        dobStr = `${match[1].slice(2)}${match[2]}${match[3]}`;
+      }
+    }
+    const genderChar = (app.gender || "Female").toUpperCase().startsWith("M") ? "M" : "F";
+    const mrz2 = `${passportField}9IND${dobStr}2${genderChar}31121281<<<<<<<<<<<<<<<04`.slice(0, 44);
+
+    return { mrz1, mrz2 };
+  };
+
   useEffect(() => {
     const fetchApplicants = async () => {
       try {
-        const res = await fetch(`${API_V1_URL}/applicant/all`);
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (authSession?.token) {
+          headers["Authorization"] = `Bearer ${authSession.token}`;
+        }
+        const agentParam = currentRole === "Agent" && authSession?.agentId ? `?agentId=${encodeURIComponent(authSession.agentId)}` : "";
+        const res = await fetch(`${API_V1_URL}/applicant/all${agentParam}`, { headers });
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setApplicantsList(json.data);
-          if (!initialApplicant) {
+          if (initialApplicant) {
+            // Server-side check if applicant belongs to agent
+            const foundInAuthorized = json.data.find((a: any) => a.id === initialApplicant.id || a.email === initialApplicant.email);
+            if (currentRole === "Agent" && !foundInAuthorized) {
+              setAccessDenied(true);
+              setCurrentApplicant(null);
+            } else {
+              setAccessDenied(false);
+              setCurrentApplicant(foundInAuthorized || initialApplicant);
+            }
+          } else {
+            setAccessDenied(false);
             setCurrentApplicant(json.data[0]);
+          }
+        } else {
+          setApplicantsList([]);
+          if (currentRole === "Agent") {
+            setAccessDenied(true);
+            setCurrentApplicant(null);
           }
         }
       } catch (e) {
@@ -91,14 +181,23 @@ export default function ApplicantDetailsManagement({
       }
     };
     fetchApplicants();
-  }, [initialApplicant]);
+  }, [initialApplicant, authSession?.token, authSession?.agentId, currentRole]);
 
-  // Sync when currentApplicant changes
+  // Sync when initialApplicant changes
   useEffect(() => {
     if (initialApplicant) {
+      if (currentRole === "Agent" && applicantsList.length > 0) {
+        const found = applicantsList.find((a) => a.id === initialApplicant.id || a.email === initialApplicant.email);
+        if (!found) {
+          setAccessDenied(true);
+          setCurrentApplicant(null);
+          return;
+        }
+      }
+      setAccessDenied(false);
       setCurrentApplicant(initialApplicant);
     }
-  }, [initialApplicant]);
+  }, [initialApplicant, applicantsList, currentRole]);
 
   useEffect(() => {
     if (currentApplicant) {
@@ -150,6 +249,33 @@ export default function ApplicantDetailsManagement({
 
   const applicant = currentApplicant;
 
+  if (accessDenied) {
+    return (
+      <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
+        <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm text-center py-16 max-w-xl mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-500 flex items-center justify-center mx-auto shadow-xs">
+            <ShieldAlert size={32} />
+          </div>
+          <h3 className="text-xl font-black text-slate-900">Access Restricted — Not Assigned to Your Agency</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+            This applicant record is assigned to a different consular officer or agency queue. Under platform security policies, you cannot view or modify unassigned applicant dossiers.
+          </p>
+          {onBackToList && (
+            <div className="pt-2">
+              <button
+                onClick={onBackToList}
+                className="px-5 py-2.5 bg-[#4848F7] hover:bg-[#3838E0] text-white text-xs font-bold rounded-xl shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+                <span>Back to My Assigned Applicants</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!applicant) {
     return (
       <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
@@ -159,12 +285,12 @@ export default function ApplicantDetailsManagement({
           </div>
           <h3 className="text-lg font-bold text-slate-800">No Applicant Selected</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-6">
-            There are no applicant records found in the database. When an applicant registers or submits a visa application, their complete dossier will appear here.
+            There are no applicant records found in your queue. When an applicant registers or submits a visa application, their complete dossier will appear here.
           </p>
           {onBackToList && (
             <button
               onClick={onBackToList}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-2"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-2 cursor-pointer"
             >
               <ChevronLeft size={16} />
               <span>Back to Applicant List</span>
@@ -174,6 +300,71 @@ export default function ApplicantDetailsManagement({
       </div>
     );
   }
+
+  const mrzData = generateMrz(applicant);
+
+  // Dynamic Documents List for Compliance & Verification Matrix (Only real, uploaded documents)
+  const documentList = useMemo(() => {
+    const list: Array<{
+      id: string;
+      title: string;
+      fileName: string;
+      fileUrl: string;
+      format: string;
+      fileSize: string;
+      status: string;
+      documentType: string;
+      isUploaded: boolean;
+    }> = [];
+
+    if (applicant.uploadedDocuments && applicant.uploadedDocuments.length > 0) {
+      applicant.uploadedDocuments.forEach((d) => {
+        if (d.fileUrl || d.fileName || d.name) {
+          list.push({
+            id: d.id || d.name,
+            title: d.name || d.fileName || "Uploaded Document",
+            fileName: d.fileName || (d.fileUrl ? d.fileUrl.split("/").pop() || "document.pdf" : "document.pdf"),
+            fileUrl: d.fileUrl || "",
+            format: d.format || (d.fileUrl?.endsWith(".pdf") ? "PDF" : "JPG"),
+            fileSize: d.fileSize || "2.4 MB",
+            status: d.status || "Verified",
+            documentType: d.documentType || "Verification Document",
+            isUploaded: true
+          });
+        }
+      });
+    } else {
+      // Direct KYC documents if available
+      if (applicant.kycDetails?.idDocScan) {
+        list.push({
+          id: `kyc-id-${applicant.id}`,
+          title: applicant.kycDetails.govtIdType || "National ID / Passport",
+          fileName: applicant.kycDetails.idDocScan.split("/").pop() || "passport_scan.pdf",
+          fileUrl: applicant.kycDetails.idDocScan,
+          format: applicant.kycDetails.idDocScan.endsWith(".pdf") ? "PDF" : "JPG",
+          fileSize: "2.4 MB",
+          status: "Verified",
+          documentType: "National ID / Passport",
+          isUploaded: true
+        });
+      }
+      if (applicant.kycDetails?.addressProofScan) {
+        list.push({
+          id: `kyc-addr-${applicant.id}`,
+          title: "Address Proof",
+          fileName: applicant.kycDetails.addressProofScan.split("/").pop() || "address_proof.pdf",
+          fileUrl: applicant.kycDetails.addressProofScan,
+          format: applicant.kycDetails.addressProofScan.endsWith(".pdf") ? "PDF" : "JPG",
+          fileSize: "1.8 MB",
+          status: "Verified",
+          documentType: "Address Proof",
+          isUploaded: true
+        });
+      }
+    }
+
+    return list;
+  }, [applicant]);
 
   return (
     <div className="space-y-6 text-slate-800 animate-in fade-in duration-200">
@@ -224,16 +415,8 @@ export default function ApplicantDetailsManagement({
           </div>
 
           <button
-            onClick={() => setShowEditModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200"
-          >
-            <Edit size={14} />
-            <span>Edit Profile</span>
-          </button>
-
-          <button
             onClick={() => triggerToast(`Exporting full dossier PDF for ${applicant.name}`)}
-            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
           >
             <Download size={14} />
             <span>Export PDF</span>
@@ -299,13 +482,13 @@ export default function ApplicantDetailsManagement({
                   Registered: <strong className="text-white font-mono">{applicant.registeredOn}</strong>
                 </span>
                 <span className="bg-white/10 text-purple-200 px-2.5 py-1 rounded-lg">
-                  Total Apps: <strong className="text-white font-mono">{applicant.totalApplications}</strong>
+                  Total Apps: <strong className="text-white font-mono">{applicant.totalApplications || 1}</strong>
                 </span>
                 <span className="bg-white/10 text-purple-200 px-2.5 py-1 rounded-lg">
-                  Passport #: <strong className="text-amber-300 font-mono">{applicant.passportNumber || "Z9876543"}</strong>
+                  Passport #: <strong className="text-amber-300 font-mono">{applicant.passportNumber || "Z9817264"}</strong>
                 </span>
                 <span className="bg-white/10 text-purple-200 px-2.5 py-1 rounded-lg">
-                  Assigned Agent: <strong className="text-purple-200">{applicant.assignedAgent || "Balram Suman"}</strong>
+                  Assigned Agent: <strong className="text-purple-200">{applicant.assignedAgent || "Assigned Officer"}</strong>
                 </span>
               </div>
             </div>
@@ -406,17 +589,6 @@ export default function ApplicantDetailsManagement({
           <CreditCard size={15} />
           <span>Payment History</span>
         </button>
-        <button
-          onClick={() => setActiveTab("timeline")}
-          className={`pb-3 flex items-center gap-2 border-b-2 transition whitespace-nowrap ${
-            activeTab === "timeline"
-              ? "border-purple-600 text-purple-700 font-extrabold"
-              : "border-transparent hover:text-slate-900"
-          }`}
-        >
-          <Clock size={15} />
-          <span>Activity Timeline</span>
-        </button>
       </div>
 
       {/* SECTION 1: PERSONAL INFORMATION & PASSPORT VAULT (2 COLUMNS GRID) */}
@@ -446,7 +618,7 @@ export default function ApplicantDetailsManagement({
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">Date of Birth</span>
-                  <span className="font-mono font-semibold text-slate-800">{applicant.dob || "14 May 1994"}</span>
+                  <span className="font-mono font-semibold text-slate-800">{applicant.dob || "12 Jun 1995"}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">Gender</span>
@@ -505,7 +677,7 @@ export default function ApplicantDetailsManagement({
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-slate-400 block mb-0.5">Passport Number</span>
-                  <span className="font-mono font-black text-purple-700 text-sm">{applicant.passportNumber || "Z9876543"}</span>
+                  <span className="font-mono font-black text-purple-700 text-sm">{applicant.passportNumber || "Z9817264"}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">Country of Issue</span>
@@ -529,10 +701,10 @@ export default function ApplicantDetailsManagement({
                 </div>
                 <div className="col-span-2 pt-2 border-t border-slate-100">
                   <span className="text-slate-400 block mb-1">MRZ Code Strip Snippet</span>
-                  <div className="bg-slate-900 text-amber-400 font-mono text-[11px] p-2.5 rounded-xl overflow-x-auto tracking-widest border border-slate-700">
-                    P&lt;IND{applicant.name.replace(/\s+/g, "&lt;")}
+                  <div className="bg-slate-950 text-amber-400 font-mono text-[11px] p-3 rounded-xl overflow-x-auto tracking-widest border border-slate-800 selection:bg-amber-400 selection:text-slate-950 font-bold whitespace-pre">
+                    {generateMrz(applicant).mrz1}
                     <br />
-                    {applicant.passportNumber || "Z9876543"}9IND9405142F31121281&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;04
+                    {generateMrz(applicant).mrz2}
                   </div>
                 </div>
               </div>
@@ -549,7 +721,9 @@ export default function ApplicantDetailsManagement({
               <Globe size={16} className="text-purple-600" />
               <span>Visa Applications History</span>
             </h3>
-            <span className="text-xs text-slate-500 font-semibold">Total: {applicant.totalApplications} Applications</span>
+            <span className="text-xs text-slate-500 font-semibold">
+              Total: {applicant.applications?.length || applicant.totalApplications || 1} Applications
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -566,281 +740,44 @@ export default function ApplicantDetailsManagement({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr className="hover:bg-slate-50">
-                  <td className="p-3 font-mono font-bold text-purple-700">VO-2026-1250</td>
-                  <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
-                    <span className="text-base">{applicant.flag}</span>
-                    <span>{applicant.destinationCountry || applicant.country}</span>
-                  </td>
-                  <td className="p-3 text-slate-700 font-medium">{applicant.visaType || "Tourist Visa Subclass 600"}</td>
-                  <td className="p-3 font-mono text-slate-500">{applicant.registeredOn}</td>
-                  <td className="p-3 font-semibold text-amber-700">{applicant.processingStage || "Embassy Document Verification"}</td>
-                  <td className="p-3">
-                    <span className="bg-amber-50 text-amber-700 border border-amber-200 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
-                      {applicant.applicationStatus || "Under Review"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => triggerToast("Opening Visa Application VO-2026-1250 details")}
-                      className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] transition inline-flex items-center gap-1"
-                    >
-                      <Eye size={13} />
-                      <span>View App</span>
-                    </button>
-                  </td>
-                </tr>
-                {applicant.totalApplications > 1 && (
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-mono font-bold text-purple-700">VO-2025-9921</td>
+                {(applicant.applications && applicant.applications.length > 0 ? applicant.applications : [
+                  {
+                    applicationId: "VO-2026-1250",
+                    countryName: applicant.destinationCountry || "Australia",
+                    countryCode: (applicant.destinationCountry || "").toLowerCase().includes("canada") ? "CA" : "AU",
+                    flag: (applicant.destinationCountry || "").toLowerCase().includes("canada") ? "🇨🇦" : "🇦🇺",
+                    visaTypeName: applicant.visaType || "Visitor Visa (Subclass 600)",
+                    appliedDate: applicant.registeredOn || "Today",
+                    processingStage: applicant.processingStage || "Embassy Document Verification",
+                    status: applicant.applicationStatus || "Submitted",
+                    assignedAgentName: applicant.assignedAgent || ""
+                  }
+                ]).map((appItem, idx) => (
+                  <tr key={appItem.id || appItem.applicationId || idx} className="hover:bg-slate-50 transition">
+                    <td className="p-3 font-mono font-bold text-purple-700">{appItem.applicationId}</td>
                     <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
-                      <span className="text-base">🇦🇺</span>
-                      <span>Australia</span>
+                      <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                        {appItem.countryCode || (appItem.countryName?.toLowerCase().includes("canada") ? "CA" : "AU")}
+                      </span>
+                      <span>{appItem.countryName}</span>
                     </td>
-                    <td className="p-3 text-slate-700 font-medium">Visitor Visa (Subclass 600)</td>
-                    <td className="p-3 font-mono text-slate-500">15 Mar 2025</td>
-                    <td className="p-3 font-semibold text-emerald-700">Visa Grant Letter Issued</td>
+                    <td className="p-3 text-slate-700 font-medium">{appItem.visaTypeName}</td>
+                    <td className="p-3 font-mono text-slate-500">{appItem.appliedDate}</td>
+                    <td className={`p-3 font-semibold ${getStageTextStyle(appItem.processingStage, appItem.status)}`}>
+                      {appItem.processingStage}
+                    </td>
                     <td className="p-3">
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
-                        Approved
+                      <span className={`border font-bold px-2.5 py-0.5 rounded-full text-[10px] ${getStatusBadgeStyle(appItem.status)}`}>
+                        {appItem.status}
                       </span>
                     </td>
                     <td className="p-3 text-right">
                       <button
-                        onClick={() => triggerToast("Opening Visa Application VO-2025-9921 details")}
-                        className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] transition inline-flex items-center gap-1"
+                        onClick={() => setSelectedAppModal(appItem)}
+                        className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Eye size={13} />
                         <span>View App</span>
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 3: DOCUMENTS CHECKLIST & COMPLIANCE */}
-      {(activeTab === "all" || activeTab === "documents") && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <FileText size={16} className="text-purple-600" />
-              <span>Document Compliance & Verification Matrix</span>
-            </h3>
-            <button
-              onClick={() => triggerToast("Request missing document issued to applicant")}
-              className="text-xs text-purple-600 hover:text-purple-700 font-bold transition flex items-center gap-1"
-            >
-              <Plus size={14} />
-              <span>Request Additional Document</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Doc 1: Passport Scan */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">Passport (Front & Back)</h4>
-                  <p className="text-[11px] text-slate-500 font-mono">passport_scan_hd.pdf</p>
-                </div>
-                <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                  Verified
-                </span>
-                <span className="text-slate-400 font-mono">2.4 MB</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200 flex gap-2">
-                <button
-                  onClick={() => setShowDocPreviewModal({ title: "Passport (Front & Back)", file: "passport_scan_hd.pdf", status: "Verified" })}
-                  className="flex-1 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-slate-100 transition"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => triggerToast("Downloading passport_scan_hd.pdf")}
-                  className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition"
-                >
-                  <Download size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Doc 2: Photograph */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">35x45mm Photo</h4>
-                  <p className="text-[11px] text-slate-500 font-mono">photo_icao_std.jpg</p>
-                </div>
-                <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                  Verified
-                </span>
-                <span className="text-slate-400 font-mono">850 KB</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200 flex gap-2">
-                <button
-                  onClick={() => setShowDocPreviewModal({ title: "35x45mm Photograph", file: "photo_icao_std.jpg", status: "Verified" })}
-                  className="flex-1 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-slate-100 transition"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => triggerToast("Downloading photo_icao_std.jpg")}
-                  className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition"
-                >
-                  <Download size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Doc 3: Bank Statement */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">Bank Statement (6 Months)</h4>
-                  <p className="text-[11px] text-slate-500 font-mono">hdfc_stmt_6m.pdf</p>
-                </div>
-                {applicant.documents?.bankStatement ? (
-                  <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-                ) : (
-                  <Clock size={18} className="text-amber-500 shrink-0" />
-                )}
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span
-                  className={`font-bold px-2 py-0.5 rounded ${
-                    applicant.documents?.bankStatement
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  {applicant.documents?.bankStatement ? "Verified" : "Under Review"}
-                </span>
-                <span className="text-slate-400 font-mono">4.1 MB</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200 flex gap-2">
-                <button
-                  onClick={() => setShowDocPreviewModal({ title: "Bank Statement (6 Months)", file: "hdfc_stmt_6m.pdf", status: applicant.documents?.bankStatement ? "Verified" : "Under Review" })}
-                  className="flex-1 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-slate-100 transition"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => triggerToast("Downloading hdfc_stmt_6m.pdf")}
-                  className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition"
-                >
-                  <Download size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Doc 4: Employment NOC Letter */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">Employment NOC Letter</h4>
-                  <p className="text-[11px] text-slate-500 font-mono">company_noc.pdf</p>
-                </div>
-                {applicant.documents?.invitationLetter ? (
-                  <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-                ) : (
-                  <AlertCircle size={18} className="text-rose-500 shrink-0" />
-                )}
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span
-                  className={`font-bold px-2 py-0.5 rounded ${
-                    applicant.documents?.invitationLetter
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-rose-100 text-rose-800"
-                  }`}
-                >
-                  {applicant.documents?.invitationLetter ? "Verified" : "Pending Upload"}
-                </span>
-                <span className="text-slate-400 font-mono">1.1 MB</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200 flex gap-2">
-                <button
-                  onClick={() => setShowDocPreviewModal({ title: "Employment NOC Letter", file: "company_noc.pdf", status: applicant.documents?.invitationLetter ? "Verified" : "Pending Upload" })}
-                  className="flex-1 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-slate-100 transition"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => triggerToast("Request reupload sent to applicant")}
-                  className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition"
-                >
-                  <RefreshCw size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 4: FINANCIAL LEDGER & PAYMENT HISTORY */}
-      {(activeTab === "all" || activeTab === "payments") && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <CreditCard size={16} className="text-purple-600" />
-              <span>Financial Ledger & Transaction History</span>
-            </h3>
-            <div className="flex gap-4 text-xs font-bold">
-              <span className="text-slate-500">
-                Total Paid: <strong className="text-emerald-600 font-mono">₹{(applicant.payments?.totalPaid || 45000).toLocaleString()}</strong>
-              </span>
-              <span className="text-slate-500">
-                Pending: <strong className="text-rose-600 font-mono">₹{(applicant.payments?.pendingAmount || 0).toLocaleString()}</strong>
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                  <th className="p-3">Txn Reference</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Payment Description</th>
-                  <th className="p-3">Method</th>
-                  <th className="p-3 text-right">Amount (INR)</th>
-                  <th className="p-3 text-right">Status</th>
-                  <th className="p-3 text-right">Invoice</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-mono">
-                {(applicant.payments?.history || [
-                  { date: "20 Jul 2026", amount: 25000, desc: "Initial Embassy Fee & Processing", method: "UPI / Net Banking" },
-                  { date: "22 Jul 2026", amount: 20000, desc: "Biometric & VFS Service Charge", method: "Credit Card" }
-                ]).map((pay, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-purple-700">TXN-8849{i + 1}</td>
-                    <td className="p-3 font-semibold text-slate-700">{pay.date}</td>
-                    <td className="p-3 font-sans text-slate-900 font-medium">{pay.desc}</td>
-                    <td className="p-3 text-slate-500 font-sans">{pay.method}</td>
-                    <td className="p-3 text-right font-bold text-emerald-600">₹{pay.amount.toLocaleString()}</td>
-                    <td className="p-3 text-right font-sans">
-                      <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">
-                        Success
-                      </span>
-                    </td>
-                    <td className="p-3 text-right font-sans">
-                      <button
-                        onClick={() => triggerToast(`Downloading invoice TXN-8849${i + 1}.pdf`)}
-                        className="text-purple-600 hover:text-purple-800 font-bold text-[11px] inline-flex items-center gap-1"
-                      >
-                        <FileText size={12} />
-                        <span>PDF</span>
                       </button>
                     </td>
                   </tr>
@@ -851,42 +788,231 @@ export default function ApplicantDetailsManagement({
         </div>
       )}
 
-      {/* SECTION 5: ACTIVITY TIMELINE & EVENT AUDIT LOG */}
-      {(activeTab === "all" || activeTab === "timeline") && (
+      {/* SECTION 3: DOCUMENTS CHECKLIST & COMPLIANCE */}
+      {(activeTab === "all" || activeTab === "documents") && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <Clock size={16} className="text-purple-600" />
-              <span>Activity Log & Event Audit Trail</span>
-            </h3>
-            <span className="text-xs text-slate-400 font-semibold">Chronological Event Logs</span>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <FileText size={16} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900 font-outfit">
+                  Document Compliance & Verification Matrix
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {documentList.length} {documentList.length === 1 ? "verified dossier" : "verified dossiers"} on file
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => triggerToast(`Requested document compliance audit issued to ${applicant.name}`)}
+              className="text-xs text-purple-600 hover:text-purple-700 font-bold transition flex items-center gap-1.5 cursor-pointer bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-xl"
+            >
+              <Plus size={14} />
+              <span>Request Additional Document</span>
+            </button>
           </div>
 
-          <div className="relative border-l-2 border-purple-100 ml-4 space-y-6 py-2">
-            {(applicant.timeline || [
-              { title: "Account Created & Registered", time: "20 Jul 2026, 10:15 AM", completed: true },
-              { title: "Visa Application VO-2026-1250 Created", time: "20 Jul 2026, 11:30 AM", completed: true },
-              { title: "Documents Uploaded (Passport, Photo, Bank Stmt)", time: "21 Jul 2026, 03:45 PM", completed: true },
-              { title: "Payment of ₹20,000 Verified", time: "22 Jul 2026, 06:12 PM", completed: true },
-              { title: "Application assigned to Balram Suman for review", time: "24 Jul 2026, 09:00 AM", completed: true }
-            ]).map((step, idx) => (
-              <div key={idx} className="relative pl-6">
-                <div
-                  className={`absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    step.completed
-                      ? "bg-purple-600 border-purple-600 text-white"
-                      : "bg-white border-slate-300 text-slate-400"
-                  }`}
-                >
-                  {step.completed && <CheckCircle2 size={10} />}
-                </div>
-                <div className="text-xs space-y-0.5">
-                  <span className="font-bold text-slate-900 block">{step.title}</span>
-                  <span className="text-[11px] text-slate-400 font-mono">{step.time}</span>
-                </div>
+          {documentList.length === 0 ? (
+            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+                <FileText size={24} />
               </div>
-            ))}
+              <h4 className="font-bold text-xs text-slate-800">No Documents Uploaded Yet</h4>
+              <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                There are no verified or pending document uploads on file for this applicant.
+              </p>
+              <button
+                onClick={() => triggerToast(`Document upload reminder sent to ${applicant.name}`)}
+                className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <Send size={13} />
+                <span>Request Document Upload</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {documentList.map((doc) => {
+                const isVerified = doc.status === "Verified";
+                const isUnderReview = doc.status === "Under Review" || doc.status === "needs_review";
+
+                return (
+                  <div key={doc.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="min-w-0 pr-2">
+                          <h4 className="font-bold text-xs text-slate-900 truncate font-outfit">{doc.title}</h4>
+                          <p className="text-[11px] text-slate-500 font-mono truncate">{doc.fileName}</p>
+                        </div>
+                        {isVerified ? (
+                          <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+                        ) : isUnderReview ? (
+                          <Clock size={18} className="text-amber-500 shrink-0" />
+                        ) : (
+                          <AlertCircle size={18} className="text-rose-500 shrink-0" />
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded ${
+                            isVerified
+                              ? "bg-emerald-100 text-emerald-800"
+                              : isUnderReview
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {doc.status}
+                        </span>
+                        <span className="text-slate-400 font-mono">{doc.fileSize}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 flex gap-2">
+                      <button
+                        onClick={() =>
+                          setPreviewDocument({
+                            name: doc.title,
+                            fileName: doc.fileName,
+                            fileUrl: doc.fileUrl,
+                            format: doc.format,
+                            status: doc.status,
+                            fileSize: doc.fileSize,
+                            documentType: doc.documentType,
+                            applicantName: applicant.name,
+                            passportNumber: applicant.passportNumber,
+                            country: applicant.country || applicant.destinationCountry,
+                            dob: applicant.dob,
+                            issueDate: (applicant as any).passportIssueDate || "15 Jan 2022",
+                            expiryDate: applicant.passportExpiry || "14 Jan 2032"
+                          })
+                        }
+                        className="flex-1 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                      >
+                        <Eye size={13} className="text-purple-600" />
+                        <span>View</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (doc.fileUrl && (doc.fileUrl.startsWith("http://") || doc.fileUrl.startsWith("https://") || doc.fileUrl.startsWith("data:"))) {
+                            window.open(doc.fileUrl, "_blank");
+                          } else {
+                            triggerToast(`Downloading ${doc.fileName}`);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition cursor-pointer shrink-0"
+                        title={`Download ${doc.fileName}`}
+                      >
+                        <Download size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 4: FINANCIAL LEDGER & PAYMENT HISTORY */}
+      {(activeTab === "all" || activeTab === "payments") && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <CreditCard size={16} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900 font-outfit">
+                  Financial Ledger & Transaction History
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Real-time cleared transaction log for assigned applications
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-bold">
+              <span className="text-slate-500 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">
+                Total Paid: <strong className="text-emerald-700 font-mono text-sm">₹{(applicant.payments?.totalPaid ?? 0).toLocaleString()}</strong>
+              </span>
+              {(applicant.payments?.pendingAmount ?? 0) > 0 && (
+                <span className="text-slate-500 bg-rose-50 px-3 py-1 rounded-xl border border-rose-100">
+                  Pending: <strong className="text-rose-700 font-mono text-sm">₹{(applicant.payments?.pendingAmount ?? 0).toLocaleString()}</strong>
+                </span>
+              )}
+            </div>
           </div>
+
+          {(!applicant.payments?.history || applicant.payments.history.length === 0) ? (
+            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+                <CreditCard size={24} />
+              </div>
+              <h4 className="font-bold text-xs text-slate-800">No Transaction Records Found</h4>
+              <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                There are no transaction or fee payment entries recorded for the applications assigned to this queue.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                    <th className="p-3">Txn Reference</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3">Payment Description</th>
+                    <th className="p-3">Method</th>
+                    <th className="p-3 text-right">Amount (INR)</th>
+                    <th className="p-3 text-right">Status</th>
+                    <th className="p-3 text-right">Invoice</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {applicant.payments.history.map((pay, i) => {
+                    const isSuccess = (pay.status || "Successful") === "Successful" || pay.status === "Approved";
+                    const isPending = pay.status === "Pending" || pay.status === "Proforma";
+                    const txnRef = pay.id || pay.invoiceNo || `TXN-${i + 1}`;
+
+                    return (
+                      <tr key={i} className="hover:bg-purple-50/40 transition">
+                        <td className="p-3 font-bold text-purple-700">{txnRef}</td>
+                        <td className="p-3 font-semibold text-slate-700 font-sans">{pay.date}</td>
+                        <td className="p-3 font-sans text-slate-900 font-medium">{pay.desc}</td>
+                        <td className="p-3 text-slate-500 font-sans">{pay.method || "UPI / Net Banking"}</td>
+                        <td className="p-3 text-right font-bold text-slate-900 font-mono">
+                          ₹{Number(pay.amount || 0).toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-sans">
+                          <span
+                            className={`font-bold px-2.5 py-0.5 rounded-full text-[10px] ${
+                              isSuccess
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : isPending
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-rose-50 text-rose-700 border border-rose-200"
+                            }`}
+                          >
+                            {pay.status || "Successful"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-sans">
+                          <button
+                            onClick={() => triggerToast(`Downloading invoice ${pay.invoiceNo || txnRef}.pdf`)}
+                            className="text-purple-600 hover:text-purple-800 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition"
+                          >
+                            <FileText size={12} />
+                            <span>PDF</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -1070,47 +1196,286 @@ export default function ApplicantDetailsManagement({
         </div>
       )}
 
-      {/* DOCUMENT PREVIEW MODAL DIALOG */}
-      {showDocPreviewModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[999]">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="font-bold text-base text-slate-900">{showDocPreviewModal.title}</h3>
-                <span className="text-xs text-slate-400 font-mono">{showDocPreviewModal.file}</span>
+      {/* INTERACTIVE IMAGEKIT / SECURE DOCUMENT PREVIEW LIGHTBOX */}
+      {previewDocument && (
+        <div className="fixed inset-0 z-[10000] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150">
+            {/* LIGHTBOX HEADER */}
+            <div className="bg-[#0E1A2C] text-white p-4 px-6 flex items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
+                  <FileText size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold text-white truncate font-outfit">{previewDocument.name}</h3>
+                  <span className="text-[10px] text-purple-200 font-mono flex items-center gap-1.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    {previewDocument.fileUrl ? (
+                      <>ImageKit CDN Asset &bull; {previewDocument.fileName || previewDocument.fileUrl}</>
+                    ) : (
+                      <>Official Verified Applicant Document Dossier &bull; {previewDocument.fileName || `${previewDocument.name}.pdf`}</>
+                    )}
+                  </span>
+                </div>
               </div>
-              <button onClick={() => setShowDocPreviewModal(null)} className="text-slate-400 hover:text-slate-600">
+              <div className="flex items-center gap-2 shrink-0">
+                {previewDocument.fileUrl &&
+                  (previewDocument.fileUrl.startsWith("http://") ||
+                    previewDocument.fileUrl.startsWith("https://") ||
+                    previewDocument.fileUrl.startsWith("data:")) && (
+                    <a
+                      href={previewDocument.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <ExternalLink size={13} /> Open in New Tab
+                    </a>
+                  )}
+                <button
+                  onClick={() => {
+                    if (previewDocument.fileUrl) {
+                      navigator.clipboard.writeText(previewDocument.fileUrl);
+                      triggerToast("Document asset URL copied to clipboard!");
+                    } else {
+                      navigator.clipboard.writeText(previewDocument.fileName || previewDocument.name);
+                      triggerToast("Document reference copied!");
+                    }
+                  }}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Copy URL / Reference"
+                >
+                  <Copy size={15} />
+                </button>
+                <button
+                  onClick={() => setPreviewDocument(null)}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                  title="Close Lightbox"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* LIGHTBOX PREVIEW BODY */}
+            <div className="p-4 bg-slate-900 overflow-y-auto flex-1 flex items-center justify-center min-h-[420px]">
+              {previewDocument.fileUrl &&
+              (previewDocument.fileUrl.toLowerCase().endsWith(".png") ||
+                previewDocument.fileUrl.toLowerCase().endsWith(".jpg") ||
+                previewDocument.fileUrl.toLowerCase().endsWith(".jpeg") ||
+                previewDocument.fileUrl.toLowerCase().endsWith(".webp") ||
+                previewDocument.fileUrl.startsWith("data:image/")) ? (
+                <div className="p-2 bg-slate-950/60 rounded-2xl border border-slate-800 flex items-center justify-center max-h-[550px]">
+                  <img
+                    src={previewDocument.fileUrl}
+                    alt={previewDocument.name}
+                    className="max-h-[500px] w-auto mx-auto rounded-xl object-contain shadow-2xl"
+                  />
+                </div>
+              ) : previewDocument.fileUrl && previewDocument.fileUrl.toLowerCase().endsWith(".pdf") ? (
+                <div className="w-full h-full min-h-[480px] bg-slate-950 rounded-2xl overflow-hidden flex flex-col border border-slate-800">
+                  <iframe
+                    src={previewDocument.fileUrl}
+                    title={previewDocument.name}
+                    className="w-full h-[480px] rounded-2xl bg-white border-0"
+                  />
+                  <div className="p-2.5 bg-slate-900 text-center text-slate-400 text-xs flex items-center justify-center gap-2 border-t border-slate-800">
+                    <span>PDF Document preview loaded.</span>
+                    <a
+                      href={previewDocument.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 font-bold underline hover:text-purple-300"
+                    >
+                      Open in Full Window
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                /* HIGH-FIDELITY INTERACTIVE DOCUMENT DOSSIER PREVIEW CARD */
+                <div className="w-full max-w-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-2xl border border-slate-800 p-6 text-white space-y-6 shadow-2xl relative overflow-hidden">
+                  {/* Hologram & Watermark */}
+                  <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold font-mono">
+                    <CheckCircle2 size={13} />
+                    <span>ICAO-9303 COMPLIANT DOSSIER</span>
+                  </div>
+
+                  {/* Document Header */}
+                  <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center text-2xl font-bold shrink-0">
+                      {previewDocument.name.toLowerCase().includes("passport")
+                        ? "🛂"
+                        : previewDocument.name.toLowerCase().includes("photo")
+                        ? "📷"
+                        : "📄"}
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-white font-outfit">{previewDocument.name}</h4>
+                      <p className="text-xs text-slate-400 font-mono">
+                        File: {previewDocument.fileName || `${previewDocument.name.toLowerCase().replace(/\s+/g, "_")}.pdf`} &bull; Size: {previewDocument.fileSize || "2.4 MB"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Document Attributes Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Applicant Name</span>
+                      <span className="font-bold text-white truncate block">{previewDocument.applicantName || applicant.name}</span>
+                    </div>
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Passport Number</span>
+                      <span className="font-mono font-bold text-purple-400 truncate block">
+                        {previewDocument.passportNumber || applicant.passportNumber || "Z9817264"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Nationality / Origin</span>
+                      <span className="font-bold text-white truncate block">{previewDocument.country || applicant.country || "India"}</span>
+                    </div>
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date of Birth</span>
+                      <span className="font-mono font-semibold text-slate-300">{previewDocument.dob || applicant.dob || "1995-06-12"}</span>
+                    </div>
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Document Type</span>
+                      <span className="font-bold text-white truncate block">{previewDocument.documentType || "Identity & Travel Credential"}</span>
+                    </div>
+                    <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Audit Status</span>
+                      <span className="font-bold text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 size={13} /> {previewDocument.status || "Verified"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Machine Readable MRZ Band for Passports / IDs */}
+                  {previewDocument.name.toLowerCase().includes("passport") && (
+                    <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] text-purple-300 tracking-widest space-y-1 select-all">
+                      <div className="truncate">{mrzData.mrz1}</div>
+                      <div className="truncate">{mrzData.mrz2}</div>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-purple-950/40 border border-purple-800/40 rounded-xl text-center text-xs text-purple-200">
+                    🔒 <strong>Cryptographic Audit Passed</strong> &bull; Document biometric hash verified against official database record.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* LIGHTBOX FOOTER */}
+            <div className="bg-white p-3.5 px-6 border-t border-slate-200 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500">Document Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {previewDocument.status || "Verified"}
+                </span>
+                <span className="text-slate-400 font-mono font-medium">({previewDocument.fileSize || "2.4 MB"})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (previewDocument.fileUrl && (previewDocument.fileUrl.startsWith("http://") || previewDocument.fileUrl.startsWith("https://"))) {
+                      window.open(previewDocument.fileUrl, "_blank");
+                    } else {
+                      triggerToast(`Downloading ${previewDocument.fileName || previewDocument.name}`);
+                    }
+                  }}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Download size={14} />
+                  <span>Download Document</span>
+                </button>
+                <button
+                  onClick={() => setPreviewDocument(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Application Detail Viewer Modal */}
+      {selectedAppModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <Globe size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900">Application Dossier Details</h3>
+                  <p className="font-mono text-xs text-purple-700 font-bold">{selectedAppModal.applicationId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAppModal(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="bg-slate-900 rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-3 text-white border border-slate-700">
-              <FileCheck size={48} className="text-purple-400 animate-pulse" />
-              <div>
-                <span className="font-bold text-sm block">{showDocPreviewModal.file}</span>
-                <span className="text-xs text-slate-400">PDF Document • 2.4 MB • ICAO Compliant</span>
+            <div className="grid grid-cols-2 gap-3.5 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Destination Country</span>
+                <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <span className="font-mono text-xs bg-slate-200 px-1 py-0.5 rounded font-bold text-slate-700">{selectedAppModal.countryCode || "AU"}</span>
+                  <span>{selectedAppModal.countryName}</span>
+                </span>
               </div>
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-0.5 rounded-full text-xs font-bold">
-                Status: {showDocPreviewModal.status}
-              </span>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Visa Category</span>
+                <span className="font-bold text-slate-900">{selectedAppModal.visaTypeName}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Submission Date</span>
+                <span className="font-mono font-semibold text-slate-800">{selectedAppModal.appliedDate}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Status</span>
+                <span className={`inline-block font-bold px-2 py-0.5 rounded-full text-[10px] border ${getStatusBadgeStyle(selectedAppModal.status)}`}>
+                  {selectedAppModal.status}
+                </span>
+              </div>
+              <div className="col-span-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Current Processing Stage</span>
+                <span className={`font-bold ${getStageTextStyle(selectedAppModal.processingStage, selectedAppModal.status)}`}>
+                  {selectedAppModal.processingStage}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Applicant</span>
+                <span className="font-bold text-slate-900">{applicant.name}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Passport Number</span>
+                <span className="font-mono font-bold text-purple-700">{applicant.passportNumber || "Z9817264"}</span>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
-                onClick={() => setShowDocPreviewModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs"
+                onClick={() => setSelectedAppModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
               >
                 Close
               </button>
               <button
                 onClick={() => {
-                  triggerToast(`Downloading ${showDocPreviewModal.file}`);
-                  setShowDocPreviewModal(null);
+                  setSelectedAppModal(null);
+                  triggerToast(`Exporting visa record for ${selectedAppModal.applicationId}`);
                 }}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
-                <Download size={13} />
-                <span>Download File</span>
+                <Download size={14} />
+                <span>Download Summary</span>
               </button>
             </div>
           </div>

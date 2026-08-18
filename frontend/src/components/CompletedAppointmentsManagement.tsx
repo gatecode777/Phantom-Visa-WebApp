@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { fetchUnifiedAppointments } from "../services/appointmentService";
 import {
   CheckCircle2,
   Search,
@@ -122,7 +123,7 @@ export default function CompletedAppointmentsManagement() {
             aptId: a.reference || a.id,
             appId: a.appId || "APP-20268001",
             applicantName: a.applicant || "Applicant",
-            passportNumber: "Z9876543",
+            passportNumber: "Z9817264",
             nationality: "Indian",
             emailAddress: "applicant@email.com",
             mobileNumber: "+91 9876543210",

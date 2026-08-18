@@ -1,15 +1,43 @@
 import { Router, Request, Response } from "express";
 import AppointmentModel from "../models/Appointment.js";
+import ApplicationModel from "../models/Application.js";
+import { verifyAccessToken, TokenPayload } from "../lib/security/jwt.js";
 
 const router = Router();
 
 
 // ─── GET /api/v1/appointments ─────────────────────────────────────────────────
-// Returns all appointments sorted newest first. Admin uses this unfiltered.
-// Applicant side filters client-side by own applicationIds.
+// Returns all appointments sorted newest first. Scoped by agentId when provided.
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const appointments = await AppointmentModel.find().sort({ createdAt: -1 });
+    const { agentId } = req.query as { agentId?: string };
+    let tokenUser: TokenPayload | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      tokenUser = verifyAccessToken(authHeader.slice(7));
+    }
+
+    const effectiveAgentId = agentId || (tokenUser?.role === "Agent" ? tokenUser.agentId || tokenUser.userId : undefined);
+
+    let query: any = {};
+    if (effectiveAgentId) {
+      const assignedApps = await ApplicationModel.find({
+        $or: [
+          { assignedAgentId: effectiveAgentId },
+          { assignedAgentName: { $regex: effectiveAgentId, $options: "i" } }
+        ]
+      });
+
+      const assignedAppIds = assignedApps.map((a) => a.applicationId).filter(Boolean);
+      query = {
+        $or: [
+          { applicationId: { $in: assignedAppIds } },
+          { agentName: { $regex: effectiveAgentId, $options: "i" } }
+        ]
+      };
+    }
+
+    const appointments = await AppointmentModel.find(query).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -39,6 +67,16 @@ router.post("/", async (req: Request, res: Response) => {
     const existing = await AppointmentModel.findOne({ aptId: body.aptId });
     if (existing) {
       return res.status(409).json({ success: false, message: `Appointment ${body.aptId} already exists` });
+    }
+
+    // Auto-link agent info from application if present
+    if (body.applicationId) {
+      const app = await ApplicationModel.findOne({ applicationId: body.applicationId });
+      if (app) {
+        if (!body.agentName && app.assignedAgentName) {
+          body.agentName = app.assignedAgentName;
+        }
+      }
     }
 
     const appointment = await AppointmentModel.create(body);

@@ -63,7 +63,6 @@ export default function ApplicantPaymentHistory({
   onNavigateMakePayment,
   onNavigateSupport
 }: ApplicantPaymentHistoryProps) {
-  const [activePaymentTab, setActivePaymentTab] = useState<"history" | "invoices">("history");
   const { unifiedTransactions } = useVisa();
 
   // Derive txItems from unifiedTransactions single ledger
@@ -181,8 +180,6 @@ export default function ApplicantPaymentHistory({
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#4848F7] mb-1">
             <span>Payments</span>
-            <span>/</span>
-            <span className="text-slate-500 font-normal">{activePaymentTab === "history" ? "Payment History" : "Invoices & Receipts"}</span>
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Consular Payment History & Invoices</h1>
@@ -193,46 +190,8 @@ export default function ApplicantPaymentHistory({
           <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-3xl">
             View all completed transactions, pending invoices, refund receipts, itemized GST tax statements, and payment activity logs.
           </p>
-
-          {/* Submenu Tab Switcher */}
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100">
-            <button
-              onClick={() => setActivePaymentTab("history")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                activePaymentTab === "history"
-                  ? "bg-[#4848F7] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              <CreditCard size={14} />
-              <span>Payment History</span>
-            </button>
-
-            <button
-              onClick={() => setActivePaymentTab("invoices")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                activePaymentTab === "invoices"
-                  ? "bg-[#4848F7] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              <FileText size={14} />
-              <span>Invoices & Receipts</span>
-            </button>
-          </div>
         </div>
-
-
       </div>
-
-      {activePaymentTab === "invoices" ? (
-        <ApplicantInvoices
-          applications={applications}
-          onNavigateMakePayment={onNavigateMakePayment}
-          onNavigateSupport={onNavigateSupport}
-        />
-      ) : (
-        <>
 
       {/* ============================================================ */}
       {/* SECTION 2: DASHBOARD STATISTICS CARDS GRID (6 CARDS) */}
@@ -664,8 +623,6 @@ export default function ApplicantPaymentHistory({
           </div>
         </div>
       </div>
-      </>
-      )}
 
     </div>
   );

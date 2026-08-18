@@ -154,7 +154,7 @@ const mapMongoAppToRecord = (app: any): ApplicationRecord => ({
   applicantName: app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : app.travelerName || "Applicant",
   firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
   lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
-  passportNumber: app.passportDetails?.passportNo || app.passportNumber || "Z9876543",
+  passportNumber: app.passportDetails?.passportNo || app.passportNumber || "Z9817264",
   passportIssueDate: app.passportDetails?.issueDate || "2020-01-15",
   passportExpiry: app.passportDetails?.expiryDate || app.passportExpiry || "2030-01-14",
   passportIssuingCountry: app.passportDetails?.issuingCountry || "India",
@@ -263,6 +263,108 @@ export default function AllApplicationsManagement() {
   // Centered Details Popup Modal State
   const [activeModalApp, setActiveModalApp] = useState<ApplicationRecord | null>(null);
   const [modalTab, setModalTab] = useState<string>("Overview");
+
+  // Admin Agent Assignment State
+  const [availableAgents, setAvailableAgents] = useState<{
+    agentId: string;
+    fullName: string;
+    agencyName: string;
+    supportedVisaCountries?: string[];
+    status?: string;
+  }[]>([]);
+  const [isEditingAgent, setIsEditingAgent] = useState<boolean>(false);
+  const [selectedAssignAgentId, setSelectedAssignAgentId] = useState<string>("");
+  const [isSavingAssignment, setIsSavingAssignment] = useState<boolean>(false);
+
+  // Fetch all active agents for Admin assignment option
+  useEffect(() => {
+    fetch(`${API_V1_URL}/agent/all`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          const active = json.data
+            .filter((a: any) => a.status === "Active" || !a.status)
+            .map((a: any) => ({
+              agentId: a.agentId || a.id || String(a._id || ""),
+              fullName: a.fullName || a.name || "Agent",
+              agencyName: a.agencyName || "",
+              supportedVisaCountries: Array.isArray(a.supportedVisaCountries) ? a.supportedVisaCountries : [],
+              status: a.status
+            }));
+          setAvailableAgents(active);
+        }
+      })
+      .catch((err) => console.warn("Failed to load agents list for assignment:", err));
+  }, []);
+
+  // Admin Assign / Reassign Agent Handler
+  const handleAssignAgentToApp = async (appId: string, targetAgentId: string) => {
+    if (!appId) return;
+    setIsSavingAssignment(true);
+    try {
+      let targetAgentName = "";
+      if (targetAgentId && targetAgentId !== "unassign") {
+        const found = availableAgents.find((a) => a.agentId === targetAgentId);
+        targetAgentName = found
+          ? (found.agencyName || found.fullName || targetAgentId)
+          : targetAgentId;
+      }
+
+      const res = await fetch(`${API_V1_URL}/applications/${appId}/assign`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {})
+        },
+        body: JSON.stringify({
+          agentId: targetAgentId === "unassign" ? "" : targetAgentId,
+          agentName: targetAgentName
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        const updatedAgentId = targetAgentId === "unassign" ? "" : targetAgentId;
+        const updatedAgentName = targetAgentName;
+
+        // Update active modal app
+        if (activeModalApp && (activeModalApp.appId === appId || activeModalApp.id === appId)) {
+          setActiveModalApp({
+            ...activeModalApp,
+            assignedAgentId: updatedAgentId,
+            assignedAgentName: updatedAgentName,
+            agentName: updatedAgentName,
+            status: updatedAgentId ? "Under Review" : activeModalApp.status
+          });
+        }
+
+        // Update list of applications in table
+        setApplications((prev) =>
+          prev.map((a) =>
+            a.appId === appId || a.id === appId
+              ? {
+                  ...a,
+                  assignedAgentId: updatedAgentId,
+                  assignedAgentName: updatedAgentName,
+                  agentName: updatedAgentName,
+                  status: updatedAgentId ? "Under Review" : a.status
+                }
+              : a
+          )
+        );
+
+        setIsEditingAgent(false);
+        triggerToast(json.message || "Agent assignment updated successfully!");
+      } else {
+        triggerToast(json.error?.message || "Failed to update agent assignment.");
+      }
+    } catch (err) {
+      console.error("Agent assignment error:", err);
+      triggerToast("Error updating agent assignment.");
+    } finally {
+      setIsSavingAssignment(false);
+    }
+  };
 
   // ImageKit Document Preview Lightbox State
   const [previewDocument, setPreviewDocument] = useState<{
@@ -841,7 +943,7 @@ export default function AllApplicationsManagement() {
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="APP-100451, Swapnil, Z9876543..."
+                placeholder="APP-100451, Swapnil, Z9817264..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
@@ -1003,7 +1105,24 @@ export default function AllApplicationsManagement() {
                           <span className="block text-[10px] font-mono text-slate-400">{a.assignedAgentId}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400 text-[10px] font-semibold italic">Auto-assign / None</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveModalApp(a);
+                            setIsEditingAgent(true);
+                            const countryMatch = availableAgents.find((ag) =>
+                              (ag.supportedVisaCountries || []).some(
+                                (c) => c.toLowerCase() === a.country.toLowerCase()
+                              )
+                            );
+                            setSelectedAssignAgentId(countryMatch ? countryMatch.agentId : availableAgents[0]?.agentId || "");
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200 transition cursor-pointer"
+                          title="Click to assign an agent"
+                        >
+                          <UserCheck size={12} className="text-amber-700" />
+                          <span>Assign Agent</span>
+                        </button>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
@@ -1190,23 +1309,118 @@ export default function AllApplicationsManagement() {
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Destination Country</span><strong className="text-slate-900 font-bold">{activeModalApp.country}</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Visa Category &amp; Type</span><strong className="text-slate-900 font-bold">{activeModalApp.category} ({activeModalApp.visaType})</strong></div>
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200"><span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Priority Speed</span><strong className="text-purple-600 font-bold">{activeModalApp.priority}</strong></div>
-                    {activeModalApp.assignedAgentName ? (
-                      <div className="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-200 col-span-1 sm:col-span-2 lg:col-span-3">
-                        <span className="text-[10px] font-extrabold uppercase text-indigo-500 block mb-1">Assigned Agent</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-[#4848F7] text-white flex items-center justify-center font-black text-xs shrink-0">
-                            {activeModalApp.assignedAgentName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <strong className="text-indigo-800 font-bold text-xs">{activeModalApp.assignedAgentName}</strong>
-                            <span className="block text-[10px] font-mono text-indigo-500">{activeModalApp.assignedAgentId}</span>
+                    {isEditingAgent ? (
+                      <div className="bg-blue-50 p-3.5 rounded-2xl border border-blue-200 col-span-1 sm:col-span-2 lg:col-span-3 space-y-2.5 animate-in fade-in duration-150 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-extrabold uppercase text-blue-700 flex items-center gap-1.5">
+                            <UserCheck size={13} className="text-[#2563EB]" />
+                            Assign / Change Agent for Destination: <strong>{activeModalApp.country}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingAgent(false)}
+                            className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                            title="Close"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <select
+                            value={selectedAssignAgentId}
+                            onChange={(e) => setSelectedAssignAgentId(e.target.value)}
+                            className="flex-1 bg-white border border-blue-300 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                          >
+                            <option value="">-- Select an Agent to Assign --</option>
+                            <option value="unassign">Unassign Agent (Move to Available Pool)</option>
+                            {availableAgents.map((agent) => (
+                              <option key={agent.agentId} value={agent.agentId}>
+                                {agent.agencyName || agent.fullName}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              disabled={isSavingAssignment}
+                              onClick={() => handleAssignAgentToApp(activeModalApp.appId || activeModalApp.id, selectedAssignAgentId)}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                            >
+                              {isSavingAssignment ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
+                              <span>Save Assignment</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingAgent(false)}
+                              className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         </div>
                       </div>
+                    ) : activeModalApp.assignedAgentName ? (
+                      <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200 col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase text-indigo-600 block mb-1">Assigned Agent</span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#4848F7] to-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                              {activeModalApp.assignedAgentName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong className="text-indigo-900 font-bold text-xs block leading-tight">{activeModalApp.assignedAgentName}</strong>
+                              <span className="text-[10px] font-mono text-indigo-500 font-semibold">{activeModalApp.assignedAgentId}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {!isAgent && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAssignAgentId(activeModalApp.assignedAgentId || "");
+                              setIsEditingAgent(true);
+                            }}
+                            className="px-3 py-1.5 bg-white hover:bg-indigo-100/70 text-indigo-700 hover:text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-center"
+                          >
+                            <Edit3 size={13} />
+                            <span>Reassign Agent</span>
+                          </button>
+                        )}
+                      </div>
                     ) : (
-                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Assigned Agent</span>
-                        <span className="text-slate-400 italic text-xs">Auto-assign / None selected</span>
+                      <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] font-extrabold uppercase text-amber-800">Assigned Agent</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-200 text-amber-900">
+                              Unassigned Pool
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-800">Auto-assign / None selected</p>
+                          <p className="text-[10px] text-amber-800 mt-0.5">
+                            No agent was auto-assigned for <strong>{activeModalApp.country}</strong>. You can manually assign an agent to handle this application.
+                          </p>
+                        </div>
+                        {!isAgent && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const countryMatch = availableAgents.find((a) =>
+                                (a.supportedVisaCountries || []).some(
+                                  (c) => c.toLowerCase() === activeModalApp.country.toLowerCase()
+                                )
+                              );
+                              setSelectedAssignAgentId(countryMatch ? countryMatch.agentId : availableAgents[0]?.agentId || "");
+                              setIsEditingAgent(true);
+                            }}
+                            className="px-3.5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0 self-start sm:self-center"
+                          >
+                            <UserCheck size={14} />
+                            <span>Assign Agent</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

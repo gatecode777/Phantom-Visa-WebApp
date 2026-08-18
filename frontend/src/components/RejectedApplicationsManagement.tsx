@@ -146,7 +146,7 @@ export default function RejectedApplicationsManagement() {
         applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
         firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
         lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
-        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9817264",
         appliedBy: app.appliedBy || "Applicant",
         country: app.destination || app.countryName || "Canada",
         category: app.visaType?.includes("Tourist") ? "Tourist" : app.visaType?.includes("Student") ? "Student" : "Business",

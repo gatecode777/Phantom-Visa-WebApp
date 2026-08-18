@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import multer from "multer";
 import ApplicationModel from "../models/Application.js";
+import AgentModel from "../models/Agent.js";
 import CountryModel from "../models/Country.js";
 import VisaTypeModel from "../models/VisaType.js";
 import VisaRequirementModel from "../models/VisaRequirement.js";
@@ -30,6 +31,54 @@ function deduplicateRequirementDocuments(documents: any[] = []) {
 }
 
 /**
+ * POST /api/v1/applications/upload-doc
+ * Upload applicant requirement document to ImageKit with base64 data-URI fallback
+ */
+router.post("/upload-doc", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "No file uploaded."));
+    }
+
+    const folder = req.body.folder || "/PHANTOM-VISA/applications/documents/";
+    const fileBase64 = req.file.buffer.toString("base64");
+    const sanitizedOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileName = `${Date.now()}_${sanitizedOriginalName}`;
+
+    let uploadedUrl = "";
+    let fileId = `file_${Date.now()}`;
+
+    try {
+      const result = await imagekit.upload({
+        file: fileBase64,
+        fileName,
+        folder
+      });
+      uploadedUrl = result.url;
+      fileId = result.fileId;
+    } catch (ikErr: any) {
+      console.warn("⚠️ ImageKit upload failed, falling back to base64 data-URL:", ikErr?.message || ikErr);
+      uploadedUrl = `data:${req.file.mimetype};base64,${fileBase64}`;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Document uploaded successfully.",
+      data: {
+        url: uploadedUrl,
+        fileId: fileId,
+        fileName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
+  } catch (error: any) {
+    console.error("Application doc upload error:", error);
+    return res.status(500).json(formatErrorEnvelope("UPLOAD_ERROR", error.message || "Failed to upload document."));
+  }
+});
+
+/**
  * GET /api/v1/applications
  * Retrieve visa applications scoped by Agent assignment, Available Pool, or Global Admin view
  */
@@ -52,7 +101,7 @@ router.get("/", async (req: Request, res: Response) => {
     const queryFilters: any[] = [];
 
     // Determine target Agent ID from query param or verified Agent token
-    const effectiveAgentId = agentId || (tokenUser?.role === "Agent" ? tokenUser.agentId : undefined);
+    const effectiveAgentId = agentId || (tokenUser?.role === "Agent" ? tokenUser.agentId || tokenUser.userId : undefined);
 
     if (pool === "available") {
       // Unassigned / general pickup pool
@@ -62,7 +111,7 @@ router.get("/", async (req: Request, res: Response) => {
           { assignedAgentId: { $exists: false } }
         ]
       });
-    } else if (effectiveAgentId && tokenUser?.role !== "Admin" && tokenUser?.role !== "Super Admin" && tokenUser?.role !== "Staff") {
+    } else if (effectiveAgentId) {
       // Agent-scoped assigned workload query
       queryFilters.push({
         $or: [
@@ -130,22 +179,37 @@ router.put("/:id/assign", async (req: Request, res: Response) => {
     const targetId = String(req.params.id);
     const { agentId, agentName } = req.body;
 
-    if (!agentId) {
-      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "agentId is required to assign application."));
-    }
-
     const queryConditions: any[] = [{ applicationId: targetId }];
     if (mongoose.Types.ObjectId.isValid(targetId)) {
       queryConditions.push({ _id: targetId });
+    }
+
+    let finalAgentId = agentId ? String(agentId).trim() : "";
+    let finalAgentName = agentName ? String(agentName).trim() : "";
+
+    if (finalAgentId && finalAgentId !== "unassign" && finalAgentId !== "none" && finalAgentId !== "None") {
+      if (!finalAgentName) {
+        const foundAgent = await AgentModel.findOne({ agentId: finalAgentId });
+        if (foundAgent) {
+          finalAgentName = foundAgent.agencyName
+            ? foundAgent.agencyName
+            : (foundAgent.fullName || foundAgent.firstName || finalAgentId);
+        } else {
+          finalAgentName = finalAgentId;
+        }
+      }
+    } else {
+      finalAgentId = "";
+      finalAgentName = "";
     }
 
     const application = await ApplicationModel.findOneAndUpdate(
       { $or: queryConditions },
       {
         $set: {
-          assignedAgentId: agentId,
-          assignedAgentName: agentName || agentId,
-          status: "Under Review"
+          assignedAgentId: finalAgentId,
+          assignedAgentName: finalAgentName,
+          ...(finalAgentId ? { status: "Under Review" } : {})
         }
       },
       { new: true }
@@ -157,7 +221,9 @@ router.put("/:id/assign", async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: `Application ${application.applicationId} successfully assigned to ${application.assignedAgentName}.`,
+      message: finalAgentId
+        ? `Application ${application.applicationId} successfully assigned to ${application.assignedAgentName}.`
+        : `Application ${application.applicationId} unassigned successfully.`,
       data: application
     });
   } catch (error: any) {
@@ -306,6 +372,39 @@ router.post("/submit", async (req: Request, res: Response) => {
 
     const calculatedTotal = consularFee + platformFee + expressSurcharge - promoDiscount;
 
+    // Auto-assign Agent by Destination Country if applicant didn't select an agent
+    let finalAgentId = (assignedAgentId || "").trim();
+    let finalAgentName = (assignedAgentName || "").trim();
+
+    if (!finalAgentId || finalAgentId === "Auto-assign / None" || finalAgentId === "None" || finalAgentId === "unassigned") {
+      try {
+        const countryRegex = new RegExp(`^${countryName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+        const eligibleAgents = await AgentModel.find({
+          status: "Active",
+          supportedVisaCountries: {
+            $elemMatch: { $regex: countryRegex }
+          }
+        }).sort({ createdAt: 1 });
+
+        if (eligibleAgents && eligibleAgents.length > 0) {
+          const matchedAgent = eligibleAgents[0];
+          finalAgentId = matchedAgent.agentId;
+          finalAgentName = matchedAgent.agencyName
+            ? matchedAgent.agencyName
+            : (matchedAgent.fullName || matchedAgent.firstName || "Agent");
+          console.log(`🎯 Auto-assigned application to active agent ${finalAgentId} (${finalAgentName}) for country: ${countryName}`);
+        } else {
+          finalAgentId = "";
+          finalAgentName = "";
+          console.log(`ℹ️ No active agent found serving ${countryName}. Leaving in available pool for Admin assignment.`);
+        }
+      } catch (agentErr) {
+        console.warn("⚠️ Agent auto-assignment lookup error:", agentErr);
+        finalAgentId = "";
+        finalAgentName = "";
+      }
+    }
+
     const applicationId = `VO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newApplication = new ApplicationModel({
@@ -316,8 +415,8 @@ router.post("/submit", async (req: Request, res: Response) => {
       categoryName,
       visaTypeName,
       processingSpeed: speed,
-      assignedAgentId: assignedAgentId || "",
-      assignedAgentName: assignedAgentName || "",
+      assignedAgentId: finalAgentId,
+      assignedAgentName: finalAgentName,
       entryType: entryType || "Single Entry",
       stayValidity: stayValidity || "60 Days",
       personalDetails: {
@@ -465,35 +564,62 @@ router.put("/:id/status", async (req: Request, res: Response) => {
 
 /**
  * GET /api/v1/applications/admin/all-documents
- * Flatten and return all uploaded documents across all applications for Admin All Documents screen
- * Includes computed summary metrics (Total, Verified, Pending, Rejected, Expired)
+ * Flatten and return all uploaded documents across applications.
+ * Scoped to assigned applications when called by an Agent or when agentId parameter is provided.
+ * Includes computed live summary metrics (Total, Verified, Pending, Rejected, Re-upload Requested, High Priority).
  */
 router.get("/admin/all-documents", async (req: Request, res: Response) => {
   try {
-    const applications = await ApplicationModel.find().sort({ createdAt: -1 });
+    let tokenUser: TokenPayload | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      tokenUser = verifyAccessToken(authHeader.slice(7));
+    }
+
+    const { agentId } = req.query as { agentId?: string };
+    const effectiveAgentId = agentId || (tokenUser?.role === "Agent" ? tokenUser.agentId || tokenUser.userId : undefined);
+
+    let query: any = {};
+    if (effectiveAgentId) {
+      query = {
+        $or: [
+          { assignedAgentId: effectiveAgentId },
+          { assignedAgentName: { $regex: effectiveAgentId, $options: "i" } }
+        ]
+      };
+    }
+
+    const applications = await ApplicationModel.find(query).sort({ createdAt: -1 });
 
     const allDocs: any[] = [];
     let totalVerified = 0;
     let totalPending = 0;
     let totalRejected = 0;
-    let totalExpired = 0;
+    let totalReupload = 0;
+    let totalPriority = 0;
 
     for (const app of applications) {
       const docs = Array.isArray(app.uploadedDocuments) ? app.uploadedDocuments : [];
       for (const doc of deduplicateRequirementDocuments(docs)) {
-        // Do not put unuploaded requirement placeholders into the admin archive.
+        // Do not put unuploaded requirement placeholders into the queue.
         if (!doc.fileUrl) continue;
         const statusNormalized = (doc.status || "uploaded").toLowerCase();
-        let displayStatus = "Pending";
+        let displayStatus: "Pending Verification" | "Verified" | "Rejected" | "Re-upload Requested" = "Pending Verification";
         if (statusNormalized === "verified") displayStatus = "Verified";
         else if (statusNormalized === "rejected") displayStatus = "Rejected";
-        else if (statusNormalized === "needs_review") displayStatus = "Re-upload Requested";
-        else if (statusNormalized === "expired") displayStatus = "Expired";
+        else if (statusNormalized === "needs_review" || statusNormalized === "reupload_requested" || statusNormalized === "re-upload requested") displayStatus = "Re-upload Requested";
 
         if (displayStatus === "Verified") totalVerified++;
         else if (displayStatus === "Rejected") totalRejected++;
-        else if (displayStatus === "Expired") totalExpired++;
+        else if (displayStatus === "Re-upload Requested") totalReupload++;
         else totalPending++;
+
+        // Derive real priority from processing speed
+        let priority: "Normal" | "High" | "Urgent" = "Normal";
+        if (app.processingSpeed === "vip") priority = "Urgent";
+        else if (app.processingSpeed === "express") priority = "High";
+
+        if (priority === "High" || priority === "Urgent") totalPriority++;
 
         const applicantName = `${app.personalDetails?.givenName || ""} ${app.personalDetails?.surname || ""}`.trim() || "Applicant";
 
@@ -503,15 +629,21 @@ router.get("/admin/all-documents", async (req: Request, res: Response) => {
           appId: app.applicationId,
           applicantName,
           passportNumber: app.passportDetails?.passportNo || "N/A",
-          documentType: doc.documentType || "PDF Document",
-          documentName: doc.title,
-          fileFormat: doc.format || "PDF",
+          documentType: doc.documentType || doc.title || "PDF Document",
+          documentName: doc.fileName || doc.title,
+          fileFormat: doc.format || (doc.fileUrl?.endsWith(".pdf") ? "PDF" : "JPG"),
           fileSize: doc.fileSize || "2.5 MB",
           fileUrl: doc.fileUrl || "",
           uploadedBy: "Applicant",
-          uploadDate: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : new Date(app.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-          uploadDateTime: doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString("en-GB") : new Date(app.createdAt).toLocaleString("en-GB"),
+          uploadDate: doc.uploadedAt
+            ? new Date(doc.uploadedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+            : new Date(app.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+          uploadDateTime: doc.uploadedAt
+            ? new Date(doc.uploadedAt).toLocaleString("en-GB")
+            : new Date(app.createdAt).toLocaleString("en-GB"),
+          priority,
           verificationStatus: displayStatus,
+          status: displayStatus,
           verifiedBy: doc.verifiedBy || (displayStatus === "Verified" ? "AI System" : undefined),
           verificationDate: doc.verificationDate || (doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-GB") : undefined),
           rejectionReason: doc.rejectionReason || "",
@@ -526,23 +658,24 @@ router.get("/admin/all-documents", async (req: Request, res: Response) => {
       success: true,
       stats: {
         totalDocuments: allDocs.length,
-        verified: totalVerified,
         pending: totalPending,
+        verified: totalVerified,
         rejected: totalRejected,
-        expired: totalExpired,
+        reuploadRequested: totalReupload,
+        highPriority: totalPriority,
         centralArchive: allDocs.length
       },
       data: allDocs
     });
   } catch (error: any) {
-    console.error("Fetch Admin All Documents Error:", error);
-    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to fetch all documents."));
+    console.error("Fetch All Documents Queue Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to fetch documents."));
   }
 });
 
 /**
  * PUT /api/v1/applications/:id/documents/:docId/status
- * Update a specific document's status (Verified / Rejected / Pending) inside an application
+ * Update a specific document's status (Verified / Rejected / Re-upload Requested) inside an application
  */
 router.put("/:id/documents/:docId/status", async (req: Request, res: Response) => {
   try {
@@ -552,6 +685,17 @@ router.put("/:id/documents/:docId/status", async (req: Request, res: Response) =
 
     if (!status) {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Document status parameter is required."));
+    }
+
+    let normalizedStatus = String(status).trim().toLowerCase();
+    if (normalizedStatus === "re-upload requested" || normalizedStatus === "reupload_requested" || normalizedStatus === "reupload requested") {
+      normalizedStatus = "needs_review";
+    } else if (normalizedStatus === "approved") {
+      normalizedStatus = "verified";
+    }
+
+    if ((normalizedStatus === "rejected" || normalizedStatus === "needs_review") && (!rejectionReason || !String(rejectionReason).trim())) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "A reason is strictly mandatory when rejecting or requesting re-upload of a document."));
     }
 
     const application = await ApplicationModel.findOne({
@@ -572,16 +716,16 @@ router.put("/:id/documents/:docId/status", async (req: Request, res: Response) =
     }
 
     const doc = docs[docIndex];
-    doc.status = status.toLowerCase() === "verified" ? "verified" : status.toLowerCase() === "rejected" ? "rejected" : status.toLowerCase();
+    doc.status = normalizedStatus as any;
     if (rejectionReason) doc.rejectionReason = String(rejectionReason).trim();
     if (verifiedBy) doc.verifiedBy = String(verifiedBy).trim();
     doc.verificationDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
     // Check overall docs to update application docs workflow stage
-    const hasRejected = docs.some((d: any) => d.status === "rejected");
+    const hasDeficiency = docs.some((d: any) => d.status === "rejected" || d.status === "needs_review");
     const allMandatoryVerified = docs.filter((d: any) => d.isMandatory).every((d: any) => d.status === "verified");
 
-    if (hasRejected) {
+    if (hasDeficiency) {
       application.status = "Docs Pending";
     } else if (allMandatoryVerified) {
       application.workflowStage = Math.max(application.workflowStage, 3);

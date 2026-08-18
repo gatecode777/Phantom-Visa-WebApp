@@ -202,9 +202,9 @@ export default function ApplicantApplyVisa({
   const [givenName, setGivenName] = useState("");
   const [surname, setSurname] = useState("");
   const [dob, setDob] = useState("");
-  const [gender, setGender] = useState("Female");
+  const [gender, setGender] = useState("");
   const [nationality, setNationality] = useState("");
-  const [maritalStatus, setMaritalStatus] = useState("Single");
+  const [maritalStatus, setMaritalStatus] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
@@ -229,18 +229,18 @@ export default function ApplicantApplyVisa({
     const selectedVt = visaTypes.find((v) => v.name === selectedVisaTypeName);
     return selectedVt?.processingTimeDays || 7;
   })();
-  const [stayType, setStayType] = useState("Hotel Booking");
+  const [stayType, setStayType] = useState("");
   const [hostName, setHostName] = useState("");
   const [hostAddress, setHostAddress] = useState("");
 
   // Step 3: Passport Credentials & Employment / Financial Status
-  const [passportType, setPassportType] = useState("Ordinary / Regular");
+  const [passportType, setPassportType] = useState("");
   const [passportNo, setPassportNo] = useState("");
   const [issuePlace, setIssuePlace] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
 
-  const [employmentStatus, setEmploymentStatus] = useState("Employed");
+  const [employmentStatus, setEmploymentStatus] = useState("");
   const [employerName, setEmployerName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [bankBalance, setBankBalance] = useState("");
@@ -268,36 +268,16 @@ export default function ApplicantApplyVisa({
     setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Pre-fill verified personal and passport details from canonical profile on mount
+  // Load co-travelers from vault if available on mount (without auto-filling personal form fields)
   useEffect(() => {
     const loadProfilePrefill = async () => {
       try {
         const p = await fetchProfileApi();
-        if (p) {
-          if (p.personalInfo) {
-            setGivenName((prev) => prev || p.personalInfo.firstName || "");
-            setSurname((prev) => prev || p.personalInfo.lastName || "");
-            setDob((prev) => prev || p.personalInfo.dob || "");
-            setGender((prev) => prev || p.personalInfo.gender || "");
-            setNationality((prev) => prev || p.personalInfo.nationality || "");
-            setPhone((prev) => prev || p.personalInfo.phone || "");
-            setEmail((prev) => prev || p.personalInfo.email || "");
-            setEmployerName((prev) => prev || p.personalInfo.employer || "");
-            setJobTitle((prev) => prev || p.personalInfo.occupation || "");
-          }
-          if (p.passportDetails) {
-            setPassportNo((prev) => prev || p.passportDetails.passportNumber || "");
-            setPassportType((prev) => prev || p.passportDetails.passportType || "Ordinary / Regular");
-            setIssuePlace((prev) => prev || p.passportDetails.placeOfIssue || "");
-            setIssueDate((prev) => prev || p.passportDetails.dateOfIssue || "");
-            setExpiryDate((prev) => prev || p.passportDetails.dateOfExpiry || "");
-          }
-          if (p.coTravelers && Array.isArray(p.coTravelers)) {
-            setSavedVaultTravelers(p.coTravelers);
-          }
+        if (p && p.coTravelers && Array.isArray(p.coTravelers)) {
+          setSavedVaultTravelers(p.coTravelers);
         }
       } catch (e) {
-        console.error("Failed to prefill profile in Apply Wizard:", e);
+        console.error("Failed to load profile data in Apply Wizard:", e);
       }
     };
     loadProfilePrefill();
@@ -647,28 +627,43 @@ export default function ApplicantApplyVisa({
     });
   }, [selectedVisaTypeName, requirements, selectedCountryName]);
 
-  // Handle Document Upload to ImageKit + Gemini AI Verification
+  // Handle Document Upload with standard validation (AI verification temporarily commented out)
   const handleFileUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const supportedVerificationFormats = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!supportedVerificationFormats.includes(file.type)) {
-      const message = "Use a JPEG, PNG, WEBP, or PDF file. This format cannot be securely verified.";
-      setUploadedSlots((prev) => {
-        const copy = [...prev];
-        copy[index] = { ...copy[index], isUploading: false, isVerifying: false, isVerified: false, fileUrl: "", fileName: undefined, verifiedType: null, aiError: message };
-        return copy;
-      });
+    // Normal Validation 1: Supported file formats (JPEG, PNG, WEBP, PDF)
+    const validExtensions = /\.(jpg|jpeg|png|webp|pdf)$/i;
+    const supportedFormats = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/pdf"];
+    if (!supportedFormats.includes(file.type) && !validExtensions.test(file.name)) {
+      const message = "Please upload a valid file format (JPEG, PNG, WEBP, or PDF).";
       showToast(message);
       e.target.value = "";
       return;
     }
 
-    // Phase 1: Upload to ImageKit
+    // Normal Validation 2: Maximum file size (10 MB limit)
+    const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const message = "File size exceeds the 10MB limit. Please upload a smaller file.";
+      showToast(message);
+      e.target.value = "";
+      return;
+    }
+
+    // Upload to ImageKit / Backend
     setUploadedSlots((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], isUploading: true, isVerifying: false, isVerified: false, verifiedType: null, aiError: null, fileUrl: "", fileName: undefined };
+      copy[index] = {
+        ...copy[index],
+        isUploading: true,
+        isVerifying: false,
+        isVerified: false,
+        verifiedType: null,
+        aiError: null,
+        fileUrl: "",
+        fileName: undefined
+      };
       return copy;
     });
 
@@ -691,12 +686,22 @@ export default function ApplicantApplyVisa({
         const titleName = uploadedSlots[index]?.title;
         setUploadedSlots((prev) => {
           const copy = [...prev];
-          copy[index] = { ...copy[index], fileUrl: uploadedUrl, fileName: uploadedFileName, isUploading: false, isVerifying: true };
+          copy[index] = {
+            ...copy[index],
+            fileUrl: uploadedUrl,
+            fileName: uploadedFileName,
+            isUploading: false,
+            isVerifying: false,
+            isVerified: true,
+            verifiedType: "Uploaded Document",
+            aiError: null
+          };
           return copy;
         });
         if (titleName) {
           setStepErrors((prev) => { const c = { ...prev }; delete c[`doc_${titleName}`]; return c; });
         }
+        showToast(`✓ "${file.name}" uploaded successfully!`);
       } else {
         showToast(json.error?.message || "Failed to upload document.");
         setUploadedSlots((prev) => { const copy = [...prev]; copy[index] = { ...copy[index], isUploading: false }; return copy; });
@@ -708,6 +713,11 @@ export default function ApplicantApplyVisa({
       return;
     }
 
+    /*
+    // =========================================================================
+    // NOTE: Gemini AI Verification is temporarily commented out per requirement.
+    // It will be re-enabled later.
+    // =========================================================================
     // Phase 2: Gemini AI Verification Loop — max 3 quick attempts (~4s)
     const slotTitle = uploadedSlots[index]?.title || "";
     const slotDocType = uploadedSlots[index]?.documentType || "";
@@ -739,7 +749,6 @@ export default function ApplicantApplyVisa({
             verifyCompleted = true;
             break;
           } else if (vJson.verificationStatus === "unreadable" || vJson.verificationStatus === "wrong_type" || (vJson.success === false && vJson.verificationStatus !== "busy")) {
-            // Real document mismatch / unreadable blur
             setUploadedSlots((prev) => {
               const copy = [...prev];
               copy[index] = { ...copy[index], isVerifying: false, isVerified: false, aiError: vJson.message || "AI document verification failed. Please upload the correct document scan." };
@@ -748,7 +757,6 @@ export default function ApplicantApplyVisa({
             hasError = true;
             break;
           } else {
-            // Busy or retrying
             await new Promise((r) => setTimeout(r, 1200));
           }
         } else {
@@ -759,8 +767,6 @@ export default function ApplicantApplyVisa({
       }
     }
 
-    // Never treat an unavailable verifier as approval. The server is the sole
-    // authority for an AI-verified document.
     if (!verifyCompleted && !hasError) {
       setUploadedSlots((prev) => {
         const copy = [...prev];
@@ -768,6 +774,7 @@ export default function ApplicantApplyVisa({
         return copy;
       });
     }
+    */
   };
 
   // Co-Travelers Add/Remove
@@ -889,12 +896,10 @@ export default function ApplicantApplyVisa({
     }
 
     if (stepNum === 4) {
-      // Validate mandatory documents
+      // Validate mandatory documents are uploaded
       for (const slot of uploadedSlots) {
         if (slot.isMandatory && (!slot.fileUrl || slot.fileUrl.trim() === "")) {
           errs[`doc_${slot.title}`] = `Mandatory document "${slot.title}" must be uploaded.`;
-        } else if (slot.isMandatory && !slot.isVerified) {
-          errs[`doc_${slot.title}`] = `Mandatory document "${slot.title}" must pass AI verification before submission.`;
         }
       }
     }
@@ -1591,6 +1596,7 @@ export default function ApplicantApplyVisa({
                         onChange={(e) => setGender(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                       >
+                        <option value="">-- Select Gender --</option>
                         <option value="Female">Female</option>
                         <option value="Male">Male</option>
                         <option value="Other">Other</option>
@@ -1658,6 +1664,7 @@ export default function ApplicantApplyVisa({
                         onChange={(e) => setMaritalStatus(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                       >
+                        <option value="">-- Select Marital Status --</option>
                         <option value="Single">Single</option>
                         <option value="Married">Married</option>
                         <option value="Divorced">Divorced</option>
@@ -1726,6 +1733,7 @@ export default function ApplicantApplyVisa({
                         onChange={(e) => setStayType(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                       >
+                        <option value="">-- Select Accommodation Type --</option>
                         <option value="Hotel Booking">Hotel Booking</option>
                         <option value="Host Residence">Host Residence / Friend</option>
                         <option value="Company Sponsor">Company Sponsor</option>
@@ -1777,6 +1785,7 @@ export default function ApplicantApplyVisa({
                         onChange={(e) => setPassportType(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                       >
+                        <option value="">-- Select Passport Type --</option>
                         <option value="Ordinary / Regular">Ordinary / Regular</option>
                         <option value="Diplomatic">Diplomatic</option>
                         <option value="Official">Official</option>
@@ -1841,6 +1850,7 @@ export default function ApplicantApplyVisa({
                         onChange={(e) => setEmploymentStatus(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:outline-none focus:border-[#4848F7]"
                       >
+                        <option value="">-- Select Employment Status --</option>
                         <option value="Employed">Employed</option>
                         <option value="Self-Employed">Self-Employed / Business Owner</option>
                         <option value="Student">Student</option>
@@ -2010,43 +2020,14 @@ export default function ApplicantApplyVisa({
                                 </div>
                               )}
 
-                              {/* AI Verification Status */}
-                              {slot.fileUrl && slot.isVerifying && (
-                                <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-xl">
-                                  <Sparkles size={13} className="text-indigo-500 animate-pulse shrink-0" />
-                                  <div className="flex-1">
-                                    <p className="text-[10px] font-bold text-indigo-700">Gemini AI Verifying...</p>
-                                    <div className="mt-1 h-1 bg-indigo-100 rounded-full overflow-hidden">
-                                      <div className="h-full bg-indigo-500 rounded-full animate-pulse" style={{ width: "70%" }} />
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {slot.fileUrl && slot.isVerified && !slot.isVerifying && (
+                              {/* Document Upload Status */}
+                              {slot.fileUrl && (
                                 <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
                                   <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
                                   <div>
-                                    <p className="text-[10px] font-bold text-emerald-700">AI Verified ✓</p>
-                                    <p className="text-[10px] text-emerald-600">{slot.verifiedType}</p>
+                                    <p className="text-[10px] font-bold text-emerald-700">Document Uploaded ✓</p>
+                                    <p className="text-[10px] text-emerald-600">Format & size verified (Ready for submission)</p>
                                   </div>
-                                </div>
-                              )}
-
-                              {slot.fileUrl && slot.aiError && !slot.isVerifying && (
-                                <div className="space-y-1.5">
-                                  <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
-                                    <ShieldAlert size={13} className="text-red-500 shrink-0 mt-0.5" />
-                                    <div>
-                                      <p className="text-[10px] font-bold text-red-700">AI Verification Failed</p>
-                                      <p className="text-[10px] text-red-600 mt-0.5">{slot.aiError}</p>
-                                    </div>
-                                  </div>
-                                  <label className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-white border border-red-200 hover:border-red-400 text-red-600 font-bold text-[10px] rounded-lg cursor-pointer transition">
-                                    <RefreshCw size={11} />
-                                    Re-upload Correct Document
-                                    <input type="file" accept="image/*,application/pdf" onChange={(e) => handleFileUpload(idx, e)} className="hidden" />
-                                  </label>
                                 </div>
                               )}
 

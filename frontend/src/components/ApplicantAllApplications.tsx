@@ -438,7 +438,7 @@ export default function ApplicantAllApplications({
       )}
 
       {/* REJECTION REASON BANNER */}
-      {activeApp.status === "Rejected" && activeApp.reason && (
+      {activeApp && activeApp.status === "Rejected" && activeApp.reason && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
             <AlertTriangle size={18} className="text-red-500" />

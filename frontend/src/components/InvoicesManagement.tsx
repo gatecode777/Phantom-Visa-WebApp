@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useVisa } from "../context/VisaContext";
 import {
   FileText,
@@ -113,8 +113,14 @@ export const STANDARD_INVOICE_FORMAT_ITEMS = [
 
 const MOCK_INVOICES: InvoiceRecord[] = [];
 
-export default function InvoicesManagement() {
-  const { unifiedTransactions } = useVisa();
+import { fetchUnifiedTransactions, UnifiedTransactionRecord } from "../services/paymentService";
+
+export interface InvoicesManagementProps {
+  agentId?: string;
+}
+
+export default function InvoicesManagement({ agentId: propAgentId }: InvoicesManagementProps = {}) {
+  const { authSession, currentRole } = useVisa();
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,10 +129,48 @@ export default function InvoicesManagement() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [methodFilter, setMethodFilter] = useState("All");
 
-  // Derive invoicesList from unifiedTransactions single ledger
+  // State for agent-scoped transactions
+  const [dbTransactions, setDbTransactions] = useState<UnifiedTransactionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const isAgentScope =
+    Boolean(propAgentId) ||
+    currentRole === "Agent" ||
+    (typeof window !== "undefined" && (window.location.pathname.includes("agent") || window.location.search.includes("agent")));
+
+  const effectiveAgentId =
+    propAgentId ||
+    authSession?.user?.agentId ||
+    (authSession as any)?.agentId ||
+    (authSession?.user as any)?.id ||
+    (isAgentScope ? "AGT-1001" : "");
+
+  const loadInvoices = async (showRefresh = false) => {
+    try {
+      if (showRefresh) setIsRefreshing(true);
+      else setLoading(true);
+
+      const targetAgentId = isAgentScope ? effectiveAgentId : undefined;
+      const data = await fetchUnifiedTransactions(targetAgentId);
+      setDbTransactions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load invoices error:", err);
+      setDbTransactions([]);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInvoices();
+  }, [authSession, currentRole, propAgentId]);
+
+  // Derive invoicesList from dbTransactions single ledger
   const invoicesList = useMemo<InvoiceRecord[]>(() => {
-    if (!unifiedTransactions || unifiedTransactions.length === 0) return [];
-    return unifiedTransactions.map((t, idx) => {
+    if (!dbTransactions || dbTransactions.length === 0) return [];
+    return dbTransactions.map((t, idx) => {
       const dateStr = t.createdAt
         ? new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
         : "01 Aug 2026";
@@ -174,7 +218,7 @@ export default function InvoicesManagement() {
 
       return {
         id: String(idx + 1),
-        invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId.split("-")[2] || "501"}`,
+        invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId?.split("-")[2] || "501"}`,
         txnId: t.transactionId,
         appId: t.applicationId,
         applicantName: t.applicantName,
@@ -187,7 +231,7 @@ export default function InvoicesManagement() {
         invoiceDateTime: dateTimeStr,
         invoiceType: t.paidBy === "Agent" ? "Agent B2B Invoice" : "Tax Invoice",
         status: statusMap[t.status] || "Paid",
-        country: t.country.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
+        country: (t.country || "General").replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, "").trim(),
         visaCategory: t.visaCategory || "Tourist",
         paymentMethod: methodClean as any,
         sacCode: t.sacCode || "998311",
@@ -214,7 +258,7 @@ export default function InvoicesManagement() {
         ]
       };
     });
-  }, [unifiedTransactions]);
+  }, [dbTransactions]);
 
   // Derived metrics from invoice ledger
   const metrics = useMemo(() => {
@@ -304,6 +348,15 @@ export default function InvoicesManagement() {
             View, generate, download, and manage all GST & tax invoices for visa payments.
           </p>
         </div>
+
+        <button
+          onClick={() => loadInvoices(true)}
+          disabled={isRefreshing}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-white/20 self-start sm:self-auto cursor-pointer"
+        >
+          <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+          <span>{isRefreshing ? "Syncing..." : "Sync Live Invoices"}</span>
+        </button>
       </div>
 
       {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
@@ -621,13 +674,6 @@ export default function InvoicesManagement() {
                           <Printer size={15} />
                         </button>
                         <button
-                          onClick={() => triggerToast(`Emailed invoice copy to ${inv.applicantName}...`)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
-                          title="Email Invoice"
-                        >
-                          <Send size={15} />
-                        </button>
-                        <button
                           onClick={() => handleDeleteRecord(inv)}
                           className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
                           title="Delete Record"
@@ -701,85 +747,63 @@ export default function InvoicesManagement() {
               </button>
             </div>
 
-            {/* TAB BAR WITH LIGHT-BLUE SLIM SCROLLBAR */}
-            <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {RECOMMENDED_INVOICE_TABS.map((tab) => {
-                const active = modalTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setModalTab(tab)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${active
-                      ? "bg-[#2563EB] text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
-                      }`}
-                  >
-                    <span>{tab}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* MODAL BODY */}
+            {/* MODAL BODY - OVERVIEW ONLY */}
             <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              {/* TAB 1: OVERVIEW */}
-              {modalTab === "Overview" && (
-                <div className="space-y-6 animate-in fade-in duration-150">
-                  {/* OVERVIEW TILES */}
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
-                      Tax Invoice Overview
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
-                        <strong className="text-[#2563EB] font-mono font-bold">{activeModalInvoice.invoiceNo}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">SAC / HSN Code</span>
-                        <strong className="text-purple-700 font-mono font-bold">{activeModalInvoice.sacCode}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Company GSTIN</span>
-                        <strong className="text-emerald-700 font-mono font-bold">{activeModalInvoice.gstin}</strong>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Type</span>
-                        <strong className="text-slate-900 font-bold">{activeModalInvoice.invoiceType}</strong>
-                      </div>
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* OVERVIEW TILES */}
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                    Tax Invoice Overview
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
+                      <strong className="text-[#2563EB] font-mono font-bold">{activeModalInvoice.invoiceNo}</strong>
                     </div>
-                  </div>
-
-                  {/* ITEMISED TAX & FEE BREAKDOWN TABLE */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
-                      <Receipt size={16} className="text-[#2563EB]" /> Itemised Tax & Fee Calculation
-                    </h4>
-                    <div className="space-y-2 text-xs font-medium text-slate-700">
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>Visa Application Fee</span>
-                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>Service Charge</span>
-                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>CGST (9%)</span>
-                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                        <span>SGST (9%)</span>
-                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
-                        <span>Total Invoiced Amount</span>
-                        <span className="font-mono text-[#2563EB]">₹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
-                      </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">SAC / HSN Code</span>
+                      <strong className="text-purple-700 font-mono font-bold">{activeModalInvoice.sacCode}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Company GSTIN</span>
+                      <strong className="text-emerald-700 font-mono font-bold">{activeModalInvoice.gstin}</strong>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Type</span>
+                      <strong className="text-slate-900 font-bold">{activeModalInvoice.invoiceType}</strong>
                     </div>
                   </div>
                 </div>
-              )}
+
+                {/* ITEMISED TAX & FEE BREAKDOWN TABLE */}
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
+                    <Receipt size={16} className="text-[#2563EB]" /> Itemised Tax & Fee Calculation
+                  </h4>
+                  <div className="space-y-2 text-xs font-medium text-slate-700">
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>Visa Application Fee</span>
+                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>Service Charge</span>
+                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>CGST (9%)</span>
+                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                      <span>SGST (9%)</span>
+                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
+                      <span>Total Invoiced Amount</span>
+                      <span className="font-mono text-[#2563EB]">₹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* MODAL FOOTER */}
@@ -800,10 +824,10 @@ export default function InvoicesManagement() {
               </div>
 
               <button
-                onClick={() => triggerToast(`Emailed invoice copy to ${activeModalInvoice.applicantName}...`)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
+                onClick={() => setActiveModalInvoice(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
               >
-                <Send size={14} /> Email Invoice
+                Close
               </button>
             </div>
           </div>

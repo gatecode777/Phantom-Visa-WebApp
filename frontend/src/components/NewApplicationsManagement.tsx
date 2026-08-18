@@ -163,7 +163,7 @@ export default function NewApplicationsManagement() {
         applicantName: app.travelerName || (app.personalDetails ? `${app.personalDetails.givenName} ${app.personalDetails.surname}` : "Applicant"),
         firstName: app.personalDetails?.givenName || app.travelerName?.split(" ")[0] || "Applicant",
         lastName: app.personalDetails?.surname || app.travelerName?.split(" ").slice(1).join(" ") || "",
-        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9876543",
+        passportNumber: app.passportNumber || app.passportDetails?.passportNo || "Z9817264",
         passportIssueDate: app.passportDetails?.issueDate || "2020-04-12",
         passportExpiry: app.passportExpiry || app.passportDetails?.expiryDate || "2030-04-11",
         passportIssuingCountry: app.passportDetails?.issuingCountry || "India",
@@ -1272,7 +1272,7 @@ export default function NewApplicationsManagement() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Z9876543"
+                      placeholder="e.g. Z9817264"
                       value={formData.passportNumber}
                       onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-mono"
