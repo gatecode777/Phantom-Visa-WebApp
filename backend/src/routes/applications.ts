@@ -744,4 +744,70 @@ router.put("/:id/documents/:docId/status", async (req: Request, res: Response) =
   }
 });
 
+/**
+ * PUT /api/v1/applications/:id/documents/:docId
+ * Replace or upload a new file URL (ImageKit asset) for a document on an application
+ */
+router.put("/:id/documents/:docId", async (req: Request, res: Response) => {
+  try {
+    const idStr = String(req.params.id);
+    const docIdStr = String(req.params.docId);
+    const { fileUrl, fileName, fileSize, format, title, documentType } = req.body;
+
+    if (!fileUrl) {
+      return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "fileUrl is required."));
+    }
+
+    const application = await ApplicationModel.findOne({
+      $or: [{ applicationId: idStr }, { _id: mongoose.Types.ObjectId.isValid(idStr) ? idStr : null }]
+    });
+
+    if (!application) {
+      return res.status(404).json(formatErrorEnvelope("NOT_FOUND", `Application ${idStr} not found.`));
+    }
+
+    if (!Array.isArray(application.uploadedDocuments)) {
+      application.uploadedDocuments = [];
+    }
+
+    const docIndex = application.uploadedDocuments.findIndex(
+      (d: any) => String(d._id) === docIdStr || d.requirementId === docIdStr || (d.title && d.title.toLowerCase() === docIdStr.toLowerCase())
+    );
+
+    if (docIndex >= 0) {
+      const doc = application.uploadedDocuments[docIndex];
+      doc.fileUrl = fileUrl;
+      if (fileName) doc.fileName = fileName;
+      if (fileSize) doc.fileSize = fileSize;
+      if (format) doc.format = format;
+      doc.status = "uploaded";
+      doc.rejectionReason = "";
+      doc.uploadedAt = new Date();
+    } else {
+      application.uploadedDocuments.push({
+        title: title || docIdStr,
+        documentType: documentType || "PDF Document",
+        isMandatory: true,
+        fileUrl,
+        fileName: fileName || "document",
+        fileSize: fileSize || "1.5 MB",
+        format: format || (fileUrl.endsWith(".pdf") ? "PDF" : "JPG"),
+        status: "uploaded",
+        uploadedAt: new Date()
+      });
+    }
+
+    await application.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Document uploaded and attached to application successfully.",
+      data: application.uploadedDocuments
+    });
+  } catch (error: any) {
+    console.error("Update Application Document Error:", error);
+    return res.status(500).json(formatErrorEnvelope("INTERNAL_SERVER_ERROR", error.message || "Failed to update document."));
+  }
+});
+
 export default router;

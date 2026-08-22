@@ -633,9 +633,9 @@ router.get("/profile", async (req: Request, res: Response) => {
         commissionType:   agent.commissionType    || "Percentage",
         commissionValue:  agent.commissionValue   ?? 15,
         status:           agent.status,
-        avatarUrl:        (agent as any).avatarUrl         || null,
-        twoFactorEnabled: (agent as any).twoFactorEnabled  ?? false,
-        idleTimeoutMinutes: (agent as any).idleTimeoutMinutes || 30,
+        avatarUrl:        agent.avatarUrl         || (linkedUser as any)?.avatarUrl || null,
+        twoFactorEnabled: agent.twoFactorEnabled  ?? false,
+        idleTimeoutMinutes: agent.idleTimeoutMinutes ?? 30,
         role:             "Agent",
         createdAt:        agent.createdAt
       }
@@ -706,14 +706,16 @@ router.put("/profile", async (req: Request, res: Response) => {
     if (altPhone !== undefined) agent.altPhone = altPhone;
     if (website !== undefined) agent.website = website;
     if (gstTaxNo !== undefined) agent.gstTaxNo = gstTaxNo;
-    if (avatarUrl !== undefined) (agent as any).avatarUrl = avatarUrl;
-    if (idleTimeoutMinutes !== undefined) (agent as any).idleTimeoutMinutes = Number(idleTimeoutMinutes);
+    if (avatarUrl !== undefined) agent.avatarUrl = avatarUrl;
+    if (idleTimeoutMinutes !== undefined) agent.idleTimeoutMinutes = Number(idleTimeoutMinutes);
 
     await agent.save();
 
-    // Sync name back to User document
+    // Sync name and avatar back to linked User document
     if (agent.userId) {
-      await User.findByIdAndUpdate(agent.userId, { name: agent.fullName });
+      const userUpdate: Record<string, any> = { name: agent.fullName };
+      if (avatarUrl !== undefined) userUpdate.avatarUrl = avatarUrl;
+      await User.findByIdAndUpdate(agent.userId, userUpdate);
     }
 
     // Record activity log

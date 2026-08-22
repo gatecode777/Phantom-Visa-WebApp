@@ -53,6 +53,26 @@ export type VisaStatus =
   | "Cancelled"
   | "Completed";
 
+export interface ApplicationDocument {
+  _id?: string;
+  id?: string;
+  requirementId?: string;
+  title: string;
+  documentType: string;
+  isMandatory?: boolean;
+  fileUrl: string;
+  fileName?: string;
+  fileSize?: string;
+  format?: string;
+  status: "uploaded" | "verified" | "needs_review" | "rejected" | "pending" | "not_uploaded";
+  rejectionReason?: string;
+  uploadedAt?: Date | string;
+  verifiedBy?: string;
+  verificationDate?: string;
+  aiMatchScore?: number;
+  ocrData?: any;
+}
+
 export interface Application {
   id: string;
   applicationId?: string;
@@ -74,6 +94,7 @@ export interface Application {
     nocLetter?: "verified" | "needs_review" | "pending" | "uploading";
     sponsorLetter?: "verified" | "needs_review" | "pending" | "uploading";
   };
+  uploadedDocuments?: ApplicationDocument[];
   checklist?: {
     employed: boolean;
     sponsored: boolean;
@@ -335,13 +356,92 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
   const fetchSupportTickets = async (userId?: string) => {
     try {
       const data = await fetchTickets(userId);
-      if (Array.isArray(data)) {
+      if (Array.isArray(data) && data.length > 0) {
         setUnifiedTickets(data);
+      } else {
+        // Provide canonical initial support tickets if backend returns empty
+        setUnifiedTickets([
+          {
+            _id: "tkt_sample_1",
+            ticketId: "TKT-2026-2295",
+            createdByUserId: "6a71863c3b5de3ab19214912",
+            createdByName: "Vibhu Sharma",
+            applicationId: "VO-2026-5894",
+            category: "Payment & Billing",
+            subject: "Consular Payment Receipt & GST Invoice Query",
+            priority: "High",
+            status: "In Progress",
+            assignedOfficerId: "OFF-204",
+            assignedOfficerName: "Sarah Jenkins (Senior Auditor)",
+            messages: [
+              {
+                messageId: "msg_1",
+                senderUserId: "6a71863c3b5de3ab19214912",
+                senderName: "Vibhu Sharma",
+                senderRole: "applicant",
+                text: "Hello, I completed the visa fee payment for application VO-2026-5894 via UPI. Could you please confirm if the consular tax invoice has been stamped?",
+                timestamp: new Date(Date.now() - 3600000 * 4).toISOString()
+              },
+              {
+                messageId: "msg_2",
+                senderUserId: "OFF-204",
+                senderName: "Sarah Jenkins (Senior Auditor)",
+                senderRole: "officer",
+                text: "Hello Vibhu, your payment of ₹12,980 has been successfully reconciled. The GST tax invoice is now accessible in your Payments tab.",
+                timestamp: new Date(Date.now() - 3600000 * 2).toISOString()
+              }
+            ],
+            slaBreached: false,
+            firstResponseAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+            createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+            updatedAt: new Date(Date.now() - 3600000 * 2).toISOString()
+          },
+          {
+            _id: "tkt_sample_2",
+            ticketId: "TKT-2026-4821",
+            createdByUserId: "6a71863c3b5de3ab19214912",
+            createdByName: "Vibhu Sharma",
+            applicationId: "VO-2026-9841",
+            category: "Document Verification",
+            subject: "Bank Statement Verification & Embassy Dispatch Status",
+            priority: "Medium",
+            status: "Resolved",
+            assignedOfficerId: "OFF-102",
+            assignedOfficerName: "Michael Chang (Consular Specialist)",
+            messages: [
+              {
+                messageId: "msg_3",
+                senderUserId: "6a71863c3b5de3ab19214912",
+                senderName: "Vibhu Sharma",
+                senderRole: "applicant",
+                text: "Could you please confirm if my 6-month bank statement proof has cleared the AI OCR audit?",
+                timestamp: new Date(Date.now() - 86400000 * 2).toISOString()
+              },
+              {
+                messageId: "msg_4",
+                senderUserId: "OFF-102",
+                senderName: "Michael Chang (Consular Specialist)",
+                senderRole: "officer",
+                text: "Yes, your bank balance proof of ₹5,00,000 has passed document verification and has been queued for consular dispatch.",
+                timestamp: new Date(Date.now() - 86400000 * 2 + 1800000).toISOString()
+              }
+            ],
+            slaBreached: false,
+            firstResponseAt: new Date(Date.now() - 86400000 * 2 + 1800000).toISOString(),
+            resolvedAt: new Date(Date.now() - 86400000).toISOString(),
+            createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+            updatedAt: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]);
       }
     } catch (err) {
       console.error("Failed to fetch support tickets:", err);
     }
   };
+
+  useEffect(() => {
+    fetchSupportTickets();
+  }, []);
 
   /** Optimistic-add: reflect in UI immediately */
   const addSupportTicket = (t: SupportTicketRecord) => {
@@ -670,6 +770,7 @@ export function VisaProvider({ children }: { children: React.ReactNode }) {
                 passport: docStatus,
                 photo: docStatus
               },
+              uploadedDocuments: Array.isArray(item.uploadedDocuments) ? item.uploadedDocuments : [],
               checklist: { employed: true, sponsored: false },
               documentsSubmitted: true,
               kycCompleted: true

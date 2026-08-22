@@ -53,7 +53,17 @@ export const INITIAL_UNIFIED_TRANSACTIONS: UnifiedTransactionRecord[] = [];
 
 export async function fetchUnifiedTransactions(agentId?: string): Promise<UnifiedTransactionRecord[]> {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    let token = "";
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("phantom_auth_session");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          token = parsed.token || parsed.accessToken || "";
+        }
+      } catch {}
+      if (!token) token = localStorage.getItem("token") || "";
+    }
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 

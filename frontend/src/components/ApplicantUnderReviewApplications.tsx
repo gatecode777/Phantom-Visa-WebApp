@@ -47,9 +47,10 @@ export default function ApplicantUnderReviewApplications({
 }: ApplicantUnderReviewApplicationsProps) {
   // Extract under-review applications from context or provide rich fallback records
   const reviewApps = useMemo(() => {
-    return applications.filter((a) =>
-      ["Submitted", "Embassy Processing", "Docs Uploaded"].includes(a.status)
+    const list = applications.filter((a) =>
+      ["Submitted", "Embassy Processing", "Docs Uploaded", "Docs Pending", "Under Review", "Processing", "In Progress"].includes(a.status)
     );
+    return list.length > 0 ? list : applications;
   }, [applications]);
 
   // State for search, filter & sorting

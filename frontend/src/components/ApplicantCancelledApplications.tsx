@@ -39,7 +39,7 @@ export default function ApplicantCancelledApplications({
   onNavigatePayments
 }: ApplicantCancelledApplicationsProps) {
   const cancelledApps = useMemo(() => {
-    return applications.filter((a) => a.status === "Docs Pending");
+    return applications.filter((a) => ["Cancelled", "Withdrawn", "Void"].includes(a.status));
   }, [applications]);
 
   // State for search & filter

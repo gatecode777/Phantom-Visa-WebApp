@@ -100,24 +100,35 @@ function slaLabel(createdAt: string, firstResponseAt?: string): {
 export default function SupportManagement() {
   const { authSession } = useVisa();
 
+  // Resolve the acting agentId (non-null only for Agent role)
+  const actingAgentId = useMemo(() => {
+    if (authSession?.user?.role !== "Agent") return undefined;
+    return (
+      authSession?.user?.agentId ||
+      (authSession as any)?.agentId ||
+      localStorage.getItem("agentId") ||
+      undefined
+    );
+  }, [authSession]);
+
   // ── LOCAL ticket state — completely isolated from shared context ──────────
-  // Fetching into local state means NO context state update → NO cascade re-renders
   const [tickets, setTickets] = useState<SupportTicketRecord[]>([]);
   const [loading, setLoading]  = useState(false);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchTickets(); // no userId = admin sees all
+      // Pass agentId for Agent role — backend will scope to assigned apps only
+      const data = await fetchTickets(undefined, actingAgentId);
       if (Array.isArray(data)) setTickets(data);
     } catch (err) {
       console.error("SupportManagement: failed to load tickets", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [actingAgentId]);
 
-  // Fetch once on mount — safe because setTickets is LOCAL, not shared context
+  // Fetch once on mount (and whenever agentId changes)
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
@@ -206,6 +217,17 @@ export default function SupportManagement() {
   const [currentPage, setCurrentPage]    = useState(1);
   const PAGE_SIZE = 20;
 
+  // ── Status dropdown popover (inline per row) ────────────────────────────────
+  const [openStatusDropdown, setOpenStatusDropdown] = useState<string | null>(null);
+
+  // Close dropdown when clicking anywhere outside
+  useEffect(() => {
+    if (!openStatusDropdown) return;
+    const handler = () => setOpenStatusDropdown(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [openStatusDropdown]);
+
   const filteredTickets = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return tickets.filter((t) => {
@@ -276,14 +298,17 @@ export default function SupportManagement() {
           <div className="flex items-center gap-2 text-xs font-mono text-blue-200 mb-1">
             <LifeBuoy size={15} />
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 font-bold">
-              Admin — Customer Support & Help Desk
+              {actingAgentId ? `Agent ${actingAgentId}` : "Admin"} — Customer Support & Help Desk
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
             Support Management
           </h1>
           <p className="text-xs text-blue-100 font-medium mt-1">
-            Live helpdesk queue, agent performance, SLA tracking, and knowledge base — all from real ticket data.
+            {actingAgentId
+              ? "Live support tickets for your assigned applications — reply, escalate, and resolve."
+              : "Live helpdesk queue, agent performance, SLA tracking, and knowledge base — all from real ticket data."
+            }
           </p>
         </div>
 
@@ -396,15 +421,28 @@ export default function SupportManagement() {
               </h3>
             </div>
 
-            {tickets.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+                <RefreshCw size={24} className="animate-spin text-[#2563EB]" />
+                <p className="text-sm font-semibold text-slate-500">Loading tickets…</p>
+              </div>
+            ) : tickets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
                 <LifeBuoy size={32} className="text-slate-300" />
-                <p className="text-sm font-semibold text-slate-500">No support tickets yet.</p>
-                <p className="text-xs text-slate-400">Tickets submitted by applicants will appear here in real-time.</p>
+                <p className="text-sm font-semibold text-slate-500">
+                  {actingAgentId
+                    ? "No support tickets found for your assigned applications."
+                    : "No support tickets yet."}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {actingAgentId
+                    ? "Tickets appear here when applicants link them to applications assigned to you."
+                    : "Tickets submitted by applicants will appear here in real-time."}
+                </p>
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[240px] pb-12">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-100">
@@ -421,10 +459,11 @@ export default function SupportManagement() {
                       {paginatedTickets.map((t) => {
                         const sla = slaLabel(t.createdAt, t.firstResponseAt);
                         const isActive = t.ticketId === selectedTicketId;
+                        const isDropdownOpen = openStatusDropdown === t.ticketId;
                         return (
                           <tr
                             key={t.ticketId}
-                            className={`hover:bg-slate-50 cursor-pointer transition ${isActive ? "bg-blue-50/60" : ""}`}
+                            className={`hover:bg-slate-50 cursor-pointer transition ${isActive ? "bg-blue-50/60" : ""} ${isDropdownOpen ? "relative z-30" : ""}`}
                             onClick={() => setSelectedTicketId(t.ticketId)}
                           >
                             <td className="py-2.5">
@@ -458,24 +497,61 @@ export default function SupportManagement() {
                             <td className="py-2.5 text-right space-x-1" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => setSelectedTicketId(t.ticketId)}
-                                className="p-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] rounded-lg transition"
+                                className="p-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] rounded-lg transition cursor-pointer"
                                 title="View thread"
                               >
                                 <Eye size={13} />
                               </button>
-                              <button
-                                onClick={async () => {
-                                  const next: TicketStatus =
-                                    t.status === "Open" ? "In Progress" :
-                                    t.status === "In Progress" ? "Resolved" : "Closed";
-                                  await handleUpdateTicket(t.ticketId, { status: next });
-                                  triggerToast(`Ticket ${t.ticketId} → ${next}`);
-                                }}
-                                className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
-                                title="Advance status"
-                              >
-                                <Edit3 size={13} />
-                              </button>
+                              <span className="relative inline-block text-left">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenStatusDropdown(isDropdownOpen ? null : t.ticketId);
+                                  }}
+                                  className={`p-1.5 rounded-lg transition cursor-pointer ${
+                                    isDropdownOpen
+                                      ? "bg-[#2563EB] text-white shadow-sm"
+                                      : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                                  }`}
+                                  title="Change status"
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                                {isDropdownOpen && (
+                                  <div
+                                    className="absolute right-0 top-full mt-1 z-[999] bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 w-44 animate-in fade-in zoom-in-95 duration-100 text-left ring-1 ring-black/5"
+                                    style={{ filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.15))" }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase px-3 pt-1 pb-1 tracking-wide">Change Status</p>
+                                    {([
+                                      { value: "Open" as TicketStatus,        dot: "bg-amber-400",   label: "Open" },
+                                      { value: "In Progress" as TicketStatus, dot: "bg-blue-500",    label: "In Progress" },
+                                      { value: "Resolved" as TicketStatus,    dot: "bg-emerald-500", label: "Resolved" },
+                                      { value: "Closed" as TicketStatus,      dot: "bg-slate-400",   label: "Closed" }
+                                    ]).map(({ value, dot, label }) => (
+                                      <button
+                                        key={value}
+                                        onClick={async () => {
+                                          setOpenStatusDropdown(null);
+                                          if (value === t.status) return;
+                                          await handleUpdateTicket(t.ticketId, { status: value });
+                                          triggerToast(`Ticket ${t.ticketId} → ${value}`);
+                                        }}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer ${
+                                          value === t.status ? "bg-blue-50/70 text-[#2563EB]" : ""
+                                        }`}
+                                      >
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                                        <span>{label}</span>
+                                        {value === t.status && (
+                                          <CheckCircle2 size={12} className="ml-auto text-[#2563EB]" />
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </span>
                             </td>
                           </tr>
                         );
@@ -715,10 +791,11 @@ export default function SupportManagement() {
               <Zap size={16} className="text-[#2563EB]" /> Support Actions
             </h3>
             <button
-              onClick={() => window.location.reload()}
-              className="w-full py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-2"
+              onClick={loadTickets}
+              disabled={loading}
+              className="w-full py-2 bg-[#2563EB] hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <RefreshCw size={14} /> Refresh Live Queue
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh Live Queue
             </button>
             <button
               onClick={handleExport}

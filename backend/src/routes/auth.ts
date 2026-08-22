@@ -8,13 +8,37 @@ import Applicant from "../models/Applicant.js";
 import Agent from "../models/Agent.js";
 import RefreshToken from "../models/RefreshToken.js";
 import { getNextSequenceValue } from "../models/Counter.js";
-import { issueTokens, hashRefreshToken, getRefreshTokenExpiry, TokenPayload } from "../lib/security/jwt.js";
+import { issueTokens, verifyAccessToken, hashRefreshToken, getRefreshTokenExpiry, TokenPayload } from "../lib/security/jwt.js";
 import { documentUploadFields } from "../middleware/upload.js";
 import { formatErrorEnvelope } from "../lib/middleware/api-standards.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { parseUserAgent, formatLastSeen } from "../lib/security/ua-parser.js";
 
 const router = Router();
+
+/**
+ * Build a flexible MongoDB query that matches phone numbers regardless of
+ * spaces, hyphens, or country-code formatting differences.
+ * e.g. "+91 98765 43210" and "+919876543210" both match when searching for "9876543210".
+ */
+function buildPhoneQuery(phone: string): Record<string, any> {
+  const cleanDigits = phone.replace(/\D/g, "");
+  const last10 = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
+
+  // Build a regex that allows optional non-digit separators between each digit
+  // e.g. "9876543210" -> /9\D*8\D*7\D*6\D*5\D*4\D*3\D*2\D*1\D*0/
+  const spacedRegex = last10.split("").join("\\D*");
+
+  return {
+    $or: [
+      { phone },
+      { phone: cleanDigits },
+      { phone: last10 },
+      { phone: { $regex: last10, $options: "i" } },
+      { phone: { $regex: spacedRegex } }
+    ]
+  };
+}
 
 // Rate limiter for auth endpoints (prevents brute-force attempts)
 const authRateLimiter = rateLimit({
@@ -258,16 +282,7 @@ router.post("/login", authRateLimiter, async (req: Request, res: Response) => {
     // Find user by phone or email with flexible digit matching
     let query: any;
     if (phone) {
-      const cleanDigits = (phone as string).replace(/\D/g, "");
-      const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
-      query = {
-        $or: [
-          { phone },
-          { phone: cleanDigits },
-          { phone: last10Digits },
-          { phone: { $regex: last10Digits, $options: "i" } }
-        ]
-      };
+      query = buildPhoneQuery(phone as string);
     } else {
       query = { email: (email as string).toLowerCase() };
     }
@@ -557,17 +572,7 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
       return res.status(401).json(formatErrorEnvelope("INVALID_OTP", "Invalid OTP code format. Must be a 6-digit numeric code."));
     }
 
-    const cleanDigits = phone.replace(/\D/g, "");
-    const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
-
-    const query = {
-      $or: [
-        { phone },
-        { phone: cleanDigits },
-        { phone: last10Digits },
-        { phone: { $regex: last10Digits, $options: "i" } }
-      ]
-    };
+    const query = buildPhoneQuery(phone);
 
     const user = await User.findOne(query);
 
@@ -653,17 +658,7 @@ router.post("/verify-phone", async (req: Request, res: Response) => {
       return res.status(400).json(formatErrorEnvelope("VALIDATION_ERROR", "Phone number is required."));
     }
 
-    const cleanDigits = phone.replace(/\D/g, "");
-    const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
-
-    const query = {
-      $or: [
-        { phone },
-        { phone: cleanDigits },
-        { phone: last10Digits },
-        { phone: { $regex: last10Digits, $options: "i" } }
-      ]
-    };
+    const query = buildPhoneQuery(phone);
 
     let user = null;
     if (role) {
@@ -727,17 +722,8 @@ router.post("/check-duplicate", async (req: Request, res: Response) => {
     }
 
     if (phone) {
-      const cleanPhoneDigits = phone.replace(/\D/g, "");
-      const last10Phone = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
-
-      const phoneMatch = await User.findOne({
-        $or: [
-          { phone },
-          { phone: cleanPhoneDigits },
-          { phone: last10Phone },
-          { phone: { $regex: last10Phone, $options: "i" } }
-        ]
-      });
+      const phoneQuery = buildPhoneQuery(phone);
+      const phoneMatch = await User.findOne(phoneQuery);
 
       if (phoneMatch) {
         return res.status(400).json({
@@ -794,13 +780,11 @@ router.post("/change-password", async (req: Request, res: Response) => {
     let userId: string | null = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      try {
-        const token = authHeader.split(" ")[1];
-        const jwtSecret = process.env.JWT_SECRET || "fallback_secret";
-        const jwt = await import("jsonwebtoken");
-        const decoded = jwt.default.verify(token, jwtSecret) as any;
-        userId = decoded.userId || decoded.id;
-      } catch (e) {}
+      const token = authHeader.slice(7).trim();
+      const verified = verifyAccessToken(token);
+      if (verified) {
+        userId = verified.userId;
+      }
     }
 
     let user = userId ? await User.findById(userId) : null;
