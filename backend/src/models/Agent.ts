@@ -40,6 +40,9 @@ export interface IAgent extends Document {
   commissionValue: number;
   status: "Active" | "Pending Approval" | "Inactive";
   adminNotes?: string;
+  avatarUrl?: string;
+  twoFactorEnabled?: boolean;
+  idleTimeoutMinutes?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,7 +91,10 @@ const AgentSchema: Schema = new Schema(
       enum: ["Active", "Pending Approval", "Inactive"],
       default: "Pending Approval"
     },
-    adminNotes: { type: String }
+    adminNotes: { type: String },
+    avatarUrl: { type: String },
+    twoFactorEnabled: { type: Boolean, default: false },
+    idleTimeoutMinutes: { type: Number, default: 30 }
   },
   { timestamps: true }
 );

@@ -105,13 +105,18 @@ function mapTicket(item: any): SupportTicketRecord {
 
 /**
  * GET /api/v1/support
- * Fetch all tickets. Pass userId to scope to a single applicant.
+ * Fetch tickets with optional scoping:
+ *   - No params  → admin sees all
+ *   - userId     → applicant sees only their own
+ *   - agentId    → agent sees only tickets for their assigned applications
  */
-export async function fetchTickets(userId?: string): Promise<SupportTicketRecord[]> {
+export async function fetchTickets(userId?: string, agentId?: string): Promise<SupportTicketRecord[]> {
   try {
-    const url = userId
-      ? `${API_V1_URL}/support?userId=${encodeURIComponent(userId)}`
-      : `${API_V1_URL}/support`;
+    const params = new URLSearchParams();
+    if (userId) params.set("userId", userId);
+    if (agentId) params.set("agentId", agentId);
+    const query = params.toString();
+    const url = query ? `${API_V1_URL}/support?${query}` : `${API_V1_URL}/support`;
     const res = await fetch(url);
     const json = await res.json();
     if (res.ok && json.success && Array.isArray(json.data)) {
@@ -122,6 +127,7 @@ export async function fetchTickets(userId?: string): Promise<SupportTicketRecord
   }
   return [];
 }
+
 
 /**
  * GET /api/v1/support/:ticketId

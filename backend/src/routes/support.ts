@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import SupportTicket from "../models/SupportTicket.js";
+import Application from "../models/Application.js";
 import { randomUUID } from "crypto";
 
 const router = express.Router();
@@ -46,13 +47,39 @@ async function checkAndMarkSLA(ticket: any): Promise<void> {
 }
 
 // ─── GET /api/v1/support ──────────────────────────────────────────────────────
-// All tickets (admin) or filtered by createdByUserId (applicant).
-// Query params: ?userId=<User._id>
+// All tickets (admin) or filtered by:
+//   ?userId=<User._id>   → applicant sees only their own tickets
+//   ?agentId=<AGT-XXXX>  → agent sees only tickets linked to their assigned applications
 router.get("/", async (req: Request, res: Response) => {
   try {
     const filter: Record<string, any> = {};
+
     if (req.query.userId) {
       filter.createdByUserId = req.query.userId as string;
+    }
+
+    // ── Agent scoping: only tickets whose applicationId belongs to this agent ──
+    if (req.query.agentId) {
+      const agentId = req.query.agentId as string;
+
+      // Find all applicationIds assigned to this agent
+      const assignedApps = await Application.find({
+        $or: [
+          { assignedAgentId: agentId },
+          { assignedAgentName: { $regex: agentId, $options: "i" } }
+        ]
+      })
+        .select("applicationId")
+        .lean();
+
+      const assignedApplicationIds = assignedApps
+        .map((a: any) => a.applicationId)
+        .filter(Boolean);
+
+      // Show tickets that are explicitly linked to one of those applications
+      // (tickets with no applicationId are excluded — they are general queries
+      //  not associated with this agent's work)
+      filter.applicationId = { $in: assignedApplicationIds };
     }
 
     const tickets = await SupportTicket.find(filter).sort({ createdAt: -1 }).lean();
@@ -68,6 +95,7 @@ router.get("/", async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to fetch tickets" });
   }
 });
+
 
 // ─── POST /api/v1/support ─────────────────────────────────────────────────────
 // Create a new support ticket. Body: { createdByUserId, createdByName,

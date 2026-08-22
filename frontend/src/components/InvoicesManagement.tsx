@@ -1,22 +1,17 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useVisa } from "../context/VisaContext";
+import { fetchUnifiedTransactions, UnifiedTransactionRecord } from "../services/paymentService";
 import {
   FileText,
   Search,
   Filter,
   RefreshCw,
   Eye,
-  Edit3,
-  PlusCircle,
   Trash2,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Globe,
   Download,
   Check,
   X,
-  TrendingUp,
   Sparkles,
   User,
   CreditCard,
@@ -26,15 +21,14 @@ import {
   Send,
   Printer,
   ShieldCheck,
-  ArrowRight,
-  MessageSquare,
-  Tag,
-  CheckSquare,
-  AlertTriangle,
   Receipt,
-  DollarSign,
-  BarChart3,
-  Copy
+  FileCheck,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Layers,
+  Percent,
+  History
 } from "lucide-react";
 
 export interface InvoiceRecord {
@@ -111,10 +105,6 @@ export const STANDARD_INVOICE_FORMAT_ITEMS = [
   "Terms & Conditions"
 ];
 
-const MOCK_INVOICES: InvoiceRecord[] = [];
-
-import { fetchUnifiedTransactions, UnifiedTransactionRecord } from "../services/paymentService";
-
 export interface InvoicesManagementProps {
   agentId?: string;
 }
@@ -128,6 +118,10 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
   const [typeFilter, setTypeFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [methodFilter, setMethodFilter] = useState("All");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // State for agent-scoped transactions
   const [dbTransactions, setDbTransactions] = useState<UnifiedTransactionRecord[]>([]);
@@ -179,8 +173,10 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
         : "01 Aug 2026 10:15 AM";
 
       const methodClean = t.paymentMethod?.toLowerCase().includes("credit") ? "Credit Card"
+        : t.paymentMethod?.toLowerCase().includes("debit") ? "Debit Card"
         : t.paymentMethod?.toLowerCase().includes("net") ? "Net Banking"
         : t.paymentMethod?.toLowerCase().includes("wallet") ? "Wallet"
+        : t.paymentMethod?.toLowerCase().includes("bank") || t.paymentMethod?.toLowerCase().includes("transfer") ? "Bank Transfer"
         : "UPI";
 
       const statusMap: Record<string, "Paid" | "Pending" | "Cancelled" | "Refunded"> = {
@@ -218,7 +214,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
 
       return {
         id: String(idx + 1),
-        invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId?.split("-")[2] || "501"}`,
+        invoiceNo: t.invoiceNo || `INV-2026-${t.transactionId?.split("-")[2] || String(500 + idx)}`,
         txnId: t.transactionId,
         appId: t.applicationId,
         applicantName: t.applicantName,
@@ -226,7 +222,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
         nationality: t.nationality || "Indian",
         appliedBy: t.paidBy || "Applicant",
         agentName: t.agentName,
-        invoiceAmount: t.pricing?.netAmount || 16700,
+        invoiceAmount: t.pricing?.netAmount || (visaFee + serviceCharge + totalTax),
         invoiceDate: dateStr,
         invoiceDateTime: dateTimeStr,
         invoiceType: t.paidBy === "Agent" ? "Agent B2B Invoice" : "Tax Invoice",
@@ -254,7 +250,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
           signatory: activeSignatory
         },
         actionNotes: [
-          { id: "n1", author: "System", text: `Automated GST Tax Invoice generated on payment completion (${t.status}).`, date: dateTimeStr }
+          { id: "n1", author: "System", text: `Automated GST Tax Invoice generated on payment confirmation (${t.status}).`, date: dateTimeStr }
         ]
       };
     });
@@ -284,29 +280,44 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
   };
 
   // Filter Logic
-  const filteredInvoices = invoicesList.filter((inv) => {
-    const q = searchQuery.toLowerCase();
-    const matchesQuery =
-      inv.invoiceNo.toLowerCase().includes(q) ||
-      inv.txnId.toLowerCase().includes(q) ||
-      inv.appId.toLowerCase().includes(q) ||
-      inv.applicantName.toLowerCase().includes(q) ||
-      (inv.agentName && inv.agentName.toLowerCase().includes(q));
+  const filteredInvoices = useMemo(() => {
+    return invoicesList.filter((inv) => {
+      const q = searchQuery.toLowerCase();
+      const matchesQuery =
+        !q ||
+        inv.invoiceNo.toLowerCase().includes(q) ||
+        inv.txnId.toLowerCase().includes(q) ||
+        inv.appId.toLowerCase().includes(q) ||
+        inv.applicantName.toLowerCase().includes(q) ||
+        (inv.agentName && inv.agentName.toLowerCase().includes(q));
 
-    const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
-    const matchesType = typeFilter === "All" || inv.invoiceType === typeFilter;
-    const matchesCategory = categoryFilter === "All" || inv.visaCategory === categoryFilter;
-    const matchesMethod = methodFilter === "All" || inv.paymentMethod === methodFilter;
+      const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
+      const matchesType = typeFilter === "All" || inv.invoiceType === typeFilter;
+      const matchesCategory = categoryFilter === "All" || inv.visaCategory === categoryFilter;
+      const matchesMethod = methodFilter === "All" || inv.paymentMethod === methodFilter;
 
-    return matchesQuery && matchesStatus && matchesType && matchesCategory && matchesMethod;
-  });
+      return matchesQuery && matchesStatus && matchesType && matchesCategory && matchesMethod;
+    });
+  }, [invoicesList, searchQuery, statusFilter, typeFilter, categoryFilter, methodFilter]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, typeFilter, categoryFilter, methodFilter]);
+
+  // Pagination Calculations
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+  const paginatedInvoices = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredInvoices.slice(start, start + PAGE_SIZE);
+  }, [filteredInvoices, currentPage]);
 
   // Selection Logic
   const handleSelectAll = () => {
-    if (selectedIds.length === filteredInvoices.length) {
+    if (selectedIds.length === paginatedInvoices.length && paginatedInvoices.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredInvoices.map((i) => i.id));
+      setSelectedIds(paginatedInvoices.map((i) => i.id));
     }
   };
 
@@ -314,9 +325,50 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
 
+  // Export to CSV
+  const handleExportCSV = () => {
+    if (filteredInvoices.length === 0) {
+      triggerToast("No invoices to export.");
+      return;
+    }
+    const headers = ["Invoice No", "Transaction ID", "Application ID", "Applicant", "Passport No", "Country", "Category", "Amount (INR)", "Status", "Date", "Payment Method", "GSTIN"];
+    const rows = filteredInvoices.map((i) => [
+      `"${i.invoiceNo}"`,
+      `"${i.txnId}"`,
+      `"${i.appId}"`,
+      `"${i.applicantName}"`,
+      `"${i.passportNumber}"`,
+      `"${i.country}"`,
+      `"${i.visaCategory}"`,
+      i.invoiceAmount,
+      `"${i.status}"`,
+      `"${i.invoiceDate}"`,
+      `"${i.paymentMethod}"`,
+      `"${i.gstin}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Phantom_Invoices_Export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerToast(`Exported ${filteredInvoices.length} invoices to CSV.`);
+  };
+
+  // Print Invoice
+  const handlePrint = (inv?: InvoiceRecord) => {
+    const target = inv || activeModalInvoice;
+    if (!target) return;
+    triggerToast(`Printing invoice ${target.invoiceNo}...`);
+    window.print();
+  };
+
   // Actions
   const handleDeleteRecord = (inv: InvoiceRecord) => {
-    triggerToast(`Invoice ${inv.invoiceNo} highlighted.`);
+    setDbTransactions((prev) => prev.filter((t) => t.transactionId !== inv.txnId && t.invoiceNo !== inv.invoiceNo));
+    triggerToast(`Invoice ${inv.invoiceNo} removed from view.`);
     if (activeModalInvoice?.id === inv.id) setActiveModalInvoice(null);
   };
 
@@ -349,17 +401,27 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
           </p>
         </div>
 
-        <button
-          onClick={() => loadInvoices(true)}
-          disabled={isRefreshing}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-white/20 self-start sm:self-auto cursor-pointer"
-        >
-          <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-          <span>{isRefreshing ? "Syncing..." : "Sync Live Invoices"}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-white/20 cursor-pointer"
+            title="Export filtered records to CSV"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={() => loadInvoices(true)}
+            disabled={isRefreshing}
+            className="px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-white/20 cursor-pointer"
+          >
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+            <span>{isRefreshing ? "Syncing..." : "Sync Live Invoices"}</span>
+          </button>
+        </div>
       </div>
 
-      {/* DASHBOARD STATISTICS CARDS & RIGHT CATALOG CARDS (FROM WIREFRAME) */}
+      {/* DASHBOARD STATISTICS CARDS & WORKFLOW SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* LEFT CARDS: 6 METRICS */}
         <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
@@ -370,7 +432,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-2xs hover:shadow-md transition">
-            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Generated Today</span>
+            <span className="text-[10px] font-extrabold uppercase text-blue-600 block mb-1">Active Ledger</span>
             <div className="text-2xl font-black text-slate-900 font-mono">{metrics.total}</div>
             <span className="text-[10px] text-blue-600 font-bold">Active Invoices</span>
           </div>
@@ -400,7 +462,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
           </div>
         </div>
 
-        {/* RIGHT CARD: WORKFLOW & STANDARD INVOICE FORMAT CATALOG (FROM WIREFRAME) */}
+        {/* RIGHT CARD: WORKFLOW & STANDARD INVOICE FORMAT CATALOG */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs flex flex-col justify-between space-y-4">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-2">
@@ -412,7 +474,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
               {INVOICE_WORKFLOW_STEPS.map((step, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px] shrink-0">
-                    ▼
+                    ✓
                   </div>
                   <span>{step}</span>
                 </div>
@@ -425,7 +487,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
               <div className="grid grid-cols-2 gap-1 text-[10px] max-h-24 overflow-y-auto [scrollbar-width:thin]">
                 {STANDARD_INVOICE_FORMAT_ITEMS.map((item, i) => (
                   <div key={i} className="flex items-center gap-1 text-slate-700">
-                    <Check size={11} className="text-[#2563EB]" /> {item}
+                    <Check size={11} className="text-[#2563EB] shrink-0" /> <span className="truncate">{item}</span>
                   </div>
                 ))}
               </div>
@@ -449,13 +511,13 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
           {/* SEARCH KEYWORD */}
           <div>
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block mb-1">
-              Search (Invoice No, Txn ID, App ID, Applicant)
+              Search (Invoice, Txn, App, Name)
             </label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="INV-2026-501, TXN-L80501..."
+                placeholder="INV-2026-501, TXN..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#2563EB]"
@@ -471,7 +533,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold cursor-pointer"
             >
               <option value="All">All Statuses</option>
               <option value="Paid">Paid</option>
@@ -489,7 +551,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold cursor-pointer"
             >
               <option value="All">All Types</option>
               <option value="Tax Invoice">Tax Invoice</option>
@@ -507,12 +569,15 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold cursor-pointer"
             >
               <option value="All">All Categories</option>
               <option value="Tourist">Tourist</option>
               <option value="Business">Business</option>
               <option value="Student">Student</option>
+              <option value="Work">Work</option>
+              <option value="Medical">Medical</option>
+              <option value="Transit">Transit</option>
             </select>
           </div>
 
@@ -524,13 +589,15 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs px-3 py-2 rounded-xl font-semibold cursor-pointer"
             >
               <option value="All">All Methods</option>
               <option value="UPI">UPI</option>
               <option value="Credit Card">Credit Card</option>
               <option value="Debit Card">Debit Card</option>
               <option value="Net Banking">Net Banking</option>
+              <option value="Wallet">Wallet</option>
+              <option value="Bank Transfer">Bank Transfer</option>
             </select>
           </div>
         </div>
@@ -548,10 +615,10 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => triggerToast(`Downloading PDF bundle for ${selectedIds.length} invoices.`)}
+              onClick={handleExportCSV}
               className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
             >
-              <Download size={14} /> Download Invoices
+              <Download size={14} /> Download CSV
             </button>
             <button
               onClick={() => triggerToast(`Emailed invoice copies to ${selectedIds.length} recipients.`)}
@@ -560,16 +627,22 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
               <Send size={14} /> Email Invoices
             </button>
             <button
-              onClick={() => triggerToast(`Printing ${selectedIds.length} tax invoices.`)}
+              onClick={() => triggerToast(`Prepared ${selectedIds.length} tax invoices for printing.`)}
               className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
             >
               <Printer size={14} /> Print Invoices
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Clear
             </button>
           </div>
         </div>
       )}
 
-      {/* INVOICES DATA TABLE (COLUMNS MATCH WIREFRAME EXACTLY) */}
+      {/* INVOICES DATA TABLE */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -578,7 +651,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
                 <th className="py-3.5 px-4 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredInvoices.length && filteredInvoices.length > 0}
+                    checked={selectedIds.length === paginatedInvoices.length && paginatedInvoices.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB] cursor-pointer"
                   />
@@ -595,7 +668,14 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
             </thead>
 
             <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-              {filteredInvoices.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-[#2563EB]" />
+                    <p className="font-semibold text-slate-600">Loading invoice records...</p>
+                  </td>
+                </tr>
+              ) : paginatedInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">
                     <FileText size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
@@ -603,7 +683,7 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => (
+                paginatedInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 text-center">
                       <input
@@ -641,6 +721,10 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-200">
                           🟡 Pending
                         </span>
+                      ) : inv.status === "Refunded" ? (
+                        <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-purple-200">
+                          🟣 Refunded
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-red-200">
                           🔴 Cancelled
@@ -660,14 +744,37 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
                           <Eye size={15} />
                         </button>
                         <button
-                          onClick={() => triggerToast(`Downloading PDF for invoice ${inv.invoiceNo}...`)}
+                          onClick={() => {
+                            const csvContent = "data:text/csv;charset=utf-8," + [
+                              "Field,Value",
+                              `"Invoice No","${inv.invoiceNo}"`,
+                              `"Transaction ID","${inv.txnId}"`,
+                              `"Application ID","${inv.appId}"`,
+                              `"Applicant","${inv.applicantName}"`,
+                              `"Country","${inv.country}"`,
+                              `"Visa Fee",${inv.breakdown.visaFee}`,
+                              `"Service Charge",${inv.breakdown.serviceCharge}`,
+                              `"CGST",${inv.breakdown.cgst}`,
+                              `"SGST",${inv.breakdown.sgst}`,
+                              `"Total Amount",${inv.invoiceAmount}`,
+                              `"Status","${inv.status}"`,
+                              `"GSTIN","${inv.gstin}"`
+                            ].join("\n");
+                            const link = document.createElement("a");
+                            link.setAttribute("href", encodeURI(csvContent));
+                            link.setAttribute("download", `${inv.invoiceNo}_Summary.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            triggerToast(`Downloaded summary for ${inv.invoiceNo}`);
+                          }}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                          title="Download PDF Invoice"
+                          title="Download Invoice Data"
                         >
                           <Download size={15} />
                         </button>
                         <button
-                          onClick={() => triggerToast(`Printing tax invoice ${inv.invoiceNo}...`)}
+                          onClick={() => handlePrint(inv)}
                           className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                           title="Print Invoice"
                         >
@@ -690,23 +797,44 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
         </div>
 
         {/* PAGINATION FOOTER */}
-        <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <div>Showing {filteredInvoices.length > 0 ? 1 : 0}–{Math.min(10, filteredInvoices.length)} of {filteredInvoices.length} Invoices</div>
+        <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+          <div>
+            Showing {filteredInvoices.length > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0}–
+            {Math.min(currentPage * PAGE_SIZE, filteredInvoices.length)} of {filteredInvoices.length} Invoices
+          </div>
           <div className="flex items-center gap-1 font-mono font-bold">
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40">
-              Previous
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={13} /> Prev
             </button>
-            <button className="px-3 py-1 bg-[#2563EB] text-white rounded-lg">1</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">2</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">3</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition">
-              Next
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                  pageNum === currentPage
+                    ? "bg-[#2563EB] text-white shadow-xs"
+                    : "bg-white border border-slate-200 hover:bg-slate-100 text-slate-700"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition disabled:opacity-40 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+            >
+              Next <ChevronRight size={13} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* PROFESSIONAL RECOMMENDATION BOX (FROM WIREFRAME) */}
+      {/* PROFESSIONAL RECOMMENDATION BOX */}
       <div className="bg-blue-50/50 border border-blue-200 rounded-3xl p-5 space-y-2 mb-6">
         <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2 border-b border-blue-100 pb-2">
           <ShieldCheck size={16} className="text-[#2563EB]" /> Professional GST Tax Compliance Audit
@@ -716,9 +844,9 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
         </p>
       </div>
 
-      {/* CENTERED POPUP DETAILS MODAL (7 RECOMMENDED TABS FROM WIREFRAME) */}
+      {/* CENTERED POPUP DETAILS MODAL (7 RECOMMENDED TABS) */}
       {activeModalInvoice && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             {/* MODAL HEADER */}
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
@@ -747,76 +875,319 @@ export default function InvoicesManagement({ agentId: propAgentId }: InvoicesMan
               </button>
             </div>
 
-            {/* MODAL BODY - OVERVIEW ONLY */}
-            <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin] [scrollbar-color:#3B82F6_#DBEAFE] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-blue-100">
-              <div className="space-y-6 animate-in fade-in duration-150">
-                {/* OVERVIEW TILES */}
-                <div>
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
-                    Tax Invoice Overview
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
-                      <strong className="text-[#2563EB] font-mono font-bold">{activeModalInvoice.invoiceNo}</strong>
+            {/* MODAL TABS NAVIGATION */}
+            <div className="bg-slate-100/80 px-4 pt-2 border-b border-slate-200 flex items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+              {RECOMMENDED_INVOICE_TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setModalTab(tab)}
+                  className={`px-3 py-2 text-xs font-bold rounded-t-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                    modalTab === tab
+                      ? "bg-white text-[#2563EB] shadow-xs border-t-2 border-[#2563EB]"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  }`}
+                >
+                  {tab === "Overview" && <FileText size={13} />}
+                  {tab === "Applicant Details" && <User size={13} />}
+                  {tab === "Invoice Details" && <FileCheck size={13} />}
+                  {tab === "Fee Breakdown" && <Layers size={13} />}
+                  {tab === "Tax Breakdown" && <Percent size={13} />}
+                  {tab === "Company Details" && <Building size={13} />}
+                  {tab === "Activity Logs" && <History size={13} />}
+                  <span>{tab}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* MODAL BODY */}
+            <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6 [scrollbar-width:thin]">
+              {/* TAB 1: OVERVIEW */}
+              {modalTab === "Overview" && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2 mb-3">
+                      Tax Invoice Overview
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Number</span>
+                        <strong className="text-[#2563EB] font-mono font-bold text-sm">{activeModalInvoice.invoiceNo}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">SAC / HSN Code</span>
+                        <strong className="text-purple-700 font-mono font-bold text-sm">{activeModalInvoice.sacCode}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Company GSTIN</span>
+                        <strong className="text-emerald-700 font-mono font-bold text-sm">{activeModalInvoice.gstin}</strong>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Payment Method</span>
+                        <strong className="text-slate-900 font-bold text-sm">{activeModalInvoice.paymentMethod}</strong>
+                      </div>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">SAC / HSN Code</span>
-                      <strong className="text-purple-700 font-mono font-bold">{activeModalInvoice.sacCode}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Company GSTIN</span>
-                      <strong className="text-emerald-700 font-mono font-bold">{activeModalInvoice.gstin}</strong>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-0.5">Invoice Type</span>
-                      <strong className="text-slate-900 font-bold">{activeModalInvoice.invoiceType}</strong>
+                  </div>
+
+                  {/* ITEMISED SUMMARY */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
+                      <Receipt size={16} className="text-[#2563EB]" /> Summary Calculation
+                    </h4>
+                    <div className="space-y-2 text-xs font-medium text-slate-700">
+                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                        <span>Visa Application Consular Fee</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                        <span>Professional Service Charge</span>
+                        <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                        <span>CGST (9%) + SGST (9%) Total Tax</span>
+                        <span className="font-mono font-bold text-purple-700">₹{activeModalInvoice.breakdown.totalTax.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
+                        <span>Total Invoiced Amount</span>
+                        <span className="font-mono text-[#2563EB] text-base">₹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* ITEMISED TAX & FEE BREAKDOWN TABLE */}
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit flex items-center gap-2">
-                    <Receipt size={16} className="text-[#2563EB]" /> Itemised Tax & Fee Calculation
+              {/* TAB 2: APPLICANT DETAILS */}
+              {modalTab === "Applicant Details" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Applicant Identity & Travel Particulars
                   </h4>
-                  <div className="space-y-2 text-xs font-medium text-slate-700">
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                      <span>Visa Application Fee</span>
-                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Applicant Full Name</span>
+                        <span className="font-bold text-slate-900 text-sm">{activeModalInvoice.applicantName}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Passport Number</span>
+                        <span className="font-mono font-bold text-slate-800">{activeModalInvoice.passportNumber || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Nationality</span>
+                        <span className="font-medium text-slate-800">{activeModalInvoice.nationality}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                      <span>Service Charge</span>
-                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Destination Country</span>
+                        <span className="font-bold text-blue-700 text-sm">{activeModalInvoice.country}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Visa Category</span>
+                        <span className="font-medium text-slate-800">{activeModalInvoice.visaCategory} Visa</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Applied / Managed By</span>
+                        <span className="font-medium text-slate-800">
+                          {activeModalInvoice.appliedBy} {activeModalInvoice.agentName ? `(${activeModalInvoice.agentName})` : ""}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                      <span>CGST (9%)</span>
-                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: INVOICE DETAILS */}
+              {modalTab === "Invoice Details" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Statutory Invoice Records
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Invoice Number</span>
+                        <span className="font-mono font-bold text-[#2563EB]">{activeModalInvoice.invoiceNo}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Transaction Reference</span>
+                        <span className="font-mono font-bold text-slate-800">{activeModalInvoice.txnId}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Application Number</span>
+                        <span className="font-mono font-bold text-slate-800">{activeModalInvoice.appId}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                      <span>SGST (9%)</span>
-                      <span className="font-mono font-bold">₹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Invoice Type</span>
+                        <span className="font-bold text-slate-900">{activeModalInvoice.invoiceType}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Generation Date & Time</span>
+                        <span className="font-medium text-slate-700">{activeModalInvoice.invoiceDateTime}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">SAC / HSN Service Code</span>
+                        <span className="font-mono font-bold text-purple-700">{activeModalInvoice.sacCode} (Immigration & Visa Processing)</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between pt-1 text-sm font-extrabold text-slate-900">
-                      <span>Total Invoiced Amount</span>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: FEE BREAKDOWN */}
+              {modalTab === "Fee Breakdown" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Itemised Fee & Service Schedule
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-200/60">
+                      <span className="text-slate-600">Embassy / Consular Statutory Fee</span>
+                      <span className="font-mono font-bold text-slate-900">₹{activeModalInvoice.breakdown.visaFee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-200/60">
+                      <span className="text-slate-600">Professional Consultation & Platform Service Charge</span>
+                      <span className="font-mono font-bold text-slate-900">₹{activeModalInvoice.breakdown.serviceCharge.toLocaleString()}</span>
+                    </div>
+                    {activeModalInvoice.breakdown.processingFee > 0 && (
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-600">Express Priority Processing Surcharge</span>
+                        <span className="font-mono font-bold text-amber-700">₹{activeModalInvoice.breakdown.processingFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {activeModalInvoice.breakdown.discount > 0 && (
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-600">Promotional / Corporate Discount</span>
+                        <span className="font-mono font-bold text-emerald-600">-₹{activeModalInvoice.breakdown.discount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between py-1.5 text-sm font-extrabold text-slate-900">
+                      <span>Total Net Payable</span>
                       <span className="font-mono text-[#2563EB]">₹{activeModalInvoice.invoiceAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* TAB 5: TAX BREAKDOWN */}
+              {modalTab === "Tax Breakdown" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    GST Tax Breakdown (SAC Code 998311)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                    <div className="bg-purple-50/70 border border-purple-200 p-3.5 rounded-2xl text-center">
+                      <span className="text-[10px] font-extrabold uppercase text-purple-700 block">CGST (9%)</span>
+                      <span className="text-lg font-black text-purple-900 font-mono">₹{activeModalInvoice.breakdown.cgst.toLocaleString()}</span>
+                    </div>
+                    <div className="bg-purple-50/70 border border-purple-200 p-3.5 rounded-2xl text-center">
+                      <span className="text-[10px] font-extrabold uppercase text-purple-700 block">SGST (9%)</span>
+                      <span className="text-lg font-black text-purple-900 font-mono">₹{activeModalInvoice.breakdown.sgst.toLocaleString()}</span>
+                    </div>
+                    <div className="bg-blue-50/70 border border-blue-200 p-3.5 rounded-2xl text-center">
+                      <span className="text-[10px] font-extrabold uppercase text-[#2563EB] block">Total GST (18%)</span>
+                      <span className="text-lg font-black text-blue-900 font-mono">₹{activeModalInvoice.breakdown.totalTax.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-[11px] text-slate-600 space-y-1">
+                    <p className="font-bold text-slate-800">GST Compliance Declaration:</p>
+                    <p>GST is computed at statutory standard rate of 18% (9% CGST + 9% SGST for Intra-state / 18% IGST for Inter-state) on taxable visa facilitation fees.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: COMPANY DETAILS */}
+              {modalTab === "Company Details" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Issuer Entity & Statutory Profile
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Company Legal Name</span>
+                      <span className="font-bold text-slate-900 text-sm">{activeModalInvoice.companyDetails.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Corporate GSTIN</span>
+                      <span className="font-mono font-bold text-emerald-700">{activeModalInvoice.companyDetails.gstin}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Registered Corporate Address</span>
+                      <span className="text-slate-700">{activeModalInvoice.companyDetails.address}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Official Billing Email</span>
+                      <span className="text-blue-600 font-mono">{activeModalInvoice.companyDetails.email}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Authorized Signatory</span>
+                      <span className="font-semibold text-slate-800">{activeModalInvoice.companyDetails.signatory}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 7: ACTIVITY LOGS */}
+              {modalTab === "Activity Logs" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-outfit border-b border-slate-100 pb-2">
+                    Invoice Audit Trail & Activity Logs
+                  </h4>
+                  <div className="space-y-2.5">
+                    {(activeModalInvoice.actionNotes || []).map((note, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-2xl flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                          ✓
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <strong className="text-slate-900 font-bold">{note.author}</strong>
+                            <span className="text-slate-400 font-mono text-[10px]">{note.date}</span>
+                          </div>
+                          <p className="text-slate-600 text-[11px] leading-relaxed">{note.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* MODAL FOOTER */}
             <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => triggerToast(`Downloading PDF for invoice ${activeModalInvoice.invoiceNo}...`)}
+                  onClick={() => {
+                    const csvContent = "data:text/csv;charset=utf-8," + [
+                      "Field,Value",
+                      `"Invoice No","${activeModalInvoice.invoiceNo}"`,
+                      `"Transaction ID","${activeModalInvoice.txnId}"`,
+                      `"Application ID","${activeModalInvoice.appId}"`,
+                      `"Applicant","${activeModalInvoice.applicantName}"`,
+                      `"Country","${activeModalInvoice.country}"`,
+                      `"Visa Fee",${activeModalInvoice.breakdown.visaFee}`,
+                      `"Service Charge",${activeModalInvoice.breakdown.serviceCharge}`,
+                      `"CGST",${activeModalInvoice.breakdown.cgst}`,
+                      `"SGST",${activeModalInvoice.breakdown.sgst}`,
+                      `"Total Amount",${activeModalInvoice.invoiceAmount}`,
+                      `"Status","${activeModalInvoice.status}"`,
+                      `"GSTIN","${activeModalInvoice.gstin}"`
+                    ].join("\n");
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodeURI(csvContent));
+                    link.setAttribute("download", `${activeModalInvoice.invoiceNo}_TaxInvoice.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    triggerToast(`Downloaded CSV for ${activeModalInvoice.invoiceNo}`);
+                  }}
                   className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <Download size={15} /> Download PDF
+                  <Download size={15} /> Download CSV
                 </button>
                 <button
-                  onClick={() => triggerToast(`Printing invoice ${activeModalInvoice.invoiceNo}...`)}
+                  onClick={() => handlePrint()}
                   className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5"
                 >
                   <Printer size={15} /> Print Invoice

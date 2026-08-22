@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Application, formatINR } from "../context/VisaContext";
+import React, { useState, useMemo, useRef } from "react";
+import { Application, formatINR, ApplicationDocument } from "../context/VisaContext";
+import { uploadImageToImageKit } from "../services/imageKitService";
+import { API_V1_URL } from "../config/api";
 import {
   Search,
   Filter,
@@ -11,8 +13,6 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-  ChevronDown,
-  ChevronUp,
   Upload,
   Calendar,
   CreditCard,
@@ -33,7 +33,12 @@ import {
   Building,
   Plane,
   FilePlus,
-  Briefcase
+  Briefcase,
+  Copy,
+  X,
+  FileSpreadsheet,
+  FileCode,
+  Image as ImageIcon
 } from "lucide-react";
 
 interface ApplicantAllApplicationsProps {
@@ -71,9 +76,25 @@ export default function ApplicantAllApplications({
   // Tab inside deep-dive detail inspector
   const [detailTab, setDetailTab] = useState<"overview" | "timeline" | "documents" | "payment" | "communication" | "actions">("overview");
 
-  // Document upload simulation state inside active app
-  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  // Document upload state inside active app
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
   const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [targetDocToUpload, setTargetDocToUpload] = useState<{ id: string; title: string } | null>(null);
+
+  // Document Preview Lightbox Modal State
+  const [previewDoc, setPreviewDoc] = useState<{
+    title: string;
+    fileUrl: string;
+    fileName?: string;
+    fileSize?: string;
+    format?: string;
+    status?: string;
+    documentType?: string;
+    rejectionReason?: string;
+    verifiedBy?: string;
+    verificationDate?: string;
+  } | null>(null);
 
   // Agent Chat state in active app
   const [agentMsg, setAgentMsg] = useState("");
@@ -98,23 +119,85 @@ export default function ApplicantAllApplications({
         {
           id: String(Date.now() + 1),
           sender: "Agent (Sarah J.)",
-          text: "Thank you for the update. Our team is auditing the document now.",
+          text: "Thank you for the update. Our consular audit team is reviewing your documents.",
           time: "Just now"
         }
       ]);
     }, 1200);
   };
 
-  const handleSimulateDocUpload = (docKey: keyof Application["verifiedDocs"]) => {
-    setUploadingDoc(docKey);
-    setTimeout(() => {
-      setUploadingDoc(null);
-      setDocUploadSuccess(`Successfully uploaded and submitted ${docKey} for verification.`);
-      if (onUpdateDocs && activeApp) {
-        onUpdateDocs(activeApp.id, docKey, "verified");
+  // Trigger file selection for replacement
+  const handleTriggerReplace = (docId: string, docTitle: string) => {
+    setTargetDocToUpload({ id: docId, title: docTitle });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  // Upload selected file to ImageKit and persist to backend MongoDB
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !targetDocToUpload || !activeApp) return;
+
+    const docId = targetDocToUpload.id;
+    const docTitle = targetDocToUpload.title;
+    setUploadingDocId(docId);
+
+    try {
+      // 1. Upload to ImageKit
+      const ikResult = await uploadImageToImageKit(file, "/PHANTOM-VISA/applications/documents/");
+      
+      // 2. Persist new ImageKit URL & metadata to backend MongoDB
+      const res = await fetch(`${API_V1_URL}/applications/${activeApp.id}/documents/${encodeURIComponent(docId)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileUrl: ikResult.url,
+          fileName: ikResult.fileName || file.name,
+          fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          format: file.name.split(".").pop()?.toUpperCase() || "JPG",
+          title: docTitle
+        })
+      });
+
+      // 3. Update activeApp local state
+      if (!activeApp.uploadedDocuments) {
+        activeApp.uploadedDocuments = [];
       }
+      const existingIndex = activeApp.uploadedDocuments.findIndex(
+        (d: any) => String(d._id) === docId || d.requirementId === docId || d.title.toLowerCase() === docTitle.toLowerCase()
+      );
+      if (existingIndex >= 0) {
+        activeApp.uploadedDocuments[existingIndex].fileUrl = ikResult.url;
+        activeApp.uploadedDocuments[existingIndex].fileName = ikResult.fileName || file.name;
+        activeApp.uploadedDocuments[existingIndex].status = "uploaded";
+        activeApp.uploadedDocuments[existingIndex].rejectionReason = "";
+      } else {
+        activeApp.uploadedDocuments.push({
+          _id: docId,
+          title: docTitle,
+          documentType: "PDF Document",
+          fileUrl: ikResult.url,
+          fileName: ikResult.fileName || file.name,
+          status: "uploaded"
+        });
+      }
+
+      if (onUpdateDocs) {
+        onUpdateDocs(activeApp.id, docId as any, "verified");
+      }
+
+      setDocUploadSuccess(`Successfully uploaded and synced "${docTitle}" to ImageKit!`);
       setTimeout(() => setDocUploadSuccess(null), 4000);
-    }, 1200);
+    } catch (err: any) {
+      console.error("Document upload error:", err);
+      alert(err.message || "Failed to upload document to ImageKit.");
+    } finally {
+      setUploadingDocId(null);
+      setTargetDocToUpload(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   // Helper for country flags
@@ -199,64 +282,90 @@ export default function ApplicantAllApplications({
         </span>
       );
     }
-    return <span className="text-xs text-slate-500">In Audit</span>;
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+        <CheckCircle2 size={12} /> Uploaded
+      </span>
+    );
   };
 
-  // Metric Computations
-  const metrics = useMemo(() => {
-    const total = applications.length;
-    const underReview = applications.filter((a) => ["Submitted", "Embassy Processing"].includes(a.status)).length;
-    const approved = applications.filter((a) => a.status === "Approved").length;
-    const rejected = applications.filter((a) => a.status === "Rejected").length;
-    const drafts = applications.filter((a) => a.status === "Draft").length;
-    const actionRequired = applications.filter((a) => 
-      a.status === "Docs Pending" || 
-      (a.verifiedDocs && Object.values(a.verifiedDocs).includes("needs_review"))
-    ).length;
+  // Active documents array for currently viewed application
+  const activeDocs = useMemo(() => {
+    if (activeApp?.uploadedDocuments && activeApp.uploadedDocuments.length > 0) {
+      return activeApp.uploadedDocuments;
+    }
+    return [
+      {
+        _id: "doc-1",
+        title: "Passport Bio Page",
+        documentType: "Image Scan",
+        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+        fileName: "passport_bio_page.png",
+        status: "verified" as const,
+        rejectionReason: ""
+      },
+      {
+        _id: "doc-2",
+        title: "Photograph (35x45mm)",
+        documentType: "Image Scan",
+        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_photo.png",
+        fileName: "applicant_photo.png",
+        status: "verified" as const,
+        rejectionReason: ""
+      },
+      {
+        _id: "doc-3",
+        title: "Employment NOC Letter",
+        documentType: "PDF Document",
+        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_doc.pdf",
+        fileName: "employment_noc_letter.pdf",
+        status: "needs_review" as const,
+        rejectionReason: "Consular Stamp Unclear • Action Required"
+      },
+      {
+        _id: "doc-4",
+        title: "Bank Statement (6 Months)",
+        documentType: "PDF Document",
+        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf",
+        fileName: "bank_statement_6m.pdf",
+        status: "pending" as const,
+        rejectionReason: ""
+      }
+    ];
+  }, [activeApp]);
 
-    return { total, underReview, approved, rejected, drafts, actionRequired, avgDays: "5 - 7 Days" };
-  }, [applications]);
-
-  // Filtered Applications List
+  // Derived filtered applications
   const filteredApps = useMemo(() => {
     return applications
-      .filter((app) => {
-        // Search query
+      .filter((a) => {
         const q = searchQuery.toLowerCase();
-        const matchesQuery =
-          app.id.toLowerCase().includes(q) ||
-          app.destination.toLowerCase().includes(q) ||
-          app.visaType.toLowerCase().includes(q) ||
-          app.travelerName.toLowerCase().includes(q) ||
-          app.passportNumber.toLowerCase().includes(q);
+        const matchesQ =
+          !q ||
+          a.id.toLowerCase().includes(q) ||
+          a.destination.toLowerCase().includes(q) ||
+          a.visaType.toLowerCase().includes(q) ||
+          a.travelerName.toLowerCase().includes(q) ||
+          a.passportNumber.toLowerCase().includes(q);
 
-        // Status Filter
-        let matchesStatus = true;
-        if (statusFilter !== "all") {
-          if (statusFilter === "under_review") matchesStatus = ["Submitted", "Embassy Processing"].includes(app.status);
-          else if (statusFilter === "action_required") matchesStatus = app.status === "Docs Pending" || (app.verifiedDocs && Object.values(app.verifiedDocs).includes("needs_review"));
-          else matchesStatus = app.status === statusFilter;
-        }
+        const matchesStatus =
+          statusFilter === "all" ||
+          a.status.toLowerCase() === statusFilter.toLowerCase() ||
+          (statusFilter === "review" && (a.status === "Under Review" || a.status === "Submitted" || a.status === "Embassy Processing"));
 
-        // Visa Type Filter
-        const matchesVisaType = visaTypeFilter === "all" || app.visaType.toLowerCase().includes(visaTypeFilter.toLowerCase());
+        const matchesVisaType =
+          visaTypeFilter === "all" || a.visaType.toLowerCase().includes(visaTypeFilter.toLowerCase());
 
-        // Country Filter
-        const matchesCountry = countryFilter === "all" || app.destination.toLowerCase().includes(countryFilter.toLowerCase());
+        const matchesCountry =
+          countryFilter === "all" || a.destination.toLowerCase().includes(countryFilter.toLowerCase());
 
-        return matchesQuery && matchesStatus && matchesVisaType && matchesCountry;
+        return matchesQ && matchesStatus && matchesVisaType && matchesCountry;
       })
       .sort((a, b) => {
-        const timeA = new Date(a.submissionDate || "2000-01-01").getTime();
-        const timeB = new Date(b.submissionDate || "2000-01-01").getTime();
-
         if (sortBy === "newest") {
-          if (timeA !== timeB) return timeB - timeA;
-          return b.id.localeCompare(a.id);
+          return new Date(b.submissionDate || "2026-08-01").getTime() - new Date(a.submissionDate || "2026-08-01").getTime();
         }
         if (sortBy === "oldest") {
-          if (timeA !== timeB) return timeA - timeB;
-          return a.id.localeCompare(b.id);
+          return new Date(a.submissionDate || "2026-08-01").getTime() - new Date(b.submissionDate || "2026-08-01").getTime();
         }
         return a.status.localeCompare(b.status);
       });
@@ -265,8 +374,17 @@ export default function ApplicantAllApplications({
   return (
     <div className="space-y-6 pb-12 text-slate-800">
       
+      {/* Hidden File Input for Document Replacement */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*,application/pdf"
+      />
+
       {/* ============================================================ */}
-      {/* SECTION 1: HEADER & BREADCRUMB BANNER */}
+      {/* SECTION 1: HEADER BANNER */}
       {/* ============================================================ */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -276,227 +394,103 @@ export default function ApplicantAllApplications({
             <span className="text-slate-500 font-normal">All Applications</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">All Visa Applications</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-3xl">
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Manage & track all your visa applications, submission history, real-time embassy processing timelines, document status, and communication logs in one place.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {onNavigateApply && (
-            <button
-              onClick={onNavigateApply}
-              className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
-            >
-              <FilePlus size={16} />
-              <span>Apply New Visa</span>
-            </button>
-          )}
-        </div>
+        {onNavigateApply && (
+          <button
+            onClick={onNavigateApply}
+            className="bg-[#4848F7] hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Plane size={15} />
+            <span>Apply New Visa</span>
+          </button>
+        )}
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 2: TOP METRIC CARDS GRID (5 CARDS) */}
+      {/* SECTION 2: TOP METRIC STATS CARDS */}
       {/* ============================================================ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {/* Card 1: Total */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Applications</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{String(metrics.total).padStart(2, "0")}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{String(applications.length).padStart(2, "0")}</p>
           <span className="text-[10px] text-slate-400 font-medium">All logged submissions</span>
         </div>
 
-        {/* Card 2: Under Review */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-amber-500">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Under Review</p>
-          <p className="text-2xl font-black text-amber-600 mt-1">{String(metrics.underReview).padStart(2, "0")}</p>
-          <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+          <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Under Review</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">
+            {String(applications.filter((a) => a.status === "Under Review" || a.status === "Submitted" || a.status === "Embassy Processing" || a.status === "Docs Pending").length).padStart(2, "0")}
+          </p>
+          <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
             <Clock size={10} /> Active processing
           </span>
         </div>
 
-        {/* Card 3: Approved Visas */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-emerald-500">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Approved Visas</p>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{String(metrics.approved).padStart(2, "0")}</p>
-          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+          <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">Approved Visas</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">
+            {String(applications.filter((a) => a.status === "Approved").length).padStart(2, "0")}
+          </p>
+          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
             <CheckCircle2 size={10} /> E-Visa ready
           </span>
         </div>
 
-        {/* Card 4: Rejected */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Rejected</p>
-          <p className="text-2xl font-black text-slate-700 mt-1">{String(metrics.rejected).padStart(2, "0")}</p>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-red-500">
+          <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wide">Rejected</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">
+            {String(applications.filter((a) => a.status === "Rejected").length).padStart(2, "0")}
+          </p>
           <span className="text-[10px] text-slate-400 font-medium">Consular decisions</span>
         </div>
 
-        {/* Card 5: Avg Processing Time */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs col-span-2 sm:col-span-1">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Avg Processing</p>
-          <p className="text-lg font-black text-indigo-600 mt-1.5">{metrics.avgDays}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">5 - 7 Days</p>
           <span className="text-[10px] text-slate-400 font-medium">Standard turnaround</span>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 3: ACTIVE APPLICATION PRIORITY BANNER & STEPPER */}
-      {/* ============================================================ */}
-      {activeApp && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 shadow-xl border border-indigo-900/50 space-y-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{getCountryFlag(activeApp.destination)}</span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-indigo-300 uppercase tracking-widest">
-                    Active Application • {activeApp.id}
-                  </span>
-                  <span className="bg-white/10 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full border border-white/20">
-                    {activeApp.visaType}
-                  </span>
-                </div>
-                <h2 className="text-lg font-extrabold text-white">
-                  {activeApp.destination} Visa ({activeApp.travelerName})
-                </h2>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden md:block">
-                <p className="text-[11px] text-slate-400 font-medium">Submission Date</p>
-                <p className="text-xs font-bold text-white">{activeApp.submissionDate || "18 Jul 2026"}</p>
-              </div>
-              <button
-                onClick={() => setSelectedAppId(activeApp.id)}
-                className="bg-white/15 hover:bg-white/25 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl border border-white/20 transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Eye size={14} />
-                <span>View Full Audit</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Stepper Timeline Bar */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-indigo-200">Consular Lifecycle Timeline Progress:</p>
-            <div className="grid grid-cols-5 gap-2 text-center text-[11px] font-semibold">
-              <div className="space-y-1">
-                <div className="h-2 rounded-full bg-emerald-500" />
-                <span className="text-emerald-400 flex items-center justify-center gap-1">
-                  <CheckCircle2 size={12} /> Form Submitted
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <div className={`h-2 rounded-full ${activeApp.status !== "Draft" ? "bg-emerald-500" : "bg-white/20"}`} />
-                <span className={activeApp.status !== "Draft" ? "text-emerald-400 flex items-center justify-center gap-1" : "text-slate-400"}>
-                  <ShieldCheck size={12} /> Doc Verification
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <div className={`h-2 rounded-full ${["Embassy Processing", "Approved"].includes(activeApp.status) ? "bg-amber-400 animate-pulse" : "bg-white/20"}`} />
-                <span className={["Embassy Processing", "Approved"].includes(activeApp.status) ? "text-amber-300 font-bold flex items-center justify-center gap-1" : "text-slate-400"}>
-                  <Building size={12} /> Embassy Audit
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <div className={`h-2 rounded-full ${activeApp.status === "Approved" ? "bg-emerald-500" : "bg-white/20"}`} />
-                <span className={activeApp.status === "Approved" ? "text-emerald-400 flex items-center justify-center gap-1" : "text-slate-400"}>
-                  <Calendar size={12} /> Biometrics / Interview
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <div className={`h-2 rounded-full ${activeApp.status === "Approved" ? "bg-emerald-500" : "bg-white/20"}`} />
-                <span className={activeApp.status === "Approved" ? "text-emerald-400 font-bold flex items-center justify-center gap-1" : "text-slate-400"}>
-                  <FileCheck size={12} /> E-Visa Issued
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Urgent Action Warning Box inside Banner */}
-          {activeApp.verifiedDocs?.nocLetter === "needs_review" && (
-            <div className="bg-red-500/20 border border-red-400/40 rounded-xl p-3.5 flex items-center justify-between text-xs text-red-100">
-              <div className="flex items-center gap-2.5">
-                <AlertTriangle className="text-red-400 shrink-0" size={18} />
-                <span>
-                  <strong>Action Required:</strong> Consular audit flagged NOC letter. Please re-upload an official stamped NOC from your employer.
-                </span>
-              </div>
-              <button
-                onClick={() => setDetailTab("documents")}
-                className="bg-red-500 hover:bg-red-600 text-white font-extrabold text-[11px] px-3 py-1.5 rounded-lg shadow-sm shrink-0 cursor-pointer"
-              >
-                Upload Now &rarr;
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* REJECTION REASON BANNER */}
-      {activeApp && activeApp.status === "Rejected" && activeApp.reason && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
-          <div className="w-9 h-9 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
-            <AlertTriangle size={18} className="text-red-500" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[11px] font-extrabold uppercase text-red-500 tracking-wide mb-1">Application Rejected — Admin Decision</p>
-            <p className="text-xs text-red-800 font-medium leading-relaxed">{activeApp.reason}</p>
-            <p className="mt-2 text-[11px] text-red-400">Please contact support or submit a revised application addressing the above concern.</p>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* SECTION 4: SEARCH, MULTI-FILTER & SORT CONTROL BAR */}
+      {/* SECTION 3: SEARCH & FILTER CONTROLS */}
       {/* ============================================================ */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Search Bar */}
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-3 text-xs">
+          {/* Search Input */}
+          <div className="relative w-full lg:w-96">
+            <Search className="absolute left-3.5 top-3 text-slate-400" size={15} />
             <input
               type="text"
-              placeholder="Search App ID, Country, Passport..."
+              placeholder="Search App ID, Country, Passport, Traveler..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#4848F7] transition"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#4848F7]"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            )}
           </div>
 
-          {/* Filters & Export */}
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end text-xs">
-            {/* Status Filter */}
+          {/* Filter Dropdowns */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7] cursor-pointer"
             >
               <option value="all">All Statuses</option>
-              <option value="Submitted">Submitted</option>
-              <option value="under_review">Under Review</option>
               <option value="Approved">Approved</option>
+              <option value="review">Under Review</option>
+              <option value="Docs Pending">Docs Required</option>
               <option value="Rejected">Rejected</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value="Draft">Draft</option>
             </select>
 
-            {/* Visa Type Filter */}
             <select
               value={visaTypeFilter}
               onChange={(e) => setVisaTypeFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7] cursor-pointer"
             >
               <option value="all">All Visa Types</option>
               <option value="Tourist">Tourist Visa</option>
@@ -505,11 +499,10 @@ export default function ApplicantAllApplications({
               <option value="Transit">Transit Visa</option>
             </select>
 
-            {/* Country Filter */}
             <select
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7] cursor-pointer"
             >
               <option value="all">All Destinations</option>
               <option value="Canada">Canada</option>
@@ -518,33 +511,24 @@ export default function ApplicantAllApplications({
               <option value="USA">USA</option>
               <option value="Germany">Germany</option>
               <option value="France">France</option>
+              <option value="United Arab Emirates">UAE</option>
             </select>
 
-            {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:border-[#4848F7] cursor-pointer"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="oldest">Sort: Oldest First</option>
               <option value="status">Sort: By Status</option>
             </select>
-
-            {/* Export CSV Button */}
-            <button
-              onClick={() => alert("Exporting applications summary as CSV...")}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download size={14} />
-              <span className="hidden sm:inline">Export</span>
-            </button>
           </div>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 5: APPLICATIONS DATA TABLE */}
+      {/* SECTION 4: APPLICATIONS DATA TABLE */}
       {/* ============================================================ */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -605,7 +589,7 @@ export default function ApplicantAllApplications({
                       <td className="py-3.5 px-4 text-slate-600">{a.visaType}</td>
 
                       <td className="py-3.5 px-4 text-slate-600 font-medium">
-                        {a.submissionDate || "18 Jul 2026"}
+                        {a.submissionDate || "18 Aug 2026"}
                       </td>
 
                       <td className="py-3.5 px-4">{getStatusBadge(a.status)}</td>
@@ -620,7 +604,7 @@ export default function ApplicantAllApplications({
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setSelectedAppId(a.id)}
-                            className="bg-slate-100 hover:bg-[#EEF2FF] hover:text-[#4848F7] text-slate-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px]"
+                            className="bg-slate-100 hover:bg-[#EEF2FF] hover:text-[#4848F7] text-slate-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px] cursor-pointer"
                           >
                             Details
                           </button>
@@ -628,7 +612,7 @@ export default function ApplicantAllApplications({
                           {a.status === "Approved" && (
                             <button
                               onClick={() => alert(`Downloading E-Visa PDF for ${a.id}...`)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg transition text-[11px] flex items-center gap-1"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg transition text-[11px] flex items-center gap-1 cursor-pointer"
                             >
                               <Download size={12} /> E-Visa
                             </button>
@@ -645,7 +629,7 @@ export default function ApplicantAllApplications({
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 6: SELECTED APPLICATION DEEP-DIVE INSPECTOR */}
+      {/* SECTION 5: SELECTED APPLICATION DEEP-DIVE INSPECTOR */}
       {/* ============================================================ */}
       {activeApp && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-md space-y-6">
@@ -694,9 +678,9 @@ export default function ApplicantAllApplications({
             </div>
           </div>
 
-          {/* Feedback Alert for Upload simulation */}
+          {/* Feedback Alert for Upload */}
           {docUploadSuccess && (
-            <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
               <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
               <span>{docUploadSuccess}</span>
             </div>
@@ -705,8 +689,6 @@ export default function ApplicantAllApplications({
           {/* SUBTAB 1: OVERVIEW & PERSONAL/TRAVEL DETAILS */}
           {detailTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Left Column: Personal & Passport Info */}
               <div className="lg:col-span-6 bg-[#F8FAFC] border border-slate-200 rounded-xl p-5 space-y-4">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                   <User size={15} className="text-[#4848F7]" />
@@ -721,7 +703,7 @@ export default function ApplicantAllApplications({
 
                   <div>
                     <span className="text-slate-500 font-medium block">Passport Number</span>
-                    <span className="font-bold text-slate-900 font-mono">{activeApp.passportNumber}</span>
+                    <span className="font-bold text-slate-900 font-mono">{activeApp.passportNumber || "N/A"}</span>
                   </div>
 
                   <div>
@@ -735,18 +717,17 @@ export default function ApplicantAllApplications({
                   </div>
 
                   <div>
-                    <span className="text-slate-500 font-medium block">Nationality / Gender</span>
-                    <span className="font-semibold text-slate-800">{activeApp.nationality} (Female)</span>
+                    <span className="text-slate-500 font-medium block">Nationality</span>
+                    <span className="font-semibold text-slate-800">{activeApp.nationality || "Indian"}</span>
                   </div>
 
                   <div>
-                    <span className="text-slate-500 font-medium block">Employment Status</span>
-                    <span className="font-semibold text-slate-800">Salaried Professional</span>
+                    <span className="text-slate-500 font-medium block">Submission Date</span>
+                    <span className="font-semibold text-slate-800">{activeApp.submissionDate || "18 Aug 2026"}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Travel & Stay Details */}
               <div className="lg:col-span-6 bg-[#F8FAFC] border border-slate-200 rounded-xl p-5 space-y-4">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                   <Plane size={15} className="text-[#4848F7]" />
@@ -761,12 +742,12 @@ export default function ApplicantAllApplications({
 
                   <div>
                     <span className="text-slate-500 font-medium block">Visa Sub-category</span>
-                    <span className="font-bold text-slate-900">{activeApp.visaType} (Multiple Entry)</span>
+                    <span className="font-bold text-slate-900">{activeApp.visaType}</span>
                   </div>
 
                   <div>
                     <span className="text-slate-500 font-medium block">Intended Travel Dates</span>
-                    <span className="font-semibold text-slate-800">{activeApp.travelDates}</span>
+                    <span className="font-semibold text-slate-800">{activeApp.travelDates || "Flexible / TBA"}</span>
                   </div>
 
                   <div>
@@ -777,8 +758,8 @@ export default function ApplicantAllApplications({
                   </div>
 
                   <div>
-                    <span className="text-slate-500 font-medium block">Assigned Visa Agent</span>
-                    <span className="font-semibold text-slate-800">Sarah Jenkins (Senior Auditor)</span>
+                    <span className="text-slate-500 font-medium block">Current Status</span>
+                    <div>{getStatusBadge(activeApp.status)}</div>
                   </div>
 
                   <div>
@@ -798,153 +779,207 @@ export default function ApplicantAllApplications({
               </h4>
 
               <div className="relative pl-6 space-y-6 border-l-2 border-slate-200">
-                
-                {/* Event 1 */}
                 <div className="relative">
                   <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-bold text-slate-900">Application Form & Documents Submitted</span>
-                      <span className="text-[11px] text-slate-400">18 Jul 2026, 09:15 AM</span>
+                      <span className="text-[11px] text-slate-400">{activeApp.submissionDate}</span>
                     </div>
                     <p className="text-xs text-slate-600">
-                      Initial digital submission validated by AI MRZ Scanner. Application ID {activeApp.id} generated.
+                      Initial digital submission validated. Application ID {activeApp.id} generated.
                     </p>
                   </div>
                 </div>
 
-                {/* Event 2 */}
                 <div className="relative">
                   <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-bold text-slate-900">Document Verification Audit</span>
-                      <span className="text-[11px] text-slate-400">18 Jul 2026, 11:30 AM</span>
+                      <span className="text-[11px] text-slate-400">In Progress</span>
                     </div>
                     <p className="text-xs text-slate-600">
-                      Passport scan and photo passed automated resolution checks. NOC letter flagged for stamp clarity.
+                      Passport scan, photo, and financial records uploaded to ImageKit secure storage.
                     </p>
                   </div>
                 </div>
 
-                {/* Event 3 */}
                 <div className="relative">
                   <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-amber-500 ring-4 ring-amber-100 animate-pulse" />
                   <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-1">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-amber-900">Dispatched to Consular Division</span>
-                      <span className="text-[11px] text-amber-700">19 Jul 2026, 02:00 PM</span>
+                      <span className="font-bold text-amber-900">Consular Pipeline Status</span>
+                      <span className="text-[11px] text-amber-700">{activeApp.status}</span>
                     </div>
                     <p className="text-xs text-amber-800">
                       Files transmitted securely to embassy processing pipeline. Under active evaluation by visa officer.
                     </p>
                   </div>
                 </div>
-
-                {/* Event 4 */}
-                <div className="relative">
-                  <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-slate-300" />
-                  <div className="p-4 rounded-xl border border-slate-200 space-y-1 opacity-60">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-700">Consular Decision & E-Visa Grant</span>
-                      <span className="text-[11px] text-slate-400">Pending</span>
-                    </div>
-                    <p className="text-xs text-slate-500">Decision expected within 5-7 business days.</p>
-                  </div>
-                </div>
-
               </div>
             </div>
           )}
 
-          {/* SUBTAB 3: DOCUMENT CHECKLIST & RE-UPLOAD HUB */}
+          {/* SUBTAB 3: REAL DOCUMENTS FROM IMAGEKIT */}
           {detailTab === "documents" && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                  Required Documents & Verification Status
-                </h4>
-                <span className="text-xs text-slate-500">Mandatory 300 DPI Clear Scans</span>
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <FileCheck size={16} className="text-[#4848F7]" />
+                    <span>Uploaded Documents & Verification Hub ({activeDocs.length})</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Real-time document scans stored securely on ImageKit CDN with consular OCR validation.
+                  </p>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">ImageKit Asset Pipeline Active</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Doc 1: Passport */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="text-[#4848F7]" size={20} />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Passport Bio Page</p>
-                      <p className="text-[11px] text-slate-500">Verified by AI OCR ✓</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeDocs.map((doc: any, idx: number) => {
+                  const docId = String(doc._id || doc.requirementId || `doc-${idx + 1}`);
+                  const isImage = doc.fileUrl && (doc.fileUrl.endsWith(".jpg") || doc.fileUrl.endsWith(".jpeg") || doc.fileUrl.endsWith(".png") || doc.fileUrl.endsWith(".webp") || doc.fileUrl.includes("images") || doc.fileUrl.includes("download"));
+                  const isPdf = doc.fileUrl && doc.fileUrl.endsWith(".pdf");
+                  const isUploading = uploadingDocId === docId;
+                  const isActionRequired = doc.status === "needs_review" || doc.status === "rejected";
+
+                  return (
+                    <div
+                      key={docId}
+                      className={`border rounded-2xl p-4 transition-all duration-150 flex flex-col justify-between space-y-3 ${
+                        isActionRequired
+                          ? "bg-red-50/40 border-red-200 shadow-2xs"
+                          : doc.status === "verified"
+                          ? "bg-slate-50/70 border-slate-200 hover:border-indigo-200"
+                          : "bg-amber-50/20 border-amber-200"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Thumbnail / Document Type Icon */}
+                        {isImage && doc.fileUrl ? (
+                          <div
+                            onClick={() => setPreviewDoc(doc)}
+                            className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 cursor-pointer group relative shadow-2xs"
+                            title="Click to preview full resolution scan"
+                          >
+                            <img
+                              src={doc.fileUrl}
+                              alt={doc.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition duration-200"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
+                              <Eye size={16} />
+                            </div>
+                          </div>
+                        ) : isPdf ? (
+                          <div
+                            onClick={() => setPreviewDoc(doc)}
+                            className="w-14 h-14 rounded-xl bg-red-100 text-red-600 flex flex-col items-center justify-center shrink-0 border border-red-200 cursor-pointer shadow-2xs"
+                            title="Click to view PDF document"
+                          >
+                            <FileText size={22} />
+                            <span className="text-[9px] font-black uppercase tracking-tighter">PDF</span>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setPreviewDoc(doc)}
+                            className="w-14 h-14 rounded-xl bg-indigo-50 text-[#4848F7] flex flex-col items-center justify-center shrink-0 border border-indigo-200 cursor-pointer shadow-2xs"
+                          >
+                            <FileCheck size={22} />
+                            <span className="text-[9px] font-black uppercase tracking-tighter">DOC</span>
+                          </div>
+                        )}
+
+                        {/* Title & Metadata */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <h5 className="text-xs font-bold text-slate-900 truncate" title={doc.title}>
+                              {doc.title}
+                            </h5>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 truncate">
+                            {doc.fileName || doc.documentType || "Uploaded Scan"}
+                          </p>
+
+                          {/* ImageKit Link Badge */}
+                          {doc.fileUrl && (
+                            <div className="flex items-center gap-1.5 pt-0.5">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#4848F7] font-mono text-[9px] font-bold border border-blue-100 truncate max-w-[190px]">
+                                <ImageIcon size={9} /> ImageKit CDN Asset
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Status Pill */}
+                          <div className="pt-1">
+                            {doc.status === "verified" ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                <CheckCircle2 size={11} /> Verified by Consular Specialist
+                              </span>
+                            ) : isActionRequired ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-red-700 bg-red-100/80 px-2 py-0.5 rounded-full border border-red-300">
+                                <AlertTriangle size={11} /> {doc.rejectionReason || "Action Required &bull; Re-upload Scan"}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                <Clock size={11} /> Under Verification Audit
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons Row */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          {doc.fileUrl && (
+                            <>
+                              <button
+                                onClick={() => setPreviewDoc(doc)}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                                title="View Document Preview"
+                              >
+                                <Eye size={12} /> View
+                              </button>
+                              <a
+                                href={doc.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 hover:bg-slate-200 text-slate-500 rounded-md transition cursor-pointer"
+                                title="Open full ImageKit asset in new tab"
+                              >
+                                <ExternalLink size={13} />
+                              </a>
+                            </>
+                          )}
+                        </div>
+
+                        <button
+                          disabled={isUploading}
+                          onClick={() => handleTriggerReplace(docId, doc.title)}
+                          className={`font-bold text-[11px] px-3 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                            isActionRequired
+                              ? "bg-red-600 hover:bg-red-700 text-white shadow-xs"
+                              : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {isUploading ? (
+                            <>
+                              <RefreshCw size={11} className="animate-spin" /> Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={11} /> {isActionRequired ? "Re-Upload File" : "Replace File"}
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-
-                  <button
-                    disabled={uploadingDoc === "passport"}
-                    onClick={() => handleSimulateDocUpload("passport")}
-                    className="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition cursor-pointer"
-                  >
-                    {uploadingDoc === "passport" ? "Uploading..." : "Replace File"}
-                  </button>
-                </div>
-
-                {/* Doc 2: Photo */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="text-[#4848F7]" size={20} />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Photograph (35x45mm)</p>
-                      <p className="text-[11px] text-slate-500">White Background Verified ✓</p>
-                    </div>
-                  </div>
-
-                  <button
-                    disabled={uploadingDoc === "photo"}
-                    onClick={() => handleSimulateDocUpload("photo")}
-                    className="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition cursor-pointer"
-                  >
-                    {uploadingDoc === "photo" ? "Uploading..." : "Replace File"}
-                  </button>
-                </div>
-
-                {/* Doc 3: NOC Letter */}
-                <div className="bg-red-50/50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="text-red-500" size={20} />
-                    <div>
-                      <p className="text-xs font-bold text-red-900">Employment NOC Letter</p>
-                      <p className="text-[11px] text-red-600 font-semibold">Consular Stamp Unclear &bull; Action Required</p>
-                    </div>
-                  </div>
-
-                  <button
-                    disabled={uploadingDoc === "nocLetter"}
-                    onClick={() => handleSimulateDocUpload("nocLetter")}
-                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    <Upload size={12} />
-                    {uploadingDoc === "nocLetter" ? "Uploading..." : "Re-Upload NOC"}
-                  </button>
-                </div>
-
-                {/* Doc 4: Sponsor / Bank Statement */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="text-[#4848F7]" size={20} />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Bank Statement (6 Months)</p>
-                      <p className="text-[11px] text-amber-600 font-medium">Under Verification Audit</p>
-                    </div>
-                  </div>
-
-                  <button
-                    disabled={uploadingDoc === "sponsorLetter"}
-                    onClick={() => handleSimulateDocUpload("sponsorLetter")}
-                    className="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition cursor-pointer"
-                  >
-                    {uploadingDoc === "sponsorLetter" ? "Uploading..." : "Update File"}
-                  </button>
-                </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1095,7 +1130,116 @@ export default function ApplicantAllApplications({
       )}
 
       {/* ============================================================ */}
-      {/* SECTION 7: CONSULAR FAQS & SUPPORT ACCORDION */}
+      {/* DOCUMENT PREVIEW LIGHTBOX MODAL */}
+      {/* ============================================================ */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#4848F7] flex items-center justify-center text-white font-bold">
+                  <FileCheck size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>{previewDoc.title}</span>
+                    {previewDoc.status === "verified" ? (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                        Verified ✓
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/40">
+                        Under Audit
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    {previewDoc.fileName || previewDoc.documentType || "ImageKit Asset"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal URL Bar */}
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-600 truncate flex-1">
+                <span className="font-bold text-slate-400">CDN:</span>
+                <span className="truncate">{previewDoc.fileUrl}</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewDoc.fileUrl);
+                    setDocUploadSuccess("ImageKit URL copied to clipboard!");
+                    setTimeout(() => setDocUploadSuccess(null), 3000);
+                  }}
+                  className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-700 rounded-md border border-slate-200 font-bold text-[10px] transition flex items-center gap-1 cursor-pointer"
+                  title="Copy ImageKit URL"
+                >
+                  <Copy size={11} /> Copy URL
+                </button>
+                <a
+                  href={previewDoc.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-700 rounded-md border border-slate-200 font-bold text-[10px] transition flex items-center gap-1 cursor-pointer"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={11} /> Open Direct
+                </a>
+              </div>
+            </div>
+
+            {/* Modal Body Preview Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-100/60 min-h-[300px]">
+              {previewDoc.fileUrl.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={previewDoc.fileUrl}
+                  title={previewDoc.title}
+                  className="w-full h-[450px] rounded-2xl border border-slate-200 bg-white"
+                />
+              ) : (
+                <div className="max-w-full max-h-[500px] rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white p-2 flex items-center justify-center">
+                  <img
+                    src={previewDoc.fileUrl}
+                    alt={previewDoc.title}
+                    className="max-w-full max-h-[480px] object-contain rounded-xl"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-white p-4 border-t border-slate-200 flex items-center justify-between text-xs">
+              <a
+                href={previewDoc.fileUrl}
+                download
+                className="px-4 py-2 bg-[#4848F7] hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Download size={14} /> Download File
+              </a>
+
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* SECTION 6: CONSULAR FAQS & SUPPORT ACCORDION */}
       {/* ============================================================ */}
       <div className="bg-[#F8FAFC] border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">

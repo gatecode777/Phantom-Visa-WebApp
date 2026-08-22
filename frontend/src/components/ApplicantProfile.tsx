@@ -159,10 +159,25 @@ export default function ApplicantProfile({
   const [passwordSuccess, setPasswordSuccess] = useState<boolean>(false);
 
   // ── Fetch Profile from MongoDB on mount ──────────────────────────────────
+  const getToken = useCallback(() => {
+    // AuthSession stores the token as .token (not .accessToken)
+    if (userSession?.token) return userSession.token;
+    if ((userSession as any)?.accessToken) return (userSession as any).accessToken;
+    // Fallback: read from persisted session in localStorage
+    try {
+      const saved = localStorage.getItem("phantom_auth_session");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.token || parsed.accessToken || "";
+      }
+    } catch {}
+    return "";
+  }, [userSession]);
+
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchProfileApi(userSession?.accessToken);
+      const data = await fetchProfileApi(getToken());
       if (data) {
         setProfile(data);
         if (data.personalInfo) setPersonalForm(data.personalInfo);
@@ -175,7 +190,7 @@ export default function ApplicantProfile({
     } finally {
       setLoading(false);
     }
-  }, [userSession?.accessToken]);
+  }, [getToken]);
 
   useEffect(() => {
     loadProfile();
@@ -198,7 +213,7 @@ export default function ApplicantProfile({
       preferences
     };
 
-    const res = await updateProfileApi(payload, userSession?.accessToken);
+    const res = await updateProfileApi(payload, getToken());
     setSaving(false);
 
     if (res.success) {
@@ -218,7 +233,7 @@ export default function ApplicantProfile({
 
     await updateProfileApi(
       { applicantId: profile?.applicantId, preferences: updated },
-      userSession?.accessToken
+      getToken()
     );
   };
 
@@ -236,7 +251,7 @@ export default function ApplicantProfile({
         dob: newTravelerForm.dob || "2000-01-01"
       },
       profile?.applicantId,
-      userSession?.accessToken
+      getToken()
     );
     setAddingTraveler(false);
 
@@ -251,7 +266,7 @@ export default function ApplicantProfile({
 
   // ── Remove Co-Traveler from MongoDB ──────────────────────────────────────
   const handleRemoveTraveler = async (id: string) => {
-    const res = await removeCoTravelerApi(id, profile?.applicantId, userSession?.accessToken);
+    const res = await removeCoTravelerApi(id, profile?.applicantId, getToken());
     if (res.success && res.data) {
       setCoTravelers(res.data);
     } else {
@@ -277,7 +292,7 @@ export default function ApplicantProfile({
     const res = await changePasswordApi(
       passwordForm.currentPassword,
       passwordForm.newPassword,
-      userSession?.accessToken
+      getToken()
     );
     setPasswordLoading(false);
 

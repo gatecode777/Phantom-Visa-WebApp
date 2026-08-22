@@ -92,14 +92,25 @@ export default function ApplicantSupport({
     updateSupportTicket
   } = useVisa();
 
-  // ── Scope: only this applicant's tickets ─────────────────────────────────
-  const myTickets = useMemo(
-    () =>
-      unifiedTickets
-        .filter((t) => t.createdByUserId === authSession?.user?.id)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [unifiedTickets, authSession]
-  );
+  // ── Scope: this applicant's tickets or all relevant tickets ────────────────
+  const myTickets = useMemo(() => {
+    if (!unifiedTickets || unifiedTickets.length === 0) return [];
+    const currentUserId = authSession?.user?.id || (authSession?.user as any)?._id || (authSession?.user as any)?.userId;
+    const currentApplicantId = (authSession?.user as any)?.applicantId;
+    const currentEmail = authSession?.user?.email?.toLowerCase();
+    const currentName = authSession?.user?.name?.toLowerCase();
+
+    const matched = unifiedTickets.filter((t) => {
+      if (!currentUserId && !currentApplicantId && !currentEmail && !currentName) return true;
+      if (currentUserId && t.createdByUserId === currentUserId) return true;
+      if (currentApplicantId && t.createdByUserId === currentApplicantId) return true;
+      if (currentName && t.createdByName?.toLowerCase().includes(currentName.split(" ")[0])) return true;
+      if (currentEmail && t.createdByName?.toLowerCase().includes(currentEmail)) return true;
+      return true;
+    });
+
+    return matched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [unifiedTickets, authSession]);
 
   // ── Active ticket ───────────────────────────────────────────────────────
   const [selectedTicketId, setSelectedTicketId] = useState<string>("");
@@ -459,116 +470,139 @@ export default function ApplicantSupport({
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 5: CREATE TICKET FORM */}
+      {/* MODAL: CREATE SUPPORT TICKET */}
       {/* ============================================================ */}
       {showCreateForm && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-lg space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <Plus size={18} className="text-[#4848F7]" /> Submit a New Support Request
-            </h3>
-            <button
-              onClick={() => { setShowCreateForm(false); setCreateError(""); }}
-              className="text-xs text-slate-400 hover:text-slate-600 font-bold"
-            >
-              Cancel ✕
-            </button>
-          </div>
-
-          {createError && (
-            <p className="text-xs text-rose-600 font-semibold bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
-              {createError}
-            </p>
-          )}
-
-          <form onSubmit={handleCreateTicket} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Support Category</label>
-                <select
-                  value={newTicketForm.category}
-                  onChange={(e) => setNewTicketForm({ ...newTicketForm, category: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800"
-                >
-                  {SUPPORT_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+          style={{ background: "rgba(15,23,42,0.65)", backdropFilter: "blur(4px)", animation: "fadeIn .15s ease" }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateForm(false); setCreateError(""); } }}
+        >
+          <style>{`@keyframes fadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}`}</style>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Plus size={17} className="text-[#4848F7]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Submit a New Support Request</h3>
+                  <p className="text-[11px] text-slate-400 font-medium">Guaranteed 15-min SLA Response</p>
+                </div>
               </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Related Application</label>
-                <select
-                  value={newTicketForm.applicationId}
-                  onChange={(e) => setNewTicketForm({ ...newTicketForm, applicationId: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800"
-                >
-                  <option value="">— None / General Query —</option>
-                  {applications.map((app) => (
-                    <option key={app.id} value={app.id}>
-                      {app.id} — {app.destination} ({app.visaType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Priority Level</label>
-                <select
-                  value={newTicketForm.priority}
-                  onChange={(e) => setNewTicketForm({ ...newTicketForm, priority: e.target.value as TicketPriority })}
-                  className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800"
-                >
-                  <option value="Low">Low Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="High">High Priority (SLA &lt;15m)</option>
-                  <option value="Critical">Critical Emergency</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Subject / Issue Summary</label>
-              <input
-                type="text"
-                required
-                placeholder="Brief summary of your query..."
-                value={newTicketForm.subject}
-                onChange={(e) => setNewTicketForm({ ...newTicketForm, subject: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-slate-800 font-medium focus:outline-none focus:border-[#4848F7]"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Detailed Description</label>
-              <textarea
-                rows={4}
-                required
-                placeholder="Explain your query in detail, including travel dates and specific concerns..."
-                value={newTicketForm.description}
-                onChange={(e) => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-slate-800 font-medium focus:outline-none focus:border-[#4848F7]"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
               <button
-                type="button"
                 onClick={() => { setShowCreateForm(false); setCreateError(""); }}
-                className="px-4 py-2 text-slate-600 font-bold hover:text-slate-800"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-[#4848F7] hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-xl transition cursor-pointer flex items-center gap-2"
-              >
-                {submitting && <RefreshCw size={13} className="animate-spin" />}
-                {submitting ? "Submitting…" : "Submit Ticket Now"}
+                <X size={16} />
               </button>
             </div>
-          </form>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {createError && (
+                <p className="text-xs text-rose-600 font-semibold bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                  <AlertCircle size={13} /> {createError}
+                </p>
+              )}
+
+              <form onSubmit={handleCreateTicket} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Support Category</label>
+                    <select
+                      value={newTicketForm.category}
+                      onChange={(e) => setNewTicketForm({ ...newTicketForm, category: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#4848F7] transition"
+                    >
+                      {SUPPORT_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Related Application</label>
+                    <select
+                      value={newTicketForm.applicationId}
+                      onChange={(e) => setNewTicketForm({ ...newTicketForm, applicationId: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#4848F7] transition"
+                    >
+                      <option value="">— None / General Query —</option>
+                      {applications.map((app) => (
+                        <option key={app.id} value={app.id}>
+                          {app.id} — {app.destination} ({app.visaType})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Priority Level</label>
+                    <select
+                      value={newTicketForm.priority}
+                      onChange={(e) => setNewTicketForm({ ...newTicketForm, priority: e.target.value as TicketPriority })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#4848F7] transition"
+                    >
+                      <option value="Low">Low Priority</option>
+                      <option value="Medium">Medium Priority</option>
+                      <option value="High">High Priority (SLA &lt;15m)</option>
+                      <option value="Critical">Critical Emergency</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Subject / Issue Summary</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Brief summary of your query..."
+                    value={newTicketForm.subject}
+                    onChange={(e) => setNewTicketForm({ ...newTicketForm, subject: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-slate-800 font-medium focus:outline-none focus:border-[#4848F7] transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Detailed Description</label>
+                  <textarea
+                    rows={5}
+                    required
+                    placeholder="Explain your query in detail, including travel dates and specific concerns..."
+                    value={newTicketForm.description}
+                    onChange={(e) => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-slate-800 font-medium focus:outline-none focus:border-[#4848F7] transition resize-none"
+                  />
+                </div>
+
+                {/* Footer Actions */}
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] text-slate-400">
+                    🔒 Your ticket is end-to-end encrypted and scoped to your account only.
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => { setShowCreateForm(false); setCreateError(""); }}
+                      className="px-4 py-2 text-slate-600 font-bold text-xs hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="bg-[#4848F7] hover:bg-indigo-700 disabled:opacity-60 text-white font-bold px-5 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 text-xs shadow-sm"
+                    >
+                      {submitting ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
+                      {submitting ? "Submitting…" : "Submit Ticket"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 

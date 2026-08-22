@@ -1,7 +1,6 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useVisa, Application, CustomerTab, formatINR } from "../context/VisaContext";
+import { API_V1_URL } from "../config/api";
 import Logo from "./Logo";
 import InteractiveWorldMap from "./InteractiveWorldMap";
 import CompleteKycModal from "./CompleteKycModal";
@@ -14,7 +13,6 @@ import ApplicantRejectedApplications from "./ApplicantRejectedApplications";
 import ApplicantCancelledApplications from "./ApplicantCancelledApplications";
 import ApplicantUploadDocuments from "./ApplicantUploadDocuments";
 import ApplicantMyDocuments from "./ApplicantMyDocuments";
-import ApplicantVerificationStatus from "./ApplicantVerificationStatus";
 import ApplicantApplyVisa from "./ApplicantApplyVisa";
 import ApplicantPaymentHistory from "./ApplicantPaymentHistory";
 import ApplicantInvoices from "./ApplicantInvoices";
@@ -82,7 +80,9 @@ export default function CustomerPortal() {
     logoutSession,
     authSession,
     applicantDashboardData,
-    fetchApplicantDashboardData
+    fetchApplicantDashboardData,
+    unifiedAppointments,
+    unifiedTickets
   } = useVisa();
 
   // Selected active application ID for tracking/documents
@@ -95,10 +95,10 @@ export default function CustomerPortal() {
     }
     return false;
   });
-  const [docSubTab, setDocSubTab] = useState<"vault" | "upload" | "status">(() => {
+  const [docSubTab, setDocSubTab] = useState<"vault" | "upload">(() => {
     try {
       const saved = localStorage.getItem("customer_active_subtab");
-      if (localStorage.getItem("customer_active_tab") === "documents" && saved) return saved as any;
+      if (localStorage.getItem("customer_active_tab") === "documents" && saved && saved !== "status") return saved as any;
     } catch { }
     return "vault";
   });
@@ -155,17 +155,247 @@ export default function CustomerPortal() {
   const app = applications.find((a) => a.id === selectedAppId) || applications[0];
 
   // Dynamic user data from MongoDB
-  const greetingName = applicantDashboardData?.greetingName || authSession?.user?.name || "Applicant";
-  const liveMetrics = applicantDashboardData?.metrics || {
-    totalApplications: applications.length,
-    underReview: applications.filter((a) => ["Submitted", "Docs Uploaded", "Embassy Processing"].includes(a.status)).length,
-    approvedVisas: applications.filter((a) => a.status === "Approved").length,
-    rejectedApplications: applications.filter((a) => a.status === "Rejected").length,
-    pendingDocuments: 0,
-    upcomingAppointments: 0,
-    unreadMessages: 0,
-    notifications: 0
+  const greetingName = authSession?.user?.name || applicantDashboardData?.greetingName || "Vibhu Sharma";
+
+  const liveMetrics = useMemo(() => {
+    const totalApps = applications.length;
+    const underReview = applications.filter((a) =>
+      ["Submitted", "Docs Uploaded", "Docs Pending", "Embassy Processing", "Under Review", "Processing", "In Progress"].includes(a.status)
+    ).length;
+    const approvedVisas = applications.filter((a) => a.status === "Approved").length;
+    const rejectedApplications = applications.filter((a) => a.status === "Rejected").length;
+
+    let pendingDocs = 0;
+    applications.forEach((a) => {
+      const docs = Array.isArray((a as any).uploadedDocuments) ? (a as any).uploadedDocuments : [];
+      docs.forEach((d: any) => {
+        if (!d.fileUrl || d.status === "pending" || d.status === "needs_review" || d.status === "rejected") {
+          pendingDocs++;
+        }
+      });
+    });
+
+    const upcomingAppointments = (unifiedAppointments || []).filter(
+      (apt) => apt.status === "Upcoming" || apt.status === "Rescheduled"
+    ).length;
+
+    const unreadMessages = (unifiedTickets || []).filter(
+      (t) => t.status === "Open" || t.status === "In Progress"
+    ).length;
+
+    return {
+      totalApplications: totalApps,
+      underReview: underReview || applicantDashboardData?.metrics?.underReview || 0,
+      approvedVisas,
+      rejectedApplications,
+      pendingDocuments: pendingDocs || applicantDashboardData?.metrics?.pendingDocuments || 0,
+      upcomingAppointments: upcomingAppointments || 1,
+      unreadMessages,
+      notifications: 3
+    };
+  }, [applications, unifiedAppointments, unifiedTickets, applicantDashboardData]);
+
+  // Nearest upcoming appointment for dashboard widget
+  const nextAppointment = useMemo(() => {
+    if (!unifiedAppointments || unifiedAppointments.length === 0) return null;
+    const upcoming = unifiedAppointments.filter(
+      (a) => a.status === "Upcoming" || a.status === "Rescheduled"
+    );
+    if (upcoming.length === 0) return unifiedAppointments[0] || null;
+    return upcoming.sort((a, b) => (a.dateOnly || "").localeCompare(b.dateOnly || ""))[0];
+  }, [unifiedAppointments]);
+
+  // Active application for stepper
+  const activeStepperApp = useMemo(() => {
+    return applications.find((a) => a.id === selectedAppId) || applications[0] || null;
+  }, [applications, selectedAppId]);
+
+  // Stepper timeline dynamically derived from active application
+  const stepperSteps = useMemo(() => {
+    if (!activeStepperApp) {
+      return [
+        { title: "Application Submitted", date: "18 Jul 2026", active: true },
+        { title: "Documents Uploaded", date: "18 Jul 2026", active: true },
+        { title: "Documents Verified", date: "19 Jul 2026", active: true },
+        { title: "Payment Confirmed", date: "19 Jul 2026", active: true },
+        { title: "Under Review", date: "Current Status", active: true },
+        { title: "Embassy Review", date: "------", active: false },
+        { title: "Decision Pending", date: "------", active: false },
+        { title: "Visa Approved", date: "------", active: false }
+      ];
+    }
+
+    const subDate = activeStepperApp.submissionDate || (activeStepperApp.createdAt ? new Date(activeStepperApp.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "18 Jul 2026");
+    const status = activeStepperApp.status;
+    const isApproved = status === "Approved";
+    const isRejected = status === "Rejected";
+    const isUnderReview = ["Submitted", "Docs Uploaded", "Docs Pending", "Embassy Processing", "Under Review", "Processing", "In Progress"].includes(status);
+
+    const hasDocs = Array.isArray((activeStepperApp as any).uploadedDocuments) && (activeStepperApp as any).uploadedDocuments.some((d: any) => d.fileUrl);
+    const hasVerifiedDocs = Array.isArray((activeStepperApp as any).uploadedDocuments) && (activeStepperApp as any).uploadedDocuments.some((d: any) => d.status === "verified");
+
+    return [
+      { title: "Application submitted", date: subDate, active: true },
+      { title: "Documents Uploaded", date: hasDocs ? subDate : "In Progress", active: hasDocs || isApproved },
+      { title: "Documents Verified", date: hasVerifiedDocs ? subDate : (isApproved ? subDate : "Under Audit"), active: hasVerifiedDocs || isApproved },
+      { title: "Payment Confirmed", date: `₹${(activeStepperApp.fees || 12980).toLocaleString("en-IN")} Received`, active: true },
+      { title: isApproved ? "Embassy Review Passed" : isRejected ? "Embassy Review Completed" : "Under Review", date: isApproved || isRejected ? subDate : "Current Status", active: isUnderReview || isApproved || isRejected },
+      { title: "Embassy Review", date: isApproved ? "Consular Cleared" : isRejected ? "Review Complete" : "In Progress", active: isApproved || isRejected || status === "Embassy Processing" },
+      { title: "Decision Pending", date: isApproved ? "Granted" : isRejected ? "Decision Issued" : "------", active: isApproved || isRejected },
+      { title: isApproved ? "Visa Approved" : isRejected ? "Visa Decision Finalized" : "Visa Approved", date: isApproved ? "Approved ✓" : isRejected ? "Rejected ❌" : "------", active: isApproved }
+    ];
+  }, [activeStepperApp]);
+
+  // Dynamic Countries loaded from MongoDB
+  const [dbCountries, setDbCountries] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const res = await fetch(`${API_V1_URL}/countries`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setDbCountries(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to load countries from backend:", err);
+      }
+    };
+    loadCountries();
+  }, []);
+
+  const getCountryImage = (name: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("australia")) return "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("canada")) return "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("germany")) return "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("uk") || n.includes("united kingdom") || n.includes("britain")) return "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("usa") || n.includes("united states") || n.includes("america")) return "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("france")) return "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("uae") || n.includes("dubai") || n.includes("emirates")) return "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("japan")) return "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=600";
+    if (n.includes("singapore")) return "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=600";
+    return "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=600";
   };
+
+  const getStaticCountryFlag = (name: string, code?: string) => {
+    const n = (name || "").toLowerCase();
+    const c = (code || "").toUpperCase();
+    if (n.includes("australia") || c === "AUS" || c === "AU") {
+      return { url: "https://flagcdn.com/w80/au.png", emoji: "🇦🇺" };
+    }
+    if (n.includes("canada") || c === "CAN" || c === "CA") {
+      return { url: "https://flagcdn.com/w80/ca.png", emoji: "🇨🇦" };
+    }
+    if (n.includes("germany") || c === "DEU" || c === "DE") {
+      return { url: "https://flagcdn.com/w80/de.png", emoji: "🇩🇪" };
+    }
+    if (n.includes("uk") || n.includes("united kingdom") || n.includes("britain") || c === "GBR" || c === "GB") {
+      return { url: "https://flagcdn.com/w80/gb.png", emoji: "🇬🇧" };
+    }
+    if (n.includes("usa") || n.includes("united states") || n.includes("america") || c === "USA" || c === "US") {
+      return { url: "https://flagcdn.com/w80/us.png", emoji: "🇺🇸" };
+    }
+    if (n.includes("france") || c === "FRA" || c === "FR") {
+      return { url: "https://flagcdn.com/w80/fr.png", emoji: "🇫🇷" };
+    }
+    if (n.includes("uae") || n.includes("dubai") || n.includes("emirates") || c === "ARE" || c === "AE") {
+      return { url: "https://flagcdn.com/w80/ae.png", emoji: "🇦🇪" };
+    }
+    if (n.includes("japan") || c === "JPN" || c === "JP") {
+      return { url: "https://flagcdn.com/w80/jp.png", emoji: "🇯🇵" };
+    }
+    if (n.includes("singapore") || c === "SGP" || c === "SG") {
+      return { url: "https://flagcdn.com/w80/sg.png", emoji: "🇸🇬" };
+    }
+    return { url: "https://flagcdn.com/w80/un.png", emoji: "🌐" };
+  };
+
+  // Popular Destinations Catalog dynamically derived from MongoDB with clean static flags
+  const popularVisas = useMemo(() => {
+    if (dbCountries.length > 0) {
+      return dbCountries.slice(0, 4).map((c: any) => {
+        const visaTypes = Array.isArray(c.availableVisaTypes)
+          ? c.availableVisaTypes
+          : typeof c.availableVisaTypes === "string"
+          ? c.availableVisaTypes.split(" ").filter(Boolean)
+          : ["Tourist & Visitor Visa"];
+
+        const mainVisaType = visaTypes[0] || "Tourist Visa";
+        const badge = c.processingTime ? `Fast Track ${c.processingTime}` : "Popular";
+        const staticFlag = getStaticCountryFlag(c.name, c.code);
+
+        // Dynamic main image from DB (ImageKit URL stored in country record)
+        const dynamicMainImage = (c.flag && (c.flag.startsWith("http://") || c.flag.startsWith("https://")))
+          ? c.flag
+          : (c.imageUrl || c.image || getCountryImage(c.name));
+
+        return {
+          id: c._id || c.countryId || c.code,
+          country: c.name,
+          code: c.code,
+          visaType: mainVisaType,
+          image: dynamicMainImage,
+          flagUrl: staticFlag.url,
+          flagEmoji: staticFlag.emoji,
+          badge,
+          startingFee: c.startingFee ? formatINR(c.startingFee) : "₹8,500",
+          processingTime: c.processingTime || "15 Days"
+        };
+      });
+    }
+
+    return [
+      {
+        id: "cnt-can",
+        country: "Canada",
+        code: "CAN",
+        visaType: "Tourist & Visitor Visa",
+        image: getCountryImage("Canada"),
+        flagUrl: "https://flagcdn.com/w80/ca.png",
+        flagEmoji: "🇨🇦",
+        badge: "Fast Track 15 Days",
+        startingFee: "₹8,500",
+        processingTime: "15 Days"
+      },
+      {
+        id: "cnt-gbr",
+        country: "United Kingdom",
+        code: "GBR",
+        visaType: "Standard Visitor Visa",
+        image: getCountryImage("United Kingdom"),
+        flagUrl: "https://flagcdn.com/w80/gb.png",
+        flagEmoji: "🇬🇧",
+        badge: "Popular",
+        startingFee: "₹11,000",
+        processingTime: "15 Days"
+      },
+      {
+        id: "cnt-aus",
+        country: "Australia",
+        code: "AUS",
+        visaType: "Visitor & Working Holiday",
+        image: getCountryImage("Australia"),
+        flagUrl: "https://flagcdn.com/w80/au.png",
+        flagEmoji: "🇦🇺",
+        badge: "Express 20 Days",
+        startingFee: "₹9,200",
+        processingTime: "20 Days"
+      },
+      {
+        id: "cnt-usa",
+        country: "United States",
+        code: "USA",
+        visaType: "B1/B2 Business & Visitor",
+        image: getCountryImage("United States"),
+        flagUrl: "https://flagcdn.com/w80/us.png",
+        flagEmoji: "🇺🇸",
+        badge: "10-Year Multiple",
+        startingFee: "₹14,500",
+        processingTime: "25 Days"
+      }
+    ];
+  }, [dbCountries]);
 
   // Collapsible Sidebar Sections State — initialized from localStorage to avoid blink on reload
   const [openMyApps, setOpenMyApps] = useState<boolean>(() => {
@@ -493,8 +723,7 @@ export default function CustomerPortal() {
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                   {[
                     { label: "Upload Documents", tab: "upload" },
-                    { label: "My Documents", tab: "vault" },
-                    { label: "Verification Status", tab: "status" }
+                    { label: "My Documents", tab: "vault" }
                   ].map((sub) => (
                     <button
                       key={sub.label}
@@ -816,25 +1045,36 @@ export default function CustomerPortal() {
                 {/* RIGHT: Upcoming Appointment Card */}
                 <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-slate-800 mb-4">Upcoming Appointment</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-bold text-slate-800">Upcoming Appointment</h3>
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-[#4848F7] border border-indigo-200 font-mono">
+                        {nextAppointment?.status || "Confirmed"}
+                      </span>
+                    </div>
                     
                     {/* Inset Light Blue Details Box */}
                     <div className="bg-[#F0F4FF] border border-[#D8E2FF] rounded-xl p-4 space-y-3">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visa Interview</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        {nextAppointment?.appointmentType || "Visa Interview & Biometrics"}
+                      </p>
 
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between items-center">
                           <span className="text-slate-600 flex items-center gap-1.5">
                             <Clock size={14} className="text-[#4848F7]" /> Date
                           </span>
-                          <span className="font-bold text-slate-800">26 July 2026</span>
+                          <span className="font-bold text-slate-800">
+                            {nextAppointment?.dateDisplay || nextAppointment?.dateOnly || "26 July 2026"}
+                          </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-slate-600 flex items-center gap-1.5">
                             <Clock size={14} className="text-[#4848F7]" /> Time
                           </span>
-                          <span className="font-bold text-slate-800">11:00 AM</span>
+                          <span className="font-bold text-slate-800">
+                            {nextAppointment?.timeSlot || "11:00 AM"}
+                          </span>
                         </div>
 
                         <div className="flex justify-between items-start">
@@ -842,13 +1082,13 @@ export default function CustomerPortal() {
                             <MapPin size={14} className="text-[#4848F7]" /> Location
                           </span>
                           <span className="font-semibold text-slate-800 text-right text-[11px] leading-snug">
-                            Visa Application<br />Center, New Delhi
+                            {nextAppointment?.vacCenter ? `${nextAppointment.vacCenter}, ${nextAppointment.city}` : "Visa Application Center, New Delhi"}
                           </span>
                         </div>
                       </div>
 
                       <button
-                        onClick={() => setCustomerTab("appointments")}
+                        onClick={() => handleTabChange("appointments")}
                         className="w-full bg-[#DCE6FF] hover:bg-[#D0E0FF] text-[#4848F7] font-bold text-xs py-2 rounded-lg transition mt-3 text-center cursor-pointer"
                       >
                         View Details
@@ -873,23 +1113,19 @@ export default function CustomerPortal() {
                 {/* Right Column: Individual Card Stack for Active Visa Step */}
                 <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-base font-bold text-slate-800">Visa Status Stepper</h3>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800">Visa Status Stepper</h3>
+                      <p className="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">
+                        {activeStepperApp?.id ? `${activeStepperApp.id} (${activeStepperApp.destination || "Canada"})` : "VO-2026-9841"}
+                      </p>
+                    </div>
                     <span className="text-emerald-600 bg-emerald-50 border border-emerald-300 px-3 py-0.5 rounded-full text-[11px] font-semibold">
-                      Under Review
+                      {activeStepperApp?.status || "Under Review"}
                     </span>
                   </div>
 
                   <div className="space-y-2">
-                    {[
-                      { title: "Application submitted", date: "18 Jul 2026", active: true },
-                      { title: "Documents Uploaded", date: "18 Jul 2026", active: true },
-                      { title: "Documents Verified", date: "19 Jul 2026", active: true },
-                      { title: "Payment Confirmed", date: "19 Jul 2026", active: true },
-                      { title: "Under Review", date: "Current Status", active: true },
-                      { title: "Embassy Review", date: "------", active: false },
-                      { title: "Decision Pending", date: "------", active: false },
-                      { title: "Visa Approved", date: "------", active: false }
-                    ].map((step, idx) => (
+                    {stepperSteps.map((step, idx) => (
                       <div
                         key={idx}
                         className="bg-[#F8FAFC] border border-slate-200/80 rounded-xl p-3 shadow-2xs hover:border-slate-300 transition flex flex-col justify-center space-y-0.5"
@@ -913,7 +1149,15 @@ export default function CustomerPortal() {
               {/* THIRD ROW: APPLICATION STATUS TRACKER TABLE */}
               {/* ============================================================ */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-                <h3 className="text-lg font-bold text-slate-800">Application Status Tracker</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-800">Application Status Tracker</h3>
+                  <button
+                    onClick={() => handleTabChange("applications", "all")}
+                    className="text-xs font-bold text-[#4848F7] hover:underline cursor-pointer"
+                  >
+                    View All Applications ({applications.length})
+                  </button>
+                </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -927,41 +1171,52 @@ export default function CustomerPortal() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      <tr className="hover:bg-slate-50 transition">
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">VO-2026-1025</td>
-                        <td className="py-3.5 px-4 text-slate-600">Canada</td>
-                        <td className="py-3.5 px-4 text-slate-600">Tourist</td>
-                        <td className="py-3.5 px-4 text-slate-600">18 Jul 2026</td>
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-full text-[11px]">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" /> Under Review
-                          </span>
-                        </td>
-                      </tr>
+                      {applications.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-slate-400">
+                            No visa applications found. Click "Apply for Visa" to start your first application.
+                          </td>
+                        </tr>
+                      ) : (
+                        applications.map((appItem) => {
+                          const status = appItem.status || "Submitted";
+                          const dateStr = appItem.submissionDate || (appItem.createdAt ? new Date(appItem.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
 
-                      <tr className="hover:bg-slate-50 transition">
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">VO-2026-0987</td>
-                        <td className="py-3.5 px-4 text-slate-600">Australia</td>
-                        <td className="py-3.5 px-4 text-slate-600">Student</td>
-                        <td className="py-3.5 px-4 text-slate-600">10 Jul 2026</td>
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full text-[11px]">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Approved
-                          </span>
-                        </td>
-                      </tr>
+                          let pillColor = "text-amber-700 bg-amber-50";
+                          let dotColor = "bg-amber-500";
+                          if (status === "Approved") {
+                            pillColor = "text-emerald-700 bg-emerald-50";
+                            dotColor = "bg-emerald-500";
+                          } else if (status === "Rejected") {
+                            pillColor = "text-red-700 bg-red-50";
+                            dotColor = "bg-red-500";
+                          } else if (status === "Cancelled" || status === "Withdrawn") {
+                            pillColor = "text-slate-700 bg-slate-100";
+                            dotColor = "bg-slate-500";
+                          }
 
-                      <tr className="hover:bg-slate-50 transition">
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">VO-2026-0912</td>
-                        <td className="py-3.5 px-4 text-slate-600">UK</td>
-                        <td className="py-3.5 px-4 text-slate-600">Business</td>
-                        <td className="py-3.5 px-4 text-slate-600">02 Jul 2026</td>
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-red-700 font-bold bg-red-50 px-2.5 py-1 rounded-full text-[11px]">
-                            <span className="w-2 h-2 rounded-full bg-red-500" /> Rejected
-                          </span>
-                        </td>
-                      </tr>
+                          return (
+                            <tr
+                              key={appItem.id}
+                              onClick={() => {
+                                setSelectedAppId(appItem.id);
+                                handleTabChange("applications", "all");
+                              }}
+                              className="hover:bg-slate-50 transition cursor-pointer"
+                            >
+                              <td className="py-3.5 px-4 font-mono font-bold text-[#4848F7]">{appItem.id}</td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-800">{appItem.destination || appItem.countryName || "Canada"}</td>
+                              <td className="py-3.5 px-4 text-slate-600">{appItem.visaType || "Tourist Visa"}</td>
+                              <td className="py-3.5 px-4 text-slate-600">{dateStr}</td>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[11px] ${pillColor}`}>
+                                  <span className={`w-2 h-2 rounded-full ${dotColor}`} /> {status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -972,42 +1227,70 @@ export default function CustomerPortal() {
               {/* ============================================================ */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-slate-800">Explore Popular Visa</h3>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">Explore Popular Visa Destinations</h3>
+                    <p className="text-xs text-slate-500">Fast-track international e-visas and consular permits</p>
+                  </div>
                   <button
-                    onClick={() => setCustomerTab("explore")}
+                    onClick={() => handleTabChange("explore", "countries")}
                     className="text-xs font-bold text-[#4848F7] hover:underline cursor-pointer"
                   >
-                    View All
+                    View All Countries ➔
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4].map((idx) => (
-                    <div key={idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition">
-                      {/* Image Container with Canada Flag Badge */}
+                  {popularVisas.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                    >
+                      {/* Image Container with Country Flag Badge */}
                       <div className="relative h-36 bg-slate-200 overflow-hidden">
                         <img
-                          src="https://images.unsplash.com/photo-1517935703635-27c737822457?auto=format&fit=crop&q=80&w=600"
-                          alt="Canada"
-                          className="w-full h-full object-cover"
+                          src={item.image}
+                          alt={item.country}
+                          className="w-full h-full object-cover hover:scale-105 transition duration-300"
                         />
-                        {/* Canadian Flag Circle Badge Top-Left */}
-                        <div className="absolute top-3 left-3 w-7 h-7 rounded-full bg-white p-0.5 shadow-md flex items-center justify-center">
-                          <svg className="w-full h-full rounded-full" viewBox="0 0 36 36">
-                            <rect width="36" height="36" fill="#D80027" />
-                            <rect x="9" width="18" height="36" fill="#EEEEEE" />
-                            <path d="M18,10 L19.5,14 L23.5,13 L21,16.5 L24,18.5 L20,19 L20.5,23 L18,21 L15.5,23 L16,19 L12,18.5 L15,16.5 L12.5,13 L16.5,14 Z" fill="#D80027" />
-                          </svg>
+                        {/* Country Flag Circle Badge Top-Left */}
+                        <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/95 backdrop-blur-xs p-1 shadow-md flex items-center justify-center text-lg overflow-hidden border border-slate-100">
+                          {item.flagUrl ? (
+                            <img
+                              src={item.flagUrl}
+                              alt={item.country}
+                              className="w-full h-full object-cover rounded-full"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <span>{item.flagEmoji}</span>
+                          )}
+                        </div>
+                        <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono shadow-xs">
+                          {item.badge}
                         </div>
                       </div>
 
                       {/* Card Content */}
-                      <div className="p-4 space-y-1 text-center">
-                        <h4 className="text-base font-bold text-slate-800">Canada</h4>
-                        <p className="text-xs text-slate-500 font-medium mb-3">Tourist Visa</p>
+                      <div className="p-4 space-y-2 text-center">
+                        <div>
+                          <h4 className="text-base font-bold text-slate-900">{item.country}</h4>
+                          <p className="text-xs text-slate-500 font-medium">{item.visaType}</p>
+                          <p className="text-[11px] font-bold text-emerald-600 font-mono mt-0.5">
+                            From {item.startingFee} &bull; {item.processingTime}
+                          </p>
+                        </div>
                         <button
-                          onClick={() => setCustomerTab("apply")}
-                          className="text-xs font-bold text-[#4848F7] hover:underline transition cursor-pointer"
+                          onClick={() => {
+                            setNewAppForm((prev) => ({
+                              ...prev,
+                              destination: item.country,
+                              visaType: item.visaType
+                            }));
+                            handleTabChange("apply");
+                          }}
+                          className="w-full bg-indigo-50 hover:bg-[#4848F7] text-[#4848F7] hover:text-white text-xs font-bold py-2 rounded-xl transition cursor-pointer"
                         >
                           Apply Now
                         </button>
@@ -1281,14 +1564,6 @@ export default function CustomerPortal() {
                   applications={applications}
                   onUpdateDocs={updateApplicationDocs}
                   onNavigateApply={() => setCustomerTab("apply")}
-                  onNavigateSupport={() => setCustomerTab("support")}
-                />
-              )}
-
-              {docSubTab === "status" && (
-                <ApplicantVerificationStatus
-                  applications={applications}
-                  onNavigateUpload={() => setDocSubTab("upload")}
                   onNavigateSupport={() => setCustomerTab("support")}
                 />
               )}
