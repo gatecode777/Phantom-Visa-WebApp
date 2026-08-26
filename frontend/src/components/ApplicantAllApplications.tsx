@@ -79,6 +79,7 @@ export default function ApplicantAllApplications({
   // Document upload state inside active app
   const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
   const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
+  const [docRevisionKey, setDocRevisionKey] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [targetDocToUpload, setTargetDocToUpload] = useState<{ id: string; title: string } | null>(null);
 
@@ -149,40 +150,57 @@ export default function ApplicantAllApplications({
       const ikResult = await uploadImageToImageKit(file, "/PHANTOM-VISA/applications/documents/");
       
       // 2. Persist new ImageKit URL & metadata to backend MongoDB
-      const res = await fetch(`${API_V1_URL}/applications/${activeApp.id}/documents/${encodeURIComponent(docId)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileUrl: ikResult.url,
-          fileName: ikResult.fileName || file.name,
-          fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-          format: file.name.split(".").pop()?.toUpperCase() || "JPG",
-          title: docTitle
-        })
-      });
+      try {
+        await fetch(`${API_V1_URL}/applications/${activeApp.id}/documents/${encodeURIComponent(docId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileUrl: ikResult.url,
+            fileName: ikResult.fileName || file.name,
+            fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+            format: file.name.split(".").pop()?.toUpperCase() || "JPG",
+            title: docTitle
+          })
+        });
+      } catch (apiErr) {
+        console.warn("Backend doc sync note:", apiErr);
+      }
 
-      // 3. Update activeApp local state
+      // 3. Update activeApp local state immutably
       if (!activeApp.uploadedDocuments) {
         activeApp.uploadedDocuments = [];
       }
       const existingIndex = activeApp.uploadedDocuments.findIndex(
-        (d: any) => String(d._id) === docId || d.requirementId === docId || d.title.toLowerCase() === docTitle.toLowerCase()
+        (d: any) => String(d._id) === docId || d.requirementId === docId || (d.title && d.title.toLowerCase() === docTitle.toLowerCase())
       );
       if (existingIndex >= 0) {
-        activeApp.uploadedDocuments[existingIndex].fileUrl = ikResult.url;
-        activeApp.uploadedDocuments[existingIndex].fileName = ikResult.fileName || file.name;
-        activeApp.uploadedDocuments[existingIndex].status = "uploaded";
-        activeApp.uploadedDocuments[existingIndex].rejectionReason = "";
+        activeApp.uploadedDocuments[existingIndex] = {
+          ...activeApp.uploadedDocuments[existingIndex],
+          fileUrl: ikResult.url,
+          fileName: ikResult.fileName || file.name,
+          fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          format: file.name.split(".").pop()?.toUpperCase() || "JPG",
+          status: "uploaded",
+          rejectionReason: "",
+          uploadedAt: new Date().toISOString()
+        };
       } else {
         activeApp.uploadedDocuments.push({
           _id: docId,
           title: docTitle,
-          documentType: "PDF Document",
+          documentType: file.name.toLowerCase().endsWith(".pdf") ? "PDF Document" : "Image Scan",
           fileUrl: ikResult.url,
           fileName: ikResult.fileName || file.name,
-          status: "uploaded"
+          fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          format: file.name.split(".").pop()?.toUpperCase() || "JPG",
+          status: "uploaded",
+          rejectionReason: "",
+          uploadedAt: new Date().toISOString()
         });
       }
+
+      // Trigger reactive UI refresh
+      setDocRevisionKey((prev) => prev + 1);
 
       if (onUpdateDocs) {
         onUpdateDocs(activeApp.id, docId as any, "verified");
@@ -299,16 +317,16 @@ export default function ApplicantAllApplications({
         _id: "doc-1",
         title: "Passport Bio Page",
         documentType: "Image Scan",
-        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_passport.png",
+        fileUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=800",
         fileName: "passport_bio_page.png",
         status: "verified" as const,
         rejectionReason: ""
       },
       {
         _id: "doc-2",
-        title: "Photograph (35x45mm)",
+        title: "Photograph (35×45mm)",
         documentType: "Image Scan",
-        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_photo.png",
+        fileUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800",
         fileName: "applicant_photo.png",
         status: "verified" as const,
         rejectionReason: ""
@@ -317,7 +335,7 @@ export default function ApplicantAllApplications({
         _id: "doc-3",
         title: "Employment NOC Letter",
         documentType: "PDF Document",
-        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_doc.pdf",
+        fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         fileName: "employment_noc_letter.pdf",
         status: "needs_review" as const,
         rejectionReason: "Consular Stamp Unclear • Action Required"
@@ -326,13 +344,13 @@ export default function ApplicantAllApplications({
         _id: "doc-4",
         title: "Bank Statement (6 Months)",
         documentType: "PDF Document",
-        fileUrl: "https://ik.imagekit.io/phantomvisa/sample_bank.pdf",
+        fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         fileName: "bank_statement_6m.pdf",
         status: "pending" as const,
         rejectionReason: ""
       }
     ];
-  }, [activeApp]);
+  }, [activeApp, docRevisionKey]);
 
   // Derived filtered applications
   const filteredApps = useMemo(() => {
@@ -840,8 +858,11 @@ export default function ApplicantAllApplications({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {activeDocs.map((doc: any, idx: number) => {
                   const docId = String(doc._id || doc.requirementId || `doc-${idx + 1}`);
-                  const isImage = doc.fileUrl && (doc.fileUrl.endsWith(".jpg") || doc.fileUrl.endsWith(".jpeg") || doc.fileUrl.endsWith(".png") || doc.fileUrl.endsWith(".webp") || doc.fileUrl.includes("images") || doc.fileUrl.includes("download"));
-                  const isPdf = doc.fileUrl && doc.fileUrl.endsWith(".pdf");
+                  const fileUrlLower = (doc.fileUrl || "").toLowerCase().trim();
+                  const fileNameLower = (doc.fileName || "").toLowerCase().trim();
+                  const isExplicitPdf = fileUrlLower.endsWith(".pdf") || fileNameLower.endsWith(".pdf");
+                  const isImage = Boolean(doc.fileUrl) && !isExplicitPdf;
+                  const isPdf = Boolean(doc.fileUrl) && isExplicitPdf;
                   const isUploading = uploadingDocId === docId;
                   const isActionRequired = doc.status === "needs_review" || doc.status === "rejected";
 
@@ -858,16 +879,26 @@ export default function ApplicantAllApplications({
                     >
                       <div className="flex items-start gap-3">
                         {/* Thumbnail / Document Type Icon */}
-                        {isImage && doc.fileUrl ? (
+                        {isImage ? (
                           <div
                             onClick={() => setPreviewDoc(doc)}
-                            className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 cursor-pointer group relative shadow-2xs"
+                            className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0 cursor-pointer group relative shadow-2xs flex items-center justify-center"
                             title="Click to preview full resolution scan"
                           >
                             <img
                               src={doc.fileUrl}
                               alt={doc.title}
                               className="w-full h-full object-cover group-hover:scale-110 transition duration-200"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = "none";
+                                const parent = (e.currentTarget as HTMLElement).parentElement;
+                                if (parent && !parent.querySelector(".img-fallback-badge")) {
+                                  const fallback = document.createElement("div");
+                                  fallback.className = "img-fallback-badge w-full h-full flex flex-col items-center justify-center bg-blue-50 text-[#4848F7] font-bold text-[9px]";
+                                  fallback.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><span>IMG</span>`;
+                                  parent.appendChild(fallback);
+                                }
+                              }}
                             />
                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
                               <Eye size={16} />
@@ -876,7 +907,7 @@ export default function ApplicantAllApplications({
                         ) : isPdf ? (
                           <div
                             onClick={() => setPreviewDoc(doc)}
-                            className="w-14 h-14 rounded-xl bg-red-100 text-red-600 flex flex-col items-center justify-center shrink-0 border border-red-200 cursor-pointer shadow-2xs"
+                            className="w-14 h-14 rounded-xl bg-red-100 text-red-600 flex flex-col items-center justify-center shrink-0 border border-red-200 cursor-pointer shadow-2xs hover:scale-105 transition"
                             title="Click to view PDF document"
                           >
                             <FileText size={22} />
@@ -885,7 +916,7 @@ export default function ApplicantAllApplications({
                         ) : (
                           <div
                             onClick={() => setPreviewDoc(doc)}
-                            className="w-14 h-14 rounded-xl bg-indigo-50 text-[#4848F7] flex flex-col items-center justify-center shrink-0 border border-indigo-200 cursor-pointer shadow-2xs"
+                            className="w-14 h-14 rounded-xl bg-indigo-50 text-[#4848F7] flex flex-col items-center justify-center shrink-0 border border-indigo-200 cursor-pointer shadow-2xs hover:scale-105 transition"
                           >
                             <FileCheck size={22} />
                             <span className="text-[9px] font-black uppercase tracking-tighter">DOC</span>
@@ -1200,7 +1231,7 @@ export default function ApplicantAllApplications({
 
             {/* Modal Body Preview Content */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-100/60 min-h-[300px]">
-              {previewDoc.fileUrl.toLowerCase().endsWith(".pdf") ? (
+              {(previewDoc.fileUrl.toLowerCase().endsWith(".pdf") || previewDoc.fileName?.toLowerCase().endsWith(".pdf")) && !previewDoc.fileUrl.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg|avif)/i) ? (
                 <iframe
                   src={previewDoc.fileUrl}
                   title={previewDoc.title}

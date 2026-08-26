@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   Users,
@@ -369,9 +369,10 @@ export default function ActiveUsers() {
                     <td className="py-3.5 px-4 font-semibold text-slate-700">
                       <span className="mr-1">{u.flag}</span> {u.country}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        • {u.status}
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>{u.status}</span>
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">

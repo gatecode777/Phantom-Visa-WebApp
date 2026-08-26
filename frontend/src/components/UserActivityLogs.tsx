@@ -73,20 +73,25 @@ export default function UserActivityLogs() {
       const json = await res.json();
 
       if (res.ok && json.success && Array.isArray(json.data)) {
-        const parsedLogs: ActivityLogItem[] = json.data.map((item: any) => ({
-          id: item.id || item.logId || "LOG-UNKNOWN",
-          logId: item.logId || item.id || "LOG-UNKNOWN",
-          userName: item.userName || "Applicant User",
-          userEmail: item.userEmail || "user@email.com",
-          applicantId: item.applicantId || "APP-1025",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-          activity: item.activity || "User Login",
-          activityType: item.activityType || "Authentication",
-          dateAndTime: item.dateAndTime || "Recently",
-          ipAddress: item.ipAddress || "192.168.1.10",
-          device: item.device || "Chrome / Windows",
-          status: item.status === "Failed" ? "Failed" : "Success"
-        }));
+        const parsedLogs: ActivityLogItem[] = json.data.map((item: any) => {
+          const avatarSeed = encodeURIComponent(item.userName || "Applicant");
+          const fallbackAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${avatarSeed}&backgroundColor=4848f7,6366f1,3b82f6,0ea5e9&textColor=ffffff`;
+
+          return {
+            id: item.id || item.logId || "LOG-UNKNOWN",
+            logId: item.logId || item.id || "LOG-UNKNOWN",
+            userName: item.userName || "Applicant User",
+            userEmail: item.userEmail || "user@email.com",
+            applicantId: item.applicantId || "APP-1001",
+            avatar: item.avatar || fallbackAvatar,
+            activity: item.activity || "User Login",
+            activityType: item.activityType || "Authentication",
+            dateAndTime: item.dateAndTime || "Recently",
+            ipAddress: item.ipAddress || "103.211.54.18",
+            device: item.device || "Chrome / Windows 11",
+            status: item.status === "Failed" ? "Failed" : "Success"
+          };
+        });
 
         setLogs(parsedLogs);
         if (json.metrics) {
@@ -107,6 +112,26 @@ export default function UserActivityLogs() {
     fetchActivityLogs();
   }, []);
 
+  // Activity Type badge styling helper
+  const getActivityBadgeClass = (type: string) => {
+    switch (type) {
+      case "Authentication":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      case "Application":
+        return "bg-indigo-50 text-indigo-700 border-indigo-200";
+      case "KYC":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "Documents":
+        return "bg-teal-50 text-teal-700 border-teal-200";
+      case "Payment":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "Security":
+        return "bg-purple-50 text-purple-700 border-purple-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+  };
+
   // Filtered Logs
   const filteredLogs = logs.filter((l) => {
     const q = searchQuery.toLowerCase();
@@ -118,7 +143,7 @@ export default function UserActivityLogs() {
       l.logId.toLowerCase().includes(q) ||
       (l.applicantId && l.applicantId.toLowerCase().includes(q));
 
-    const matchesType = selectedActivityType === "All Activities" || l.activityType === selectedActivityType;
+    const matchesType = selectedActivityType === "All Activities" || l.activityType.toLowerCase() === selectedActivityType.toLowerCase();
     const matchesStatus = selectedStatus === "All Statuses" || l.status === selectedStatus;
 
     return matchesSearch && matchesType && matchesStatus;
@@ -140,12 +165,12 @@ export default function UserActivityLogs() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#4848F7] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200 font-mono">
-                Live Audit Stream
+                Applicant Audit Stream
               </span>
               <h1 className="text-xl font-black text-slate-900 tracking-tight">User Activity Logs</h1>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Monitor real-time system audit logs, user login attempts, security events, and platform activity.
+              Monitor real-time client & applicant activities, application milestones, KYC uploads, and security events.
             </p>
           </div>
         </div>
@@ -163,11 +188,11 @@ export default function UserActivityLogs() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total System Activities</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Applicant Activities</span>
             <h3 className="text-2xl font-black text-slate-900 font-outfit">
               {metrics.totalActivities || logs.length}
             </h3>
-            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">100% Audited Log Trail</span>
+            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">100% Client Audited</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Activity size={20} />
@@ -180,7 +205,7 @@ export default function UserActivityLogs() {
             <h3 className="text-2xl font-black text-slate-900 font-outfit">
               {metrics.todayActivities || Math.min(logs.length, 12)}
             </h3>
-            <span className="text-[11px] text-[#4848F7] font-bold mt-1 inline-block">Live Audit Stream</span>
+            <span className="text-[11px] text-[#4848F7] font-bold mt-1 inline-block">Live Stream Active</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-[#4848F7] flex items-center justify-center">
             <Clock size={20} />
@@ -189,11 +214,11 @@ export default function UserActivityLogs() {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Active Registered Users</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Active Applicants</span>
             <h3 className="text-2xl font-black text-emerald-600 font-outfit">
               {metrics.activeUsers || 1}
             </h3>
-            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">Live Access Sessions</span>
+            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">Registered Portal Users</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <ShieldCheck size={20} />
@@ -202,11 +227,11 @@ export default function UserActivityLogs() {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Failed Login Attempts</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Failed Attempts</span>
             <h3 className="text-2xl font-black text-rose-600 font-outfit">
               {metrics.failedAttempts || logs.filter((l) => l.status === "Failed").length}
             </h3>
-            <span className="text-[11px] text-rose-600 font-bold mt-1 inline-block">Security Flagged</span>
+            <span className="text-[11px] text-rose-600 font-bold mt-1 inline-block">Security Filtered</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
             <ShieldAlert size={20} />
@@ -243,8 +268,9 @@ export default function UserActivityLogs() {
             <option value="Authentication">Authentication</option>
             <option value="Application">Application</option>
             <option value="KYC">KYC Verification</option>
+            <option value="Documents">Documents Vault</option>
             <option value="Payment">Payment</option>
-            <option value="Security">Security</option>
+            <option value="Security">Security & Settings</option>
           </select>
 
           <select
@@ -269,7 +295,7 @@ export default function UserActivityLogs() {
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] uppercase tracking-wider font-extrabold text-slate-500">
                 <th className="py-3.5 px-4">LOG ID</th>
-                <th className="py-3.5 px-4">USER</th>
+                <th className="py-3.5 px-4">APPLICANT</th>
                 <th className="py-3.5 px-4">ACTIVITY DESCRIPTION</th>
                 <th className="py-3.5 px-4">DATE & TIME</th>
                 <th className="py-3.5 px-4">IP ADDRESS</th>
@@ -298,26 +324,45 @@ export default function UserActivityLogs() {
                 paginatedLogs.map((l) => (
                   <tr key={l.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3.5 px-4 font-mono font-bold text-[#4848F7]">{l.logId}</td>
-                    <td className="py-3.5 px-4 font-extrabold text-slate-900 flex items-center gap-2.5">
-                      <img src={l.avatar} alt={l.userName} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
-                      <div>
-                        <span>{l.userName}</span>
-                        <span className="text-[10px] text-slate-400 block font-mono font-normal">{l.applicantId || l.userEmail}</span>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <img src={l.avatar} alt={l.userName} className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 bg-indigo-50" />
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-slate-900 block truncate">{l.userName}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-bold text-[#4848F7] bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-mono">
+                              {l.applicantId}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-normal truncate max-w-[130px]">{l.userEmail}</span>
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-800">{l.activity}</td>
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-1">
+                        <span className="font-bold text-slate-800 block">{l.activity}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold font-mono border uppercase tracking-wider ${getActivityBadgeClass(l.activityType)}`}>
+                          {l.activityType}
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-3.5 px-4 font-mono text-slate-600">{l.dateAndTime}</td>
                     <td className="py-3.5 px-4 font-mono text-slate-600">{l.ipAddress}</td>
-                    <td className="py-3.5 px-4 font-medium text-slate-600">{l.device}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 font-medium text-slate-600 max-w-[200px] truncate" title={l.device}>{l.device}</td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold font-mono border inline-block ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${
                           l.status === "Success"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-rose-50 text-rose-700 border-rose-200"
                         }`}
                       >
-                        • {l.status}
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            l.status === "Success" ? "bg-emerald-500" : "bg-rose-500"
+                          }`}
+                        />
+                        <span>{l.status}</span>
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
