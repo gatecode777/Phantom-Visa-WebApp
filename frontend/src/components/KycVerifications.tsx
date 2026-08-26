@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { API_V1_URL } from "../config/api";
 import {
   FileCheck2,
@@ -345,9 +345,9 @@ export default function KycVerifications() {
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-800">{r.govtIdType}</td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">{r.submittedOn}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-extrabold font-mono border inline-block ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${
                           r.kycStatus === "Approved"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : r.kycStatus === "Rejected"
@@ -357,7 +357,18 @@ export default function KycVerifications() {
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
-                        • {r.kycStatus}
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            r.kycStatus === "Approved"
+                              ? "bg-emerald-500"
+                              : r.kycStatus === "Rejected"
+                              ? "bg-rose-500"
+                              : r.kycStatus === "Under Audit"
+                              ? "bg-blue-500"
+                              : "bg-amber-500"
+                          }`}
+                        />
+                        <span>{r.kycStatus}</span>
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
